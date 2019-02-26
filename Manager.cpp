@@ -58,11 +58,43 @@ void Manager::Render()
 
 void Manager::DestroyComponent(const ComponentHandle& handle)
 {
-	auto storageIt = m_componentStorages.find(handle.GetTypeIndex());
+	assert(handle.IsValid());
+
+	auto collection = GetCollection(handle.GetTypeIndex(), handle.GetOffset());
+	std::size_t offset = handle.GetOffset() % k_defaultComponentPoolSize;
+	collection->Destroy(offset);
+}
+
+IComponentCollection* Manager::FindCollectionToInsert(const std::type_index& typeIndex, int& storageIdx)
+{
+	auto storageIt = m_componentStorages.find(typeIndex);
 	if (storageIt != m_componentStorages.end())
 	{
-		storageIt->second[0]->Destroy(handle.GetOffset());
+		storageIdx = 0;
+		for (const auto& storage : storageIt->second)
+		{
+			if (!storage->IsFull())
+			{
+				return storage.get();
+			}
+
+			++storageIdx;
+		}
 	}
+
+	return nullptr;
+}
+
+IComponentCollection* Manager::GetCollection(const std::type_index& typeIndex, const std::size_t offset)
+{
+	auto storageIt = m_componentStorages.find(typeIndex);
+	if (storageIt != m_componentStorages.end())
+	{
+		std::size_t idx = offset / k_defaultComponentPoolSize;
+		return storageIt->second[idx].get();
+	}
+
+	return nullptr;
 }
 
 } // namespace ecs

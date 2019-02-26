@@ -37,3 +37,8 @@
 *.pdb
 *.idb
 *.tlog
+*.vcxproj
+*.filters
+*.user
+*.ipch
+*.suo

@@ -14,9 +14,9 @@ int main()
 	manager.Init();
 
 	// Fill all required space
-	ecs::ComponentHandle handles[1024];
-	StaticMesh* meshes[1024];
-	for (int i = 0; i < 1024; ++i)
+	ecs::ComponentHandle handles[2050];
+	StaticMesh* meshes[2050];
+	for (int i = 0; i < 2050; ++i)
 	{
 		handles[i] = manager.CreateComponent<StaticMesh>(meshes[i]);
 	}
@@ -26,8 +26,11 @@ int main()
 	meshes[5]->colorY = 45.f;
 	meshes[5]->colorZ = 56.f;
 
-	manager.DestroyComponent(handles[5]);
+	manager.DestroyComponent(handles[1500]);
 	handles[5] = manager.CreateComponent<StaticMesh>(meshes[5]);
+
+	auto testMesh = manager.GetComponent<StaticMesh>(handles[1500]);
+	int a = 0;
 
 	// Go through test 1000 iterations
 	for (int i = 0; i < 1000; ++i)

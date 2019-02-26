@@ -12,12 +12,13 @@
 namespace ecs
 {
 
+constexpr std::size_t k_defaultComponentPoolSize = 1024U;
+
 class Manager
 	: public ILifecycleCallback
 {
-	constexpr static std::size_t poolSize = 1024U;
 	template <typename T>
-	using ComponentPool = std::array<T, poolSize>;
+	using ComponentPool = std::array<T, k_defaultComponentPoolSize>;
 	using SystemPtr = std::unique_ptr<System>;
 	using ComponentStoragesType = std::vector<std::unique_ptr<IComponentCollection>>;
 
@@ -46,9 +47,11 @@ public:
 	{
 		assert(!m_initialized);
 
-		ComponentStoragesType storage;
-		storage.emplace_back(std::make_unique<ComponentCollectionImpl<ComponentType, 1024U>>());
-		m_componentStorages.emplace(typeid(ComponentType), std::move(storage));
+		// Register type storage
+		m_componentStorages.emplace(typeid(ComponentType), ComponentStoragesType());
+
+		// Create first storage
+		CreateNewStorage<ComponentType>();
 	}
 
 	template <class SystemType>
@@ -68,46 +71,80 @@ public:
 	template <typename ComponentType>
 	ComponentHandle CreateComponent(ComponentType*& result)
 	{
-		auto storageIt = m_componentStorages.find(typeid(ComponentType));
-		if (storageIt != m_componentStorages.end())
+		assert(m_componentStorages.find(typeid(ComponentType)) != m_componentStorages.end());
+
+		int storageIdx = 0;
+		auto storage = FindCollectionToInsert(typeid(ComponentType), storageIdx);
+
+		// If storage for insertion not found - allocate new one
+		if (nullptr == storage)
 		{
-			for (const auto& storage : storageIt->second)
-			{
-				auto createResult = storage->TryCreate();
-				if (createResult.second)
-				{
-					result = static_cast<ComponentType*>(storage->Get(createResult.first));
-					return ComponentHandle(typeid(ComponentType), createResult.first);
-				}
-			}
+			storage = CreateNewStorage<ComponentType>();
 		}
 
-		return ComponentHandle();
+		// Storage must be created at this step
+		assert(nullptr != storage);
+
+		auto createResult = storage->TryCreate();
+		result = static_cast<ComponentType*>(storage->Get(createResult.first));
+		assert(createResult.second);
+		return ComponentHandle(typeid(ComponentType), createResult.first + storageIdx * k_defaultComponentPoolSize);
 	}
 
 	void DestroyComponent(const ComponentHandle& handle);
 
 	template <typename ComponentType>
-	ComponentHandle CreateComponent()
+	ComponentType* GetComponent(const ComponentHandle& handle)
 	{
-		auto storageIt = m_componentStorages.find(typeid(ComponentType));
-		if (storageIt != m_componentStorages.end())
+		auto it = m_componentStorages.find(handle.GetTypeIndex());
+		if (it != m_componentStorages.end())
 		{
-			for (const auto& storage : storageIt->second)
-			{
-				auto createResult = storage->TryCreate();
-				if (createResult.second)
-				{
-					return ComponentHandle(0, createResult.first);
-				}
-			}
+			std::size_t poolIndex = handle.GetOffset() / k_defaultComponentPoolSize;
+			std::size_t poolOffset = handle.GetOffset() % k_defaultComponentPoolSize;
+
+			return static_cast<ComponentType*>(it->second[poolIndex]->Get(poolOffset));
 		}
 
-		return ComponentHandle();
+		return nullptr;
+	}
+
+	template <typename ComponentType>
+	ComponentHandle CreateComponent()
+	{
+		assert(m_componentStorages.find(typeid(ComponentType)) != m_componentStorages.end());
+
+		int storageIdx = 0;
+		auto storage = FindCollectionToInsert(typeid(ComponentType), storageIdx);
+
+		// If storage for insertion not found - allocate new one
+		if (nullptr == storage)
+		{
+			storage = CreateNewStorage(typeid(ComponentType));
+		}
+
+		// Storage must be created at this step
+		assert(nullptr != storage);
+
+		auto createResult = storage->TryCreate();
+		assert(createResult.second);
+		return ComponentHandle(typeid(ComponentType), createResult.first + storageIdx * k_defaultComponentPoolSize);
 	}
 
 private:
 	void RegisterSystemInternal(const std::type_index& typeIndex, SystemPtr&& system);
+
+	IComponentCollection* FindCollectionToInsert(const std::type_index& typeIndex, int& storageIdx);
+	IComponentCollection* GetCollection(const std::type_index& typeIndex, const std::size_t offset);
+
+	template <typename ComponentType>
+	IComponentCollection* CreateNewStorage()
+	{
+		auto storageIt = m_componentStorages.find(typeid(ComponentType));
+		assert(storageIt != m_componentStorages.end());
+
+		storageIt->second.emplace_back(std::make_unique<ComponentCollectionImpl<ComponentType, k_defaultComponentPoolSize>>());
+		return storageIt->second.back().get();
+	}
 
 private:
 	std::unordered_map<std::type_index, ComponentStoragesType> m_componentStorages;
