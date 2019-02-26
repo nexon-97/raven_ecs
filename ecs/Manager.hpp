@@ -17,8 +17,6 @@ constexpr std::size_t k_defaultComponentPoolSize = 1024U;
 class Manager
 	: public ILifecycleCallback
 {
-	template <typename T>
-	using ComponentPool = std::array<T, k_defaultComponentPoolSize>;
 	using SystemPtr = std::unique_ptr<System>;
 	using ComponentStoragesType = std::vector<std::unique_ptr<IComponentCollection>>;
 
@@ -119,7 +117,7 @@ public:
 		// If storage for insertion not found - allocate new one
 		if (nullptr == storage)
 		{
-			storage = CreateNewStorage(typeid(ComponentType));
+			storage = CreateNewStorage<ComponentType>();
 		}
 
 		// Storage must be created at this step
@@ -130,49 +128,44 @@ public:
 		return ComponentHandle(typeid(ComponentType), createResult.first + storageIdx * k_defaultComponentPoolSize);
 	}
 
-	// TODO: implement correct iterator logic
 	template <typename ComponentType>
-	struct iterator
+	typename ComponentCollectionImpl<ComponentType, 1024U>::iterator GetComponentsIterator()
 	{
-		ComponentType* item = nullptr;
-
-		explicit iterator(ComponentType* item)
-			: item(item)
-		{}
-
-		iterator operator++()
+		auto storageIt = m_componentStorages.find(typeid(ComponentType));
+		if (storageIt != m_componentStorages.end())
 		{
-			return iterator(nullptr);
+			auto end = ComponentCollectionImpl<ComponentType, 1024U>::iterator();
+
+			for (std::size_t i = 0; i < storageIt->second.size(); ++i)
+			{
+				auto ptr = storageIt->second[i].get();
+				auto containerPtr = static_cast<ComponentCollectionImpl<ComponentType, 1024>*>(ptr);
+
+				auto it = containerPtr->begin();
+				end = containerPtr->end();
+				if (it != end)
+				{
+					return it;
+				}
+			}
+
+			return end;
 		}
 
-		bool operator==(const iterator& other) const
-		{
-			return item == other.item;
-		}
-
-		bool operator!=(const iterator& other) const
-		{
-			return !(*this == other);
-		}
-	};
-
-	template <typename ComponentType>
-	iterator<ComponentType> GetComponentsIterator()
-	{
-		auto it = m_componentStorages.find(typeid(ComponentType));
-		if (it != m_componentStorages.end())
-		{
-			return iterator<ComponentType>(static_cast<ComponentType*>(it->second.at(0)->Get(0U)));
-		}
-
-		return iterator<ComponentType>(nullptr);
+		return ComponentCollectionImpl<ComponentType, 1024>::iterator();
 	}
 
-	template <typename ComponentType>
+	/*template <typename ComponentType>
 	iterator<ComponentType> GetComponentEndIterator()
 	{
-		return iterator<ComponentType>(nullptr);
+		return iterator<ComponentType>(this, ComponentHandle(typeid(nullptr), 0U));
 	}
+
+	template <typename ComponentType>
+	iterator<ComponentType> GetNextComponentIterator(const ComponentHandle& handle)
+	{
+		return iterator<ComponentType>(this, ComponentHandle(typeid(nullptr), 0U));
+	}*/
 
 private:
 	void RegisterSystemInternal(const std::type_index& typeIndex, SystemPtr&& system);

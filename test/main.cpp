@@ -14,11 +14,12 @@ int main()
 	manager.Init();
 
 	// Fill all required space
-	ecs::ComponentHandle handles[2050];
-	StaticMesh* meshes[2050];
-	for (int i = 0; i < 2050; ++i)
+	ecs::ComponentHandle handles[100];
+	StaticMesh* meshes[100];
+	for (int i = 0; i < 100; ++i)
 	{
 		handles[i] = manager.CreateComponent<StaticMesh>(meshes[i]);
+		meshes[i]->id = i;
 	}
 
 	meshes[5]->colorA = 25.f;
@@ -26,16 +27,31 @@ int main()
 	meshes[5]->colorY = 45.f;
 	meshes[5]->colorZ = 56.f;
 
-	manager.DestroyComponent(handles[1500]);
-	handles[5] = manager.CreateComponent<StaticMesh>(meshes[5]);
+	manager.DestroyComponent(handles[50]);
+	manager.DestroyComponent(handles[51]);
+	manager.CreateComponent<StaticMesh>();
+	manager.CreateComponent<StaticMesh>();
+	manager.CreateComponent<StaticMesh>();
+	manager.DestroyComponent(handles[0]);
+	manager.DestroyComponent(handles[1]);
+	manager.DestroyComponent(handles[2]);
 
-	auto testMesh = manager.GetComponent<StaticMesh>(handles[1500]);
-	int a = 0;
+	auto testMesh = manager.GetComponent<StaticMesh>(handles[25]);
 
-	// Go through test 1000 iterations
-	for (int i = 0; i < 1000; ++i)
+	// Go through test iterations
+	for (int i = 0; i < 1; ++i)
 	{
 		std::cout << "ECS iteration start" << std::endl;
+
+		auto it = manager.GetComponentsIterator<StaticMesh>();
+
+		/*auto end = manager.GetComponentEndIterator<StaticMesh>();
+		int j = 0;
+		for (auto it = manager.GetComponentsIterator<StaticMesh>(); it != end; ++it)
+		{
+			std::cout << "Static mesh iteration " << j << std::endl;
+			++j;
+		}*/
 
 		manager.Update();
 		manager.Render();
