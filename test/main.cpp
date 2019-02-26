@@ -1,8 +1,8 @@
 #include <iostream>
-#include "Manager.hpp"
 
-#include "test_systems/UISystem.hpp"
-#include "test_components/StaticMesh.hpp"
+#include "ecs/Manager.hpp"
+#include "test/UISystem.hpp"
+#include "test/StaticMesh.hpp"
 
 int main()
 {

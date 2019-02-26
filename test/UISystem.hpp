@@ -1,5 +1,5 @@
 #pragma once
-#include "System.hpp"
+#include "ecs/System.hpp"
 
 class UISystem
 	: public ecs::System

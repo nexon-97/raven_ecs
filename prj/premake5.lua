@@ -1,30 +1,8 @@
--- If no EngineRootLocation provided - setup as standalone project
-local isStandaloneProject = (nil == EngineRootLocation)
-if isStandaloneProject then
-	EngineRootLocation = "../"
-end
+workspace "raven_ecs"
+	configurations { "Debug", "Release" }
+	platforms { "x64" }
 
-project "ecs"
-	kind "StaticLib"
-	language "C++"
-	location ("../prj/".._ACTION)
+solution "raven_ecs"
+	location (_ACTION)
 
-	files { "../**.cpp", "../**.hpp" }
-	includedirs { "../." }
-	
-	if isStandaloneProject then
-		excludes { "../test/**" }
-	end
-
-	targetdir(EngineRootLocation.."/bin")
-
-	configuration "Debug"
-		defines { "DEBUG" }
-		symbols "on"
-		optimize "Off"
-		targetname "ecs_d"
-
-	configuration "Release"
-		defines { "NDEBUG" }
-		optimize "Full"
-		targetname "ecs"
+	include ("project_config.lua")
