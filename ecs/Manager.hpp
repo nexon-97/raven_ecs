@@ -130,6 +130,50 @@ public:
 		return ComponentHandle(typeid(ComponentType), createResult.first + storageIdx * k_defaultComponentPoolSize);
 	}
 
+	// TODO: implement correct iterator logic
+	template <typename ComponentType>
+	struct iterator
+	{
+		ComponentType* item = nullptr;
+
+		explicit iterator(ComponentType* item)
+			: item(item)
+		{}
+
+		iterator operator++()
+		{
+			return iterator(nullptr);
+		}
+
+		bool operator==(const iterator& other) const
+		{
+			return item == other.item;
+		}
+
+		bool operator!=(const iterator& other) const
+		{
+			return !(*this == other);
+		}
+	};
+
+	template <typename ComponentType>
+	iterator<ComponentType> GetComponentsIterator()
+	{
+		auto it = m_componentStorages.find(typeid(ComponentType));
+		if (it != m_componentStorages.end())
+		{
+			return iterator<ComponentType>(static_cast<ComponentType*>(it->second.at(0)->Get(0U)));
+		}
+
+		return iterator<ComponentType>(nullptr);
+	}
+
+	template <typename ComponentType>
+	iterator<ComponentType> GetComponentEndIterator()
+	{
+		return iterator<ComponentType>(nullptr);
+	}
+
 private:
 	void RegisterSystemInternal(const std::type_index& typeIndex, SystemPtr&& system);
 
