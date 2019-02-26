@@ -1,4 +1,5 @@
 #pragma once
+#include "ILifecycleCallback.hpp"
 
 namespace ecs
 {
