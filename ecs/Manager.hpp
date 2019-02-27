@@ -83,10 +83,10 @@ public:
 		// Storage must be created at this step
 		assert(nullptr != storage);
 
-		auto createResult = storage->TryCreate();
-		result = static_cast<ComponentType*>(storage->Get(createResult.first));
-		assert(createResult.second);
-		return ComponentHandle(typeid(ComponentType), createResult.first + storageIdx * k_defaultComponentPoolSize);
+		auto insertedId = storage->Create();
+		result = static_cast<ComponentType*>(storage->Get(insertedId));
+
+		return ComponentHandle(typeid(ComponentType), insertedId + storageIdx * k_defaultComponentPoolSize);
 	}
 
 	void DestroyComponent(const ComponentHandle& handle);
@@ -123,9 +123,8 @@ public:
 		// Storage must be created at this step
 		assert(nullptr != storage);
 
-		auto createResult = storage->TryCreate();
-		assert(createResult.second);
-		return ComponentHandle(typeid(ComponentType), createResult.first + storageIdx * k_defaultComponentPoolSize);
+		auto insertedId = storage->Create();
+		return ComponentHandle(typeid(ComponentType), insertedId + storageIdx * k_defaultComponentPoolSize);
 	}
 
 	template <typename ComponentType>

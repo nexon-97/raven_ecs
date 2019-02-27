@@ -8,21 +8,24 @@
 namespace ecs
 {
 
-template <typename ComponentType, std::size_t CollectionSize>
+template <typename ComponentType>
 class ComponentCollectionImpl
 	: public IComponentCollection
 {
-	using StorageType = std::array<ComponentType, CollectionSize>;
-	using CollectionType = ComponentCollectionImpl<ComponentType, CollectionSize>;
+	using StorageType = std::array<ComponentType, 1024>;
+	using CollectionType = ComponentCollectionImpl<ComponentType>;
 
 public:
 	~ComponentCollectionImpl()
 	{
-		for (std::size_t i = 0; i < m_usedSpace; ++i)
+		for (auto& chunk : m_chunks)
 		{
-			if (m_holesList.find(i) == m_holesList.end())
+			for (std::size_t i = 0; i < chunk.usedSpace; ++i)
 			{
-				m_storage[i].~ComponentType();
+				if (chunk.holesList.find(i) == chunk.holesList.end())
+				{
+					chunk.data[i].~ComponentType();
+				}
 			}
 		}
 	}
@@ -79,93 +82,86 @@ public:
 		std::size_t index;
 	};
 
-	std::pair<std::size_t, bool> TryCreate() override
+	std::size_t Create() override
 	{
-		std::pair<std::size_t, bool> result(0U, false);
+		std::size_t insertedIndex = 0;
 
-		// If there are holes - try to fill them first to keep data close to each other
+		// If there are holes - fill them first to keep data close to each other
 		if (!m_holesList.empty())
 		{
 			// Pick first hole to fill
 			auto startIt = m_holesList.begin();
-			std::size_t insertPos = *startIt;
+			insertedIndex = *startIt;
 			m_holesList.erase(startIt);
-
-			result.first = insertPos;
-			result.second = true;
 		}
 		else if (m_usedSpace < CollectionSize)
 		{
 			// If not all space is allocated - put new element at the end
-			result.first = m_usedSpace;
-			result.second = true;
+			insertedIndex = m_usedSpace;
 			++m_usedSpace;
 		}
 
-		if (result.second)
-		{
-			new (&m_storage[result.first]) ComponentType();
+		new (&m_storage[insertedIndex]) ComponentType();
 
-			// Overwrite first alive index for iterator
-			if (result.first < m_firstAliveIndex)
-			{
-				m_firstAliveIndex = result.first;
-			}
+		// Overwrite first alive index for iterator
+		if (insertedIndex < m_firstAliveIndex)
+		{
+			m_firstAliveIndex = result.first;
 		}
 
-		return result;
+		return insertedIndex;
 	}
 
 	void Destroy(const std::size_t index) override
 	{
-		assert(index < CollectionSize);
+		auto chunkId = SplitObjectId(index);
+		assert(chunkId.first < m_chunks.size());
 
-		auto insertResult = m_holesList.insert(index);
+		auto& chunk = m_chunks[chunkId.first];
+		auto insertResult = chunk.holesList.insert(chunkId.second);
 		if (insertResult.second)
 		{
-			m_storage[index].~ComponentType();
+			chunk.data[chunkId.second].~ComponentType();
 
-			if (index == m_firstAliveIndex)
+			// Overwrite first alive index
+			if (chunkId.second == chunk.firstAliveIndex)
 			{
-				m_firstAliveIndex = GetNextAliveIndex(index);
+				chunk.firstAliveIndex = GetNextAliveIndex(chunkId.second);
 			}
 		}
 	}
 
 	void* Get(const std::size_t index) override
 	{
-		assert(index < CollectionSize);
-		return &m_storage[index];
-	}
+		auto chunkId = SplitObjectId(index);
+		assert(chunkId.first < m_chunks.size());
 
-	bool IsFull() const override
-	{
-		return m_usedSpace == CollectionSize && m_holesList.empty();
-	}
-
-	std::size_t GetFirstAliveIndex() const
-	{
-		return m_firstAliveIndex;
+		auto& chunk = m_chunks[chunkId.first];
+		return &chunk.data[chunkId.second];
 	}
 
 	std::size_t GetNextAliveIndex(const std::size_t from) const
 	{
-		for (std::size_t i = from + 1; i < m_usedSpace; ++i)
+		auto chunkId = SplitObjectId(from);
+
+		for (std::size_t i = chunkId.first; i < m_chunks.size(); ++i)
 		{
-			if (m_holesList.find(i) == m_holesList.end())
+			for (std::size_t j = from + 1; i < m_usedSpace; ++i)
 			{
-				return i;
+				if (m_holesList.find(i) == m_holesList.end())
+				{
+					return i;
+				}
 			}
 		}
 
-		return CollectionSize;
+		return static_cast<std::size_t>(-1);
 	}
 
 	iterator begin()
 	{
-		auto firstIndex = GetFirstAliveIndex();
-		auto arrayIt = (firstIndex < CollectionSize) ? m_storage.begin() + firstIndex : m_storage.end();
-		return iterator(this, arrayIt, firstIndex);
+		auto arrayIt = (m_firstAliveIndex < CollectionSize) ? m_storage.begin() + m_firstAliveIndex : m_storage.end();
+		return iterator(this, arrayIt, m_firstAliveIndex);
 	}
 
 	iterator end()
@@ -174,10 +170,21 @@ public:
 	}
 
 private:
-	StorageType m_storage;
-	std::size_t m_usedSpace = 0U;
-	std::size_t m_firstAliveIndex = 0U;
-	std::set<std::size_t> m_holesList;
+	std::pair<std::size_t, std::size_t> SplitObjectId(const std::size_t id)
+	{
+		return std::make_pair(id / 1024, id % 1024);
+	}
+
+private:
+	struct Chunk
+	{
+		StorageType data;
+		std::size_t usedSpace = 0U;
+		std::size_t firstAliveIndex = 0U;
+		std::size_t lastAliveIndex = 0U;	// Unused (reserved for reverse iterators)
+		std::set<std::size_t> holesList;
+	};
+	std::list<Chunk> m_chunks;
 };
 
 } // namespace ecs
