@@ -99,26 +99,6 @@ public:
 	}
 
 	template <typename ComponentType>
-	typename ComponentCollectionImpl<ComponentType>::iterator GetComponentsIterator()
-	{
-		auto collection = GetCollection(typeid(ComponentType));
-		assert(nullptr != collection);
-
-		auto concreteCollection = static_cast<ComponentCollectionImpl<ComponentType>*>(collection);
-		return concreteCollection->begin();
-	}
-
-	template <typename ComponentType>
-	typename ComponentCollectionImpl<ComponentType>::iterator GetComponentEndIterator()
-	{
-		auto collection = GetCollection(typeid(ComponentType));
-		assert(nullptr != collection);
-
-		auto concreteCollection = static_cast<ComponentCollectionImpl<ComponentType>*>(collection);
-		return concreteCollection->end();
-	}
-
-	template <typename ComponentType>
 	ComponentCollectionImpl<ComponentType>* GetComponentCollection()
 	{
 		return static_cast<ComponentCollectionImpl<ComponentType>*>(GetCollection(typeid(ComponentType)));
