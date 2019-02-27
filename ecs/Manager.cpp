@@ -60,38 +60,16 @@ void Manager::DestroyComponent(const ComponentHandle& handle)
 {
 	assert(handle.IsValid());
 
-	auto collection = GetCollection(handle.GetTypeIndex(), handle.GetOffset());
-	std::size_t offset = handle.GetOffset() % k_defaultComponentPoolSize;
-	collection->Destroy(offset);
+	auto collection = GetCollection(handle.GetTypeIndex());
+	collection->Destroy(handle.GetOffset());
 }
 
-IComponentCollection* Manager::FindCollectionToInsert(const std::type_index& typeIndex, int& storageIdx)
+IComponentCollection* Manager::GetCollection(const std::type_index& typeIndex)
 {
 	auto storageIt = m_componentStorages.find(typeIndex);
 	if (storageIt != m_componentStorages.end())
 	{
-		storageIdx = 0;
-		for (const auto& storage : storageIt->second)
-		{
-			if (!storage->IsFull())
-			{
-				return storage.get();
-			}
-
-			++storageIdx;
-		}
-	}
-
-	return nullptr;
-}
-
-IComponentCollection* Manager::GetCollection(const std::type_index& typeIndex, const std::size_t offset)
-{
-	auto storageIt = m_componentStorages.find(typeIndex);
-	if (storageIt != m_componentStorages.end())
-	{
-		std::size_t idx = offset / k_defaultComponentPoolSize;
-		return storageIt->second[idx].get();
+		return storageIt->second.get();
 	}
 
 	return nullptr;

@@ -18,7 +18,6 @@ class Manager
 	: public ILifecycleCallback
 {
 	using SystemPtr = std::unique_ptr<System>;
-	using ComponentStoragesType = std::vector<std::unique_ptr<IComponentCollection>>;
 
 public:
 	void Init() final;
@@ -46,10 +45,7 @@ public:
 		assert(!m_initialized);
 
 		// Register type storage
-		m_componentStorages.emplace(typeid(ComponentType), ComponentStoragesType());
-
-		// Create first storage
-		CreateNewStorage<ComponentType>();
+		m_componentStorages.emplace(typeid(ComponentType), std::make_unique<ComponentCollectionImpl<ComponentType>>());
 	}
 
 	template <class SystemType>
@@ -69,24 +65,23 @@ public:
 	template <typename ComponentType>
 	ComponentHandle CreateComponent(ComponentType*& result)
 	{
-		assert(m_componentStorages.find(typeid(ComponentType)) != m_componentStorages.end());
+		auto collection = GetCollection(typeid(ComponentType));
+		assert(nullptr != collection);
+		
+		auto insertedId = collection->Create();
+		result = static_cast<ComponentType*>(collection->Get(insertedId));
 
-		int storageIdx = 0;
-		auto storage = FindCollectionToInsert(typeid(ComponentType), storageIdx);
+		return ComponentHandle(typeid(ComponentType), insertedId);
+	}
 
-		// If storage for insertion not found - allocate new one
-		if (nullptr == storage)
-		{
-			storage = CreateNewStorage<ComponentType>();
-		}
+	template <typename ComponentType>
+	ComponentHandle CreateComponent()
+	{
+		auto collection = GetCollection(typeid(ComponentType));
+		assert(nullptr != collection);
 
-		// Storage must be created at this step
-		assert(nullptr != storage);
-
-		auto insertedId = storage->Create();
-		result = static_cast<ComponentType*>(storage->Get(insertedId));
-
-		return ComponentHandle(typeid(ComponentType), insertedId + storageIdx * k_defaultComponentPoolSize);
+		auto insertedId = collection->Create();
+		return ComponentHandle(typeid(ComponentType), insertedId);
 	}
 
 	void DestroyComponent(const ComponentHandle& handle);
@@ -94,96 +89,47 @@ public:
 	template <typename ComponentType>
 	ComponentType* GetComponent(const ComponentHandle& handle)
 	{
-		auto it = m_componentStorages.find(handle.GetTypeIndex());
-		if (it != m_componentStorages.end())
+		auto collection = GetCollection(handle.GetTypeIndex());
+		if (nullptr != collection)
 		{
-			std::size_t poolIndex = handle.GetOffset() / k_defaultComponentPoolSize;
-			std::size_t poolOffset = handle.GetOffset() % k_defaultComponentPoolSize;
-
-			return static_cast<ComponentType*>(it->second[poolIndex]->Get(poolOffset));
+			return static_cast<ComponentType*>(collection->Get(handle.GetOffset()));
 		}
 
 		return nullptr;
 	}
 
 	template <typename ComponentType>
-	ComponentHandle CreateComponent()
+	typename ComponentCollectionImpl<ComponentType>::iterator GetComponentsIterator()
 	{
-		assert(m_componentStorages.find(typeid(ComponentType)) != m_componentStorages.end());
+		auto collection = GetCollection(typeid(ComponentType));
+		assert(nullptr != collection);
 
-		int storageIdx = 0;
-		auto storage = FindCollectionToInsert(typeid(ComponentType), storageIdx);
-
-		// If storage for insertion not found - allocate new one
-		if (nullptr == storage)
-		{
-			storage = CreateNewStorage<ComponentType>();
-		}
-
-		// Storage must be created at this step
-		assert(nullptr != storage);
-
-		auto insertedId = storage->Create();
-		return ComponentHandle(typeid(ComponentType), insertedId + storageIdx * k_defaultComponentPoolSize);
+		auto concreteCollection = static_cast<ComponentCollectionImpl<ComponentType>*>(collection);
+		return concreteCollection->begin();
 	}
 
 	template <typename ComponentType>
-	typename ComponentCollectionImpl<ComponentType, 1024U>::iterator GetComponentsIterator()
+	typename ComponentCollectionImpl<ComponentType>::iterator GetComponentEndIterator()
 	{
-		auto storageIt = m_componentStorages.find(typeid(ComponentType));
-		if (storageIt != m_componentStorages.end())
-		{
-			auto end = ComponentCollectionImpl<ComponentType, 1024U>::iterator();
+		auto collection = GetCollection(typeid(ComponentType));
+		assert(nullptr != collection);
 
-			for (std::size_t i = 0; i < storageIt->second.size(); ++i)
-			{
-				auto ptr = storageIt->second[i].get();
-				auto containerPtr = static_cast<ComponentCollectionImpl<ComponentType, 1024>*>(ptr);
-
-				auto it = containerPtr->begin();
-				end = containerPtr->end();
-				if (it != end)
-				{
-					return it;
-				}
-			}
-
-			return end;
-		}
-
-		return ComponentCollectionImpl<ComponentType, 1024>::iterator();
-	}
-
-	/*template <typename ComponentType>
-	iterator<ComponentType> GetComponentEndIterator()
-	{
-		return iterator<ComponentType>(this, ComponentHandle(typeid(nullptr), 0U));
+		auto concreteCollection = static_cast<ComponentCollectionImpl<ComponentType>*>(collection);
+		return concreteCollection->end();
 	}
 
 	template <typename ComponentType>
-	iterator<ComponentType> GetNextComponentIterator(const ComponentHandle& handle)
+	ComponentCollectionImpl<ComponentType>* GetComponentCollection()
 	{
-		return iterator<ComponentType>(this, ComponentHandle(typeid(nullptr), 0U));
-	}*/
+		return static_cast<ComponentCollectionImpl<ComponentType>*>(GetCollection(typeid(ComponentType)));
+	}
 
 private:
 	void RegisterSystemInternal(const std::type_index& typeIndex, SystemPtr&& system);
-
-	IComponentCollection* FindCollectionToInsert(const std::type_index& typeIndex, int& storageIdx);
-	IComponentCollection* GetCollection(const std::type_index& typeIndex, const std::size_t offset);
-
-	template <typename ComponentType>
-	IComponentCollection* CreateNewStorage()
-	{
-		auto storageIt = m_componentStorages.find(typeid(ComponentType));
-		assert(storageIt != m_componentStorages.end());
-
-		storageIt->second.emplace_back(std::make_unique<ComponentCollectionImpl<ComponentType, k_defaultComponentPoolSize>>());
-		return storageIt->second.back().get();
-	}
+	IComponentCollection* GetCollection(const std::type_index& typeIndex);
 
 private:
-	std::unordered_map<std::type_index, ComponentStoragesType> m_componentStorages;
+	std::unordered_map<std::type_index, std::unique_ptr<IComponentCollection>> m_componentStorages;
 	std::unordered_map<std::type_index, SystemPtr> m_systems;
 	bool m_initialized = false;
 };

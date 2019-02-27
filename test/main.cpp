@@ -32,69 +32,39 @@ int main()
 	manager.Init();
 
 	// Fill all required space
-	ecs::ComponentHandle handles[100];
-	StaticMesh* meshes[100];
+	ecs::ComponentHandle handles[103];
+	StaticMesh* meshes[103];
 	for (int i = 0; i < 100; ++i)
 	{
 		handles[i] = manager.CreateComponent<StaticMesh>(meshes[i]);
 		meshes[i]->id = i;
 	}
 
-	meshes[5]->colorA = 25.f;
-	meshes[5]->colorX = 35.f;
-	meshes[5]->colorY = 45.f;
-	meshes[5]->colorZ = 56.f;
-
 	manager.DestroyComponent(handles[50]);
 	manager.DestroyComponent(handles[51]);
-	manager.CreateComponent<StaticMesh>();
-	manager.CreateComponent<StaticMesh>();
-	manager.CreateComponent<StaticMesh>();
+	manager.CreateComponent<StaticMesh>(meshes[100]);
+	manager.CreateComponent<StaticMesh>(meshes[101]);
+	manager.CreateComponent<StaticMesh>(meshes[102]);
+	meshes[100]->id = 100;
+	meshes[101]->id = 101;
+	meshes[102]->id = 102;
 	manager.DestroyComponent(handles[0]);
 	manager.DestroyComponent(handles[1]);
 	manager.DestroyComponent(handles[2]);
 
 	auto testMesh = manager.GetComponent<StaticMesh>(handles[25]);
-
-	std::string captureMember = "Capture member";
-	auto testLambda = [&captureMember](const int testVar1, std::string& testVar2) -> int
-	{
-		testVar2 += "Lambda called!";
-		captureMember += " LAMBDA CALL";
-		return testVar1 + 5;
-	};
-
-	TestClass classInstance;
-	using sigType = int(const int, std::string&);
-	auto wrapper = WrapLambda<sigType>(testLambda);
-	auto wrapper2 = WrapMemberFunction(&TestClass::TestMethod, &classInstance);
-	auto wrapper3 = WrapFreeFunction(&testFreeFunction);
-
-	auto t(testFreeFunction);
-
-	std::string test = "Test string";
-	std::string test2 = "Test string";
-	int lambda_result = wrapper->Invoke(15, test);
-	int memfn_result = wrapper2->Invoke(35, test2);
-	int freefn_result = wrapper3->Invoke(25, test2);
-	/*std::cout << test << std::endl;*/
-
-	//testFreeFunction(15, test);
+	testMesh->id = 2500;
 
 	// Go through test iterations
 	for (int i = 0; i < 1; ++i)
 	{
 		std::cout << "ECS iteration start" << std::endl;
 
-		auto it = manager.GetComponentsIterator<StaticMesh>();
-
-		/*auto end = manager.GetComponentEndIterator<StaticMesh>();
-		int j = 0;
-		for (auto it = manager.GetComponentsIterator<StaticMesh>(); it != end; ++it)
+		auto& staticMeshes = *manager.GetComponentCollection<StaticMesh>();
+		for (const auto& mesh : staticMeshes)
 		{
-			std::cout << "Static mesh iteration " << j << std::endl;
-			++j;
-		}*/
+			std::cout << "Iterating static mesh [" << mesh.id << "]" << std::endl;
+		}
 
 		manager.Update();
 		manager.Render();

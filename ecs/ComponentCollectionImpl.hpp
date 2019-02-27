@@ -4,6 +4,7 @@
 #include <set>
 #include <cassert>
 #include <array>
+#include <map>
 
 namespace ecs
 {
@@ -12,14 +13,23 @@ template <typename ComponentType>
 class ComponentCollectionImpl
 	: public IComponentCollection
 {
-	using StorageType = std::array<ComponentType, 1024>;
+	static constexpr const std::size_t k_chunkSize = 1024U;
+	using StorageType = std::array<ComponentType, k_chunkSize>;
 	using CollectionType = ComponentCollectionImpl<ComponentType>;
 
 public:
+	ComponentCollectionImpl()
+	{
+		// Create first storage
+		m_chunks.emplace(std::piecewise_construct, std::forward_as_tuple(0U), std::forward_as_tuple());
+	}
+
 	~ComponentCollectionImpl()
 	{
-		for (auto& chunk : m_chunks)
+		// Release all alive objects (call destructors)
+		for (auto& chunkData : m_chunks)
 		{
+			auto& chunk = chunkData.second;
 			for (std::size_t i = 0; i < chunk.usedSpace; ++i)
 			{
 				if (chunk.holesList.find(i) == chunk.holesList.end())
@@ -29,6 +39,9 @@ public:
 			}
 		}
 	}
+
+	ComponentCollectionImpl(const ComponentCollectionImpl&) = delete;
+	ComponentCollectionImpl& operator=(const ComponentCollectionImpl&) = delete;
 
 	struct iterator
 	{
@@ -57,8 +70,9 @@ public:
 
 		iterator& operator++()
 		{
-			std::size_t nextIndex = collection->GetNextAliveIndex(index);
+			std::size_t nextIndex = collection->GetNextAliveIndex(0U, index + 1);
 			curr += (nextIndex - index);
+			index = nextIndex;
 			return *this;
 		}
 
@@ -84,29 +98,57 @@ public:
 
 	std::size_t Create() override
 	{
-		std::size_t insertedIndex = 0;
+		static const std::size_t k_notInsertedIndex = static_cast<std::size_t>(-1);
+		std::size_t insertedIndex = k_notInsertedIndex;
+		Chunk& selectedChunk = m_chunks[0U];
 
-		// If there are holes - fill them first to keep data close to each other
-		if (!m_holesList.empty())
+		for (auto& chunkData : m_chunks)
 		{
-			// Pick first hole to fill
-			auto startIt = m_holesList.begin();
-			insertedIndex = *startIt;
-			m_holesList.erase(startIt);
-		}
-		else if (m_usedSpace < CollectionSize)
-		{
-			// If not all space is allocated - put new element at the end
-			insertedIndex = m_usedSpace;
-			++m_usedSpace;
+			selectedChunk = chunkData.second;
+
+			// If there is first alive index -> chunk has space for an item
+			if (selectedChunk.firstFreeIndex < k_chunkSize)
+			{
+				// Place for insertion found, insert here
+				insertedIndex = chunkData.first * k_chunkSize + selectedChunk.firstFreeIndex;
+
+				// Remove hole if it exists
+				auto& holesList = selectedChunk.holesList;
+				auto holeIt = holesList.find(selectedChunk.firstFreeIndex);
+				if (holeIt != holesList.end())
+				{
+					holesList.erase(holeIt);
+				}
+
+				break;
+			}
 		}
 
-		new (&m_storage[insertedIndex]) ComponentType();
+		// Element not created -> create new storage then
+		if (insertedIndex == k_notInsertedIndex)
+		{
+			std::size_t newChunkId = m_chunks.size();
+			insertedIndex = newChunkId * k_chunkSize;
+
+			m_chunks.emplace(std::piecewise_construct, std::forward_as_tuple(newChunkId), std::forward_as_tuple());
+			selectedChunk = m_chunks[newChunkId];
+			selectedChunk.firstFreeIndex = 1U;
+		}
+
+		std::size_t chunkId = insertedIndex / k_chunkSize;
+		std::size_t chunkOffset = insertedIndex % k_chunkSize;
+		new (&selectedChunk.data[chunkOffset]) ComponentType();
+
+		// Increase used space counter
+		if (chunkOffset >= selectedChunk.usedSpace)
+		{
+			selectedChunk.usedSpace = chunkOffset + 1;
+		}
 
 		// Overwrite first alive index for iterator
-		if (insertedIndex < m_firstAliveIndex)
+		if (chunkOffset == selectedChunk.firstFreeIndex)
 		{
-			m_firstAliveIndex = result.first;
+			selectedChunk.firstFreeIndex = GetNextFreeIndex(chunkId, chunkOffset);
 		}
 
 		return insertedIndex;
@@ -124,9 +166,9 @@ public:
 			chunk.data[chunkId.second].~ComponentType();
 
 			// Overwrite first alive index
-			if (chunkId.second == chunk.firstAliveIndex)
+			if (chunkId.second < chunk.firstFreeIndex)
 			{
-				chunk.firstAliveIndex = GetNextAliveIndex(chunkId.second);
+				chunk.firstFreeIndex = chunkId.second;
 			}
 		}
 	}
@@ -140,39 +182,64 @@ public:
 		return &chunk.data[chunkId.second];
 	}
 
-	std::size_t GetNextAliveIndex(const std::size_t from) const
+	std::size_t GetNextAliveIndex(const std::size_t chunkId, const std::size_t offset) const
 	{
-		auto chunkId = SplitObjectId(from);
+		auto it = m_chunks.find(chunkId);
+		const auto& chunk = it->second;
 
-		for (std::size_t i = chunkId.first; i < m_chunks.size(); ++i)
+		for (std::size_t i = offset; i < chunk.usedSpace; ++i)
 		{
-			for (std::size_t j = from + 1; i < m_usedSpace; ++i)
+			if (chunk.holesList.find(i) == chunk.holesList.end())
 			{
-				if (m_holesList.find(i) == m_holesList.end())
-				{
-					return i;
-				}
+				return i;
 			}
 		}
 
-		return static_cast<std::size_t>(-1);
+		return k_chunkSize;
+	}
+
+	std::size_t GetNextFreeIndex(const std::size_t chunkId, const std::size_t offset) const
+	{
+		auto it = m_chunks.find(chunkId);
+		const auto& chunk = it->second;
+
+		for (std::size_t i = offset + 1; i < chunk.usedSpace; ++i)
+		{
+			if (chunk.holesList.find(i) != chunk.holesList.end())
+			{
+				return i;
+			}
+		}
+
+		return chunk.usedSpace;
 	}
 
 	iterator begin()
 	{
-		auto arrayIt = (m_firstAliveIndex < CollectionSize) ? m_storage.begin() + m_firstAliveIndex : m_storage.end();
-		return iterator(this, arrayIt, m_firstAliveIndex);
+		for (std::size_t i = 0; i < m_chunks.size(); ++i)
+		{
+			auto& chunk = m_chunks[i];
+			std::size_t firstAliveIndex = GetNextAliveIndex(i, 0U);
+
+			if (firstAliveIndex < k_chunkSize)
+			{
+				auto arrayIt = chunk.data.begin() + firstAliveIndex;
+				return iterator(this, arrayIt, k_chunkSize * i + firstAliveIndex);
+			}
+		}
+
+		return end();
 	}
 
 	iterator end()
 	{
-		return iterator(this, m_storage.end(), CollectionSize);
+		return iterator(this, m_chunks[m_chunks.size() - 1].data.end(), k_chunkSize);
 	}
 
 private:
-	std::pair<std::size_t, std::size_t> SplitObjectId(const std::size_t id)
+	std::pair<std::size_t, std::size_t> SplitObjectId(const std::size_t id) const
 	{
-		return std::make_pair(id / 1024, id % 1024);
+		return std::make_pair(id / k_chunkSize, id % k_chunkSize);
 	}
 
 private:
@@ -180,11 +247,11 @@ private:
 	{
 		StorageType data;
 		std::size_t usedSpace = 0U;
-		std::size_t firstAliveIndex = 0U;
+		std::size_t firstFreeIndex = 0U;
 		std::size_t lastAliveIndex = 0U;	// Unused (reserved for reverse iterators)
 		std::set<std::size_t> holesList;
 	};
-	std::list<Chunk> m_chunks;
+	std::map<std::size_t, Chunk> m_chunks;
 };
 
 } // namespace ecs
