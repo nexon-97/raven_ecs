@@ -4,6 +4,24 @@
 #include "test/UISystem.hpp"
 #include "test/StaticMesh.hpp"
 
+#include "function/FunctionFactory.hpp"
+
+int testFreeFunction(const int testVar1, std::string& testVar2)
+{
+	testVar2 += "Lambda called!";
+	return testVar1 + 5;
+}
+
+class TestClass
+{
+public:
+	int TestMethod(const int testVar1, std::string& testVar2)
+	{
+		testVar2 += "Memfun called!";
+		return testVar1 + 15;
+	}
+};
+
 int main()
 {
 	ecs::Manager manager;
@@ -37,6 +55,31 @@ int main()
 	manager.DestroyComponent(handles[2]);
 
 	auto testMesh = manager.GetComponent<StaticMesh>(handles[25]);
+
+	std::string captureMember = "Capture member";
+	auto testLambda = [&captureMember](const int testVar1, std::string& testVar2) -> int
+	{
+		testVar2 += "Lambda called!";
+		captureMember += " LAMBDA CALL";
+		return testVar1 + 5;
+	};
+
+	TestClass classInstance;
+	using sigType = int(const int, std::string&);
+	auto wrapper = WrapLambda<sigType>(testLambda);
+	auto wrapper2 = WrapMemberFunction(&TestClass::TestMethod, &classInstance);
+	auto wrapper3 = WrapFreeFunction(&testFreeFunction);
+
+	auto t(testFreeFunction);
+
+	std::string test = "Test string";
+	std::string test2 = "Test string";
+	int lambda_result = wrapper->Invoke(15, test);
+	int memfn_result = wrapper2->Invoke(35, test2);
+	int freefn_result = wrapper3->Invoke(25, test2);
+	/*std::cout << test << std::endl;*/
+
+	//testFreeFunction(15, test);
 
 	// Go through test iterations
 	for (int i = 0; i < 1; ++i)
