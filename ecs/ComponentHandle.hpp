@@ -10,6 +10,8 @@ struct ComponentHandle
 	static const std::type_index k_invalidSystemId;
 
 public:
+	static const ComponentHandle k_invalidHandle;
+
 	ComponentHandle()
 		: typeId(k_invalidSystemId)
 		, objectId(0U)

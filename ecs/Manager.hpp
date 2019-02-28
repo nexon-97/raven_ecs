@@ -40,12 +40,13 @@ public:
 	}
 
 	template <typename ComponentType>
-	void RegisterComponentType()
+	void RegisterComponentType(const std::string& name)
 	{
 		assert(!m_initialized);
 
 		// Register type storage
 		m_componentStorages.emplace(typeid(ComponentType), std::make_unique<ComponentCollectionImpl<ComponentType>>());
+		m_componentNames.emplace(name, typeid(ComponentType));
 	}
 
 	template <class SystemType>
@@ -80,10 +81,10 @@ public:
 		auto collection = GetCollection(typeid(ComponentType));
 		assert(nullptr != collection);
 
-		auto insertedId = collection->Create();
-		return ComponentHandle(typeid(ComponentType), insertedId);
+		return CreateComponentInternal(typeIndexIt->second, collection);
 	}
 
+	ComponentHandle CreateComponentByName(const std::string& name);
 	void DestroyComponent(const ComponentHandle& handle);
 
 	template <typename ComponentType>
@@ -107,10 +108,12 @@ public:
 private:
 	void RegisterSystemInternal(const std::type_index& typeIndex, SystemPtr&& system);
 	IComponentCollection* GetCollection(const std::type_index& typeIndex);
+	ComponentHandle CreateComponentInternal(const std::type_index& typeIndex, IComponentCollection* collection);
 
 private:
 	std::unordered_map<std::type_index, std::unique_ptr<IComponentCollection>> m_componentStorages;
 	std::unordered_map<std::type_index, SystemPtr> m_systems;
+	std::unordered_map<std::string, std::type_index> m_componentNames;
 	bool m_initialized = false;
 };
 

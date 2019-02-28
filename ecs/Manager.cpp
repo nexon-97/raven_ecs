@@ -4,6 +4,7 @@ namespace ecs
 {
 
 const std::type_index ComponentHandle::k_invalidSystemId = typeid(nullptr);
+const ComponentHandle ComponentHandle::k_invalidHandle = ComponentHandle(ComponentHandle::k_invalidSystemId, 0U);
 
 void Manager::RegisterSystemInternal(const std::type_index& typeIndex, SystemPtr&& system)
 {
@@ -62,6 +63,26 @@ void Manager::DestroyComponent(const ComponentHandle& handle)
 
 	auto collection = GetCollection(handle.GetTypeIndex());
 	collection->Destroy(handle.GetOffset());
+}
+
+ComponentHandle Manager::CreateComponentByName(const std::string& name)
+{
+	auto typeIndexIt = m_componentNames.find(name);
+	if (typeIndexIt != m_componentNames.end())
+	{
+		auto collection = GetCollection(typeIndexIt->second);
+		assert(nullptr != collection);
+
+		return CreateComponentInternal(typeIndexIt->second, collection);
+	}
+
+	return ComponentHandle::k_invalidHandle;
+}
+
+ComponentHandle Manager::CreateComponentInternal(const std::type_index& typeIndex, IComponentCollection* collection)
+{
+	auto insertedId = collection->Create();
+	return ComponentHandle(typeIndex, insertedId);
 }
 
 IComponentCollection* Manager::GetCollection(const std::type_index& typeIndex)
