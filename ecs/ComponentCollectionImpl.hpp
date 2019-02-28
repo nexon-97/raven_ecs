@@ -18,7 +18,7 @@ class ComponentCollectionImpl
 	struct ComponentData
 	{
 		ComponentType component;
-		std::size_t entityId = 0;
+		std::size_t entityId = 0U;
 		bool isEnabled = true;
 	};
 	using StorageType = std::array<ComponentData, k_chunkSize>;
@@ -35,6 +35,7 @@ public:
 	~ComponentCollectionImpl()
 	{
 		// Release all alive objects (call destructors)
+		std::size_t chunkId = 0U;
 		for (auto& chunkData : m_chunks)
 		{
 			auto& chunk = chunkData.second;
@@ -42,9 +43,29 @@ public:
 			{
 				if (chunk.holesList.find(i) == chunk.holesList.end())
 				{
-					chunk.data[i].component.~ComponentType();
+					auto& componentData = chunk.data[i];
+					std::size_t componentIndex = k_chunkSize * chunkId + i;
+
+					// Invoke disable callbacks, because each component is actually disabled before destruction
+					if (componentData.isEnabled && componentData.entityId != 0U)
+					{
+						for (auto callback : m_callbacks.disableCallbacks)
+						{
+							callback->OnComponentDisabled(&componentData.component, ComponentHandle(typeid(ComponentType), componentIndex));
+						}
+					}
+
+					// Invoke destroy callbacks
+					for (auto callback : m_callbacks.destroyCallbacks)
+					{
+						callback->OnComponentDestroyed(&componentData.component, ComponentHandle(typeid(ComponentType), componentIndex));
+					}
+
+					componentData.component.~ComponentType();
 				}
 			}
+
+			++chunkId;
 		}
 	}
 
@@ -209,7 +230,29 @@ public:
 		assert(chunkId.first < m_chunks.size());
 
 		auto& chunk = m_chunks[chunkId.first];
-		chunk.data[chunkId.second].entityId = entityId;
+		auto& componentData = chunk.data[chunkId.second];
+		std::size_t lastEntityId = componentData.entityId;
+		componentData.entityId = entityId;
+
+		if (componentData.isEnabled && lastEntityId != entityId)
+		{
+			if (entityId == 0U)
+			{
+				// Invoke disable callbacks, because component was removed from its entity, and was enabled by then
+				for (auto callback : m_callbacks.disableCallbacks)
+				{
+					callback->OnComponentDisabled(&componentData.component, ComponentHandle(typeid(ComponentType), index));
+				}
+			}
+			else if (lastEntityId == 0U)
+			{
+				// Component had no owner, but now has, so should call enable callback
+				for (auto callback : m_callbacks.enableCallbacks)
+				{
+					callback->OnComponentEnabled(&componentData.component, ComponentHandle(typeid(ComponentType), index));
+				}
+			}
+		}
 	}
 
 	std::size_t GetItemEntityId(const std::size_t index) const override
