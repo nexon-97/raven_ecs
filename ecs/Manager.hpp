@@ -105,9 +105,12 @@ public:
 		return static_cast<ComponentCollectionImpl<ComponentType>*>(GetCollection(typeid(ComponentType)));
 	}
 
+	void SetComponentEntityId(const ComponentHandle& handle, const std::size_t id);
+	std::size_t GetComponentEntityId(const ComponentHandle& handle) const;
+
 private:
 	void RegisterSystemInternal(const std::type_index& typeIndex, SystemPtr&& system);
-	IComponentCollection* GetCollection(const std::type_index& typeIndex);
+	IComponentCollection* GetCollection(const std::type_index& typeIndex) const;
 	ComponentHandle CreateComponentInternal(const std::type_index& typeIndex, IComponentCollection* collection);
 
 private:

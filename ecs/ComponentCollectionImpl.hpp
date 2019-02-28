@@ -1,5 +1,6 @@
 #pragma once
 #include "IComponentCollection.hpp"
+#include "IComponentCollectionCallback.hpp"
 
 #include <set>
 #include <cassert>
@@ -14,8 +15,15 @@ class ComponentCollectionImpl
 	: public IComponentCollection
 {
 	static constexpr const std::size_t k_chunkSize = 1024U;
-	using StorageType = std::array<ComponentType, k_chunkSize>;
+	struct ComponentData
+	{
+		ComponentType component;
+		std::size_t entityId = 0;
+		bool isEnabled = true;
+	};
+	using StorageType = std::array<ComponentData, k_chunkSize>;
 	using CollectionType = ComponentCollectionImpl<ComponentType>;
+	using CallbackType = IComponentCollectionCallback<ComponentType>;
 
 public:
 	ComponentCollectionImpl()
@@ -34,12 +42,13 @@ public:
 			{
 				if (chunk.holesList.find(i) == chunk.holesList.end())
 				{
-					chunk.data[i].~ComponentType();
+					chunk.data[i].component.~ComponentType();
 				}
 			}
 		}
 	}
 
+	// Disable collection copy
 	ComponentCollectionImpl(const ComponentCollectionImpl&) = delete;
 	ComponentCollectionImpl& operator=(const ComponentCollectionImpl&) = delete;
 
@@ -60,7 +69,7 @@ public:
 
 		reference operator*()
 		{
-			return *curr;
+			return (*curr).component;
 		}
 
 		pointer operator->()
@@ -137,7 +146,7 @@ public:
 
 		std::size_t chunkId = insertedIndex / k_chunkSize;
 		std::size_t chunkOffset = insertedIndex % k_chunkSize;
-		new (&selectedChunk.data[chunkOffset]) ComponentType();
+		new (&selectedChunk.data[chunkOffset].component) ComponentType();
 
 		// Increase used space counter
 		if (chunkOffset >= selectedChunk.usedSpace)
@@ -149,6 +158,12 @@ public:
 		if (chunkOffset == selectedChunk.firstFreeIndex)
 		{
 			selectedChunk.firstFreeIndex = GetNextFreeIndex(chunkId, chunkOffset);
+		}
+
+		// Invoke create callbacks
+		for (auto callback : m_callbacks.createCallbacks)
+		{
+			callback->OnComponentCreated(&selectedChunk.data[chunkOffset].component, ComponentHandle(typeid(ComponentType), insertedIndex));
 		}
 
 		return insertedIndex;
@@ -163,7 +178,13 @@ public:
 		auto insertResult = chunk.holesList.insert(chunkId.second);
 		if (insertResult.second)
 		{
-			chunk.data[chunkId.second].~ComponentType();
+			// Invoke destroy callbacks
+			for (auto callback : m_callbacks.destroyCallbacks)
+			{
+				callback->OnComponentDestroyed(&chunk.data[chunkId.second].component, ComponentHandle(typeid(ComponentType), index));
+			}
+
+			chunk.data[chunkId.second].component.~ComponentType();
 
 			// Overwrite first alive index
 			if (chunkId.second < chunk.firstFreeIndex)
@@ -179,7 +200,26 @@ public:
 		assert(chunkId.first < m_chunks.size());
 
 		auto& chunk = m_chunks[chunkId.first];
-		return &chunk.data[chunkId.second];
+		return &chunk.data[chunkId.second].component;
+	}
+
+	void SetItemEntityId(const std::size_t index, const std::size_t entityId) override
+	{
+		auto chunkId = SplitObjectId(index);
+		assert(chunkId.first < m_chunks.size());
+
+		auto& chunk = m_chunks[chunkId.first];
+		chunk.data[chunkId.second].entityId = entityId;
+	}
+
+	std::size_t GetItemEntityId(const std::size_t index) const override
+	{
+		auto chunkId = SplitObjectId(index);
+		assert(chunkId.first < m_chunks.size());
+
+		auto chunkIt = m_chunks.find(chunkId.first);
+		auto& chunk = chunkIt->second;
+		return chunk.data[chunkId.second].entityId;
 	}
 
 	std::size_t GetNextAliveIndex(const std::size_t chunkId, const std::size_t offset) const
@@ -212,6 +252,12 @@ public:
 		}
 
 		return chunk.usedSpace;
+	}
+
+	// Registers callback in collection. Callback cannot be removed currently.
+	void RegisterCallback(CallbackType* callback)
+	{
+		m_callbacks.RegisterCallback(callback);
 	}
 
 	iterator begin()
@@ -251,7 +297,49 @@ private:
 		std::size_t lastAliveIndex = 0U;	// Unused (reserved for reverse iterators)
 		std::set<std::size_t> holesList;
 	};
+
+	struct CallbacksPack
+	{
+		struct PrioritySorter
+		{
+			bool operator()(CallbackType* lhs, CallbackType* rhs) const
+			{
+				return lhs->GetPriority() > rhs->GetPriority();
+			}
+		};
+		using CallbackCollection = std::set<CallbackType*, PrioritySorter>;
+
+		CallbackCollection createCallbacks;
+		CallbackCollection destroyCallbacks;
+		CallbackCollection enableCallbacks;
+		CallbackCollection disableCallbacks;
+
+		void RegisterCallback(CallbackType* callback)
+		{
+			if (callback->WantsCreateNotifications())
+			{
+				createCallbacks.insert(callback);
+			}
+
+			if (callback->WantsDestroyNotifications())
+			{
+				destroyCallbacks.insert(callback);
+			}
+
+			if (callback->WantsEnableNotifications())
+			{
+				enableCallbacks.insert(callback);
+			}
+
+			if (callback->WantsDisableNotifications())
+			{
+				disableCallbacks.insert(callback);
+			}
+		}
+	};
+
 	std::map<std::size_t, Chunk> m_chunks;
+	CallbacksPack m_callbacks;
 };
 
 } // namespace ecs
