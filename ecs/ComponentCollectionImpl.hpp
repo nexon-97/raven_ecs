@@ -76,9 +76,9 @@ public:
 	struct iterator
 	{
 		using iterator_category = std::forward_iterator_tag;
-		using value_type = ComponentType;
-		using pointer = ComponentType*;
-		using reference = ComponentType&;
+		using value_type = ComponentData;
+		using pointer = ComponentData *;
+		using reference = ComponentData &;
 		using difference_type = std::ptrdiff_t;
 
 		iterator() = default;
@@ -90,7 +90,7 @@ public:
 
 		reference operator*()
 		{
-			return (*curr).component;
+			return (*curr);
 		}
 
 		pointer operator->()
