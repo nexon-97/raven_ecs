@@ -60,7 +60,6 @@ void Manager::Render()
 
 void Manager::DestroyComponent(const ComponentHandle& handle)
 {
-	assert(m_initialized);
 	assert(handle.IsValid());
 
 	auto collection = GetCollection(handle.GetTypeIndex());
@@ -69,8 +68,6 @@ void Manager::DestroyComponent(const ComponentHandle& handle)
 
 ComponentHandle Manager::CreateComponentByName(const std::string& name)
 {
-	assert(m_initialized);
-
 	auto typeIndexIt = m_componentNames.find(name);
 	if (typeIndexIt != m_componentNames.end())
 	{
@@ -85,8 +82,6 @@ ComponentHandle Manager::CreateComponentByName(const std::string& name)
 
 ComponentHandle Manager::CreateComponentInternal(const std::type_index& typeIndex, IComponentCollection* collection)
 {
-	assert(m_initialized);
-
 	auto insertedId = collection->Create();
 	return ComponentHandle(typeIndex, insertedId);
 }
@@ -104,8 +99,6 @@ IComponentCollection* Manager::GetCollection(const std::type_index& typeIndex) c
 
 void Manager::SetComponentEntityId(const ComponentHandle& handle, const std::size_t id)
 {
-	assert(m_initialized);
-
 	auto collection = GetCollection(handle.GetTypeIndex());
 	collection->SetItemEntityId(handle.GetOffset(), id);
 }
@@ -114,6 +107,11 @@ std::size_t Manager::GetComponentEntityId(const ComponentHandle& handle) const
 {
 	auto collection = GetCollection(handle.GetTypeIndex());
 	return collection->GetItemEntityId(handle.GetOffset());
+}
+
+EntitiesCollection& Manager::GetEntitiesCollection()
+{
+	return m_entitiesCollection;
 }
 
 } // namespace ecs

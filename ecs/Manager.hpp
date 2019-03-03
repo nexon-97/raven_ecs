@@ -82,7 +82,7 @@ public:
 		auto collection = GetCollection(typeid(ComponentType));
 		assert(nullptr != collection);
 
-		return CreateComponentInternal(typeIndexIt->second, collection);
+		return CreateComponentInternal(typeid(ComponentType), collection);
 	}
 
 	ComponentHandle CreateComponentByName(const std::string& name);
@@ -108,6 +108,8 @@ public:
 
 	void SetComponentEntityId(const ComponentHandle& handle, const std::size_t id);
 	std::size_t GetComponentEntityId(const ComponentHandle& handle) const;
+
+	EntitiesCollection& GetEntitiesCollection();
 
 private:
 	void RegisterSystemInternal(const std::type_index& typeIndex, SystemPtr&& system);

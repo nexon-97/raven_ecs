@@ -2,11 +2,13 @@
 local isStandaloneProject = (nil == EngineRootLocation)
 if isStandaloneProject then
 	EngineRootLocation = "../"
+	
+	defines { "OS_WINDOWS" } 
 end
 
 project "ecs"
 	if isStandaloneProject then
-		kind "ConsoleApp"
+		kind "WindowedApp"
 	else
 		kind "StaticLib"
 	end
@@ -15,7 +17,17 @@ project "ecs"
 	location ("../prj/".._ACTION)
 
 	files { "../**.cpp", "../**.hpp" }
-	includedirs { "../." }
+	includedirs
+	{
+		"../.",
+		"../externals/sdl2/include",
+	}
+	libdirs
+	{
+		"../externals/sdl2/lib",
+	}
+	
+	links { "SDL2" }
 	
 	if not isStandaloneProject then
 		excludes { "../test/**" }

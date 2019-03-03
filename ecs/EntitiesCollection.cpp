@@ -26,4 +26,24 @@ void EntitiesCollection::DestroyEntity(const uint32_t id)
 	m_entities[id].isAlive = false;
 }
 
+void EntitiesCollection::AddComponent(Entity& entity, const ComponentHandle& handle)
+{
+	const int typeMask = 1 << 10;
+	entity.componentsMask |= typeMask;
+}
+
+void EntitiesCollection::RemoveComponent(Entity& entity, const ComponentHandle& handle)
+{
+	const int typeMask = 1 << 10;
+	entity.componentsMask ^= typeMask;
+}
+
+bool EntitiesCollection::HasComponent(Entity& entity, const std::size_t componentType)
+{
+	const int typeMask = 1 << 10;
+	bool hasComponent = entity.componentsMask & typeMask;
+
+	return hasComponent;
+}
+
 } // namespace ecs
