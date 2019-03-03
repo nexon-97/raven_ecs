@@ -27,7 +27,7 @@ int main()
 	ecs::Manager manager;
 
 	manager.RegisterSystem<UISystem>();
-	manager.RegisterComponentType<StaticMesh>();
+	manager.RegisterComponentType<StaticMesh>("StaticMesh");
 
 	manager.Init();
 
@@ -63,7 +63,7 @@ int main()
 		auto& staticMeshes = *manager.GetComponentCollection<StaticMesh>();
 		for (const auto& mesh : staticMeshes)
 		{
-			std::cout << "Iterating static mesh [" << mesh.id << "]" << std::endl;
+			std::cout << "Iterating static mesh [" << "]" << std::endl;
 		}
 
 		manager.Update();

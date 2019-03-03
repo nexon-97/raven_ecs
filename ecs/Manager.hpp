@@ -8,6 +8,7 @@
 #include "ComponentCollectionImpl.hpp"
 #include "ILifecycleCallback.hpp"
 #include "System.hpp"
+#include "EntitiesCollection.hpp"
 
 namespace ecs
 {
@@ -117,6 +118,7 @@ private:
 	std::unordered_map<std::type_index, std::unique_ptr<IComponentCollection>> m_componentStorages;
 	std::unordered_map<std::type_index, SystemPtr> m_systems;
 	std::unordered_map<std::string, std::type_index> m_componentNames;
+	EntitiesCollection m_entitiesCollection;
 	bool m_initialized = false;
 };
 
