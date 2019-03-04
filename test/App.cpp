@@ -43,12 +43,6 @@ bool App::Init()
 
 	m_ecsManager.Init();
 
-	//Create a thousand entities
-	for (int i = 0; i < 1000; ++i)
-	{
-		m_ecsManager.GetEntitiesCollection().CreateEntity();
-	}
-
 	// Fill all required space
 	/*ecs::ComponentHandle handles[103];
 	StaticMesh* meshes[103];

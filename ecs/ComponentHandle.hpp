@@ -1,49 +1,47 @@
 #pragma once
-#include <type_traits>
-#include <typeindex>
+#include <cstdint>
 
 namespace ecs
 {
 
+struct ComponentHandleInternal
+{
+	static const uint8_t k_invalidTypeId;
+
+	uint32_t objectId;
+	uint8_t typeId;
+};
+
 struct ComponentHandle
 {
-	static const std::type_index k_invalidSystemId;
-
 public:
-	static const ComponentHandle k_invalidHandle;
-
-	ComponentHandle()
-		: typeId(k_invalidSystemId)
-		, objectId(0U)
-	{}
-
-	explicit ComponentHandle(const std::type_index& typeId, const std::size_t objectId)
-		: typeId(typeId)
-		, objectId(objectId)
+	ComponentHandle() = default;
+	explicit ComponentHandle(const ComponentHandleInternal* handle)
+		: m_handle(handle)
 	{}
 
 	bool operator==(const ComponentHandle& other) const
 	{
-		return typeId == other.typeId && objectId == other.objectId;
+		return m_handle == other.m_handle;
 	}
 
 	bool IsValid() const
 	{
-		return typeId != k_invalidSystemId;
+		return (nullptr != m_handle) && (m_handle->typeId != ComponentHandleInternal::k_invalidTypeId);
 	}
 
-	std::type_index GetTypeIndex() const
+	uint8_t GetTypeIndex() const
 	{
-		return typeId;
+		return m_handle->typeId;
 	}
 
-	std::size_t GetOffset() const
+	uint32_t GetOffset() const
 	{
-		return objectId;
+		return m_handle->objectId;
 	}
 
-	std::type_index typeId;
-	std::size_t objectId;
+private:
+	const ComponentHandleInternal* m_handle = nullptr;
 };
 
 } // namespace ecs

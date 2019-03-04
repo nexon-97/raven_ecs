@@ -20,6 +20,22 @@ void RenderSystem::Init()
 		entitiesCollection.AddComponent(entity, transformHandle);
 		entitiesCollection.AddComponent(entity, spriteHandle);
 	}
+
+	ecs::ComponentHandleInternal dummyHandleInternal = { 50, 1 };
+	ecs::ComponentHandleInternal dummyHandleInternal2 = { 55, 1 };
+	ecs::ComponentHandleInternal dummyHandleInternal3 = { 60, 1 };
+	ecs::ComponentHandle dummyHandle(&dummyHandleInternal);
+	ecs::ComponentHandle dummyHandle2(&dummyHandleInternal2);
+	ecs::ComponentHandle dummyHandle3(&dummyHandleInternal3);
+	
+	ecsManager.DestroyComponent(dummyHandle);
+	ecsManager.DestroyComponent(dummyHandle2);
+	ecsManager.DestroyComponent(dummyHandle3);
+
+	auto transformHandle = ecsManager.CreateComponent<Transform>();
+	transformHandle = ecsManager.CreateComponent<Transform>();
+
+	int a = 0;
 }
 
 void RenderSystem::Update()

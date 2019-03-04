@@ -1,11 +1,11 @@
 #pragma once
 #include "IComponentCollection.hpp"
 #include "IComponentCollectionCallback.hpp"
+#include "ComponentHandle.hpp"
 
 #include <set>
 #include <cassert>
-#include <array>
-#include <map>
+#include <list>
 
 namespace ecs
 {
@@ -21,48 +21,23 @@ class ComponentCollectionImpl
 		std::size_t entityId = 0U;
 		bool isEnabled = true;
 	};
-	using StorageType = std::array<ComponentData, k_chunkSize>;
+	using StorageType = ComponentData[k_chunkSize];
+	using HandlesStorage = ComponentHandleInternal[k_chunkSize];
 	using CollectionType = ComponentCollectionImpl<ComponentType>;
 	using CallbackType = IComponentCollectionCallback<ComponentType>;
 
 public:
-	ComponentCollectionImpl()
-	{
-		// Create first storage
-		m_chunks.emplace(std::piecewise_construct, std::forward_as_tuple(0U), std::forward_as_tuple());
-	}
+	ComponentCollectionImpl() = default;
 
 	~ComponentCollectionImpl()
 	{
 		// Release all alive objects (call destructors)
 		std::size_t chunkId = 0U;
-		for (auto& chunkData : m_chunks)
+		for (auto& chunk : m_chunks)
 		{
-			auto& chunk = chunkData.second;
 			for (std::size_t i = 0; i < chunk.usedSpace; ++i)
 			{
-				if (chunk.holesList.find(i) == chunk.holesList.end())
-				{
-					auto& componentData = chunk.data[i];
-					std::size_t componentIndex = k_chunkSize * chunkId + i;
-
-					// Invoke disable callbacks, because each component is actually disabled before destruction
-					if (componentData.isEnabled && componentData.entityId != 0U)
-					{
-						for (auto callback : m_callbacks.disableCallbacks)
-						{
-							callback->OnComponentDisabled(&componentData.component, ComponentHandle(typeid(ComponentType), componentIndex));
-						}
-					}
-
-					// Invoke destroy callbacks
-					for (auto callback : m_callbacks.destroyCallbacks)
-					{
-						callback->OnComponentDestroyed(&componentData.component, ComponentHandle(typeid(ComponentType), componentIndex));
-					}
-
-					componentData.component.~ComponentType();
-				}
+				chunk.data[i].component.~ComponentType();
 			}
 
 			++chunkId;
@@ -73,6 +48,7 @@ public:
 	ComponentCollectionImpl(const ComponentCollectionImpl&) = delete;
 	ComponentCollectionImpl& operator=(const ComponentCollectionImpl&) = delete;
 
+	// Collection iterator implementation
 	struct iterator
 	{
 		using iterator_category = std::forward_iterator_tag;
@@ -90,7 +66,7 @@ public:
 
 		reference operator*()
 		{
-			return (*curr);
+			return collection->GetComponentData(index);
 		}
 
 		pointer operator->()
@@ -100,9 +76,7 @@ public:
 
 		iterator& operator++()
 		{
-			std::size_t nextIndex = collection->GetNextAliveIndex(0U, index + 1);
-			curr += (nextIndex - index);
-			index = nextIndex;
+			++index;
 			return *this;
 		}
 
@@ -113,7 +87,7 @@ public:
 
 		bool operator==(const iterator& other) const
 		{
-			return curr == other.curr;
+			return index == other.index;
 		}
 
 		bool operator!=(const iterator& other) const
@@ -122,72 +96,45 @@ public:
 		}
 
 		const CollectionType* collection;
-		typename StorageType::iterator curr;
 		std::size_t index;
 	};
 
-	std::size_t Create() override
+	ComponentHandleInternal* Create() override
 	{
+		// Pick a chunk for insertion
 		static const std::size_t k_notInsertedIndex = static_cast<std::size_t>(-1);
 		std::size_t insertedIndex = k_notInsertedIndex;
-		Chunk& selectedChunk = m_chunks[0U];
+		Chunk* selectedChunk = nullptr;
 
-		for (auto& chunkData : m_chunks)
+		// Check last chunk for available place
+		const bool hasPlaceInLastChunk = (!m_chunks.empty() && m_chunks.back().usedSpace < k_chunkSize);
+
+		// No place in existing chunks -> create new chunk
+		if (hasPlaceInLastChunk)
 		{
-			selectedChunk = chunkData.second;
-
-			// If there is first alive index -> chunk has space for an item
-			if (selectedChunk.firstFreeIndex < k_chunkSize)
-			{
-				// Place for insertion found, insert here
-				insertedIndex = chunkData.first * k_chunkSize + selectedChunk.firstFreeIndex;
-
-				// Remove hole if it exists
-				auto& holesList = selectedChunk.holesList;
-				auto holeIt = holesList.find(selectedChunk.firstFreeIndex);
-				if (holeIt != holesList.end())
-				{
-					holesList.erase(holeIt);
-				}
-
-				break;
-			}
+			selectedChunk = &m_chunks.back();
+		}
+		else
+		{
+			selectedChunk = &CreateNewChunk();
 		}
 
-		// Element not created -> create new storage then
-		if (insertedIndex == k_notInsertedIndex)
-		{
-			std::size_t newChunkId = m_chunks.size();
-			insertedIndex = newChunkId * k_chunkSize;
+		insertedIndex = (m_chunks.size() - 1U) * k_chunkSize + selectedChunk->usedSpace;
 
-			m_chunks.emplace(std::piecewise_construct, std::forward_as_tuple(newChunkId), std::forward_as_tuple());
-			selectedChunk = m_chunks[newChunkId];
-			selectedChunk.firstFreeIndex = 1U;
-		}
-
-		std::size_t chunkId = insertedIndex / k_chunkSize;
+		// Get offset of created handle in selected chunk
 		std::size_t chunkOffset = insertedIndex % k_chunkSize;
-		new (&selectedChunk.data[chunkOffset].component) ComponentType();
+
+		// Get freshly created component handle
+		auto& handle = selectedChunk->handlesData[chunkOffset];
+		// Given the handle, get component pointer
+		auto componentPtr = &selectedChunk->data[handle.objectId].component;
+		// Call constructor for created component instance
+		new (componentPtr) ComponentType();
 
 		// Increase used space counter
-		if (chunkOffset >= selectedChunk.usedSpace)
-		{
-			selectedChunk.usedSpace = chunkOffset + 1;
-		}
-
-		// Overwrite first alive index for iterator
-		if (chunkOffset == selectedChunk.firstFreeIndex)
-		{
-			selectedChunk.firstFreeIndex = GetNextFreeIndex(chunkId, chunkOffset);
-		}
-
-		// Invoke create callbacks
-		for (auto callback : m_callbacks.createCallbacks)
-		{
-			callback->OnComponentCreated(&selectedChunk.data[chunkOffset].component, ComponentHandle(typeid(ComponentType), insertedIndex));
-		}
-
-		return insertedIndex;
+		++selectedChunk->usedSpace;
+	
+		return &handle;
 	}
 
 	void Destroy(const std::size_t index) override
@@ -195,24 +142,14 @@ public:
 		auto chunkId = SplitObjectId(index);
 		assert(chunkId.first < m_chunks.size());
 
-		auto& chunk = m_chunks[chunkId.first];
-		auto insertResult = chunk.holesList.insert(chunkId.second);
-		if (insertResult.second)
+		auto chunk = GetChunkByIndex(chunkId.first);
+		if (chunkId.second < chunk->usedSpace)
 		{
-			// Invoke destroy callbacks
-			for (auto callback : m_callbacks.destroyCallbacks)
-			{
-				callback->OnComponentDestroyed(&chunk.data[chunkId.second].component, ComponentHandle(typeid(ComponentType), index));
-			}
-
-			chunk.data[chunkId.second].component.~ComponentType();
-
-			// Overwrite first alive index
-			if (chunkId.second < chunk.firstFreeIndex)
-			{
-				chunk.firstFreeIndex = chunkId.second;
-			}
+			// Swap handles to make fill the hole, made by destroyed item
+			std::swap(chunk->handlesData[chunkId.second], chunk->handlesData[chunk->usedSpace - 1]);
 		}
+
+		--chunk->usedSpace;
 	}
 
 	void* Get(const std::size_t index) override
@@ -220,8 +157,17 @@ public:
 		auto chunkId = SplitObjectId(index);
 		assert(chunkId.first < m_chunks.size());
 
-		auto& chunk = m_chunks[chunkId.first];
-		return &chunk.data[chunkId.second].component;
+		auto chunk = GetChunkByIndex(chunkId.first);
+		return &chunk->data[chunkId.second].component;
+	}
+
+	ComponentData& GetComponentData(const std::size_t index)
+	{
+		auto chunkId = SplitObjectId(index);
+		assert(chunkId.first < m_chunks.size());
+
+		auto chunk = GetChunkByIndex(chunkId.first);
+		return chunk->data[chunkId.second];
 	}
 
 	void SetItemEntityId(const std::size_t index, const std::size_t entityId) override
@@ -229,30 +175,10 @@ public:
 		auto chunkId = SplitObjectId(index);
 		assert(chunkId.first < m_chunks.size());
 
-		auto& chunk = m_chunks[chunkId.first];
-		auto& componentData = chunk.data[chunkId.second];
+		auto chunk = GetChunkByIndex(chunkId.first);
+		auto& componentData = chunk->data[chunkId.second];
 		std::size_t lastEntityId = componentData.entityId;
 		componentData.entityId = entityId;
-
-		if (componentData.isEnabled && lastEntityId != entityId)
-		{
-			if (entityId == 0U)
-			{
-				// Invoke disable callbacks, because component was removed from its entity, and was enabled by then
-				for (auto callback : m_callbacks.disableCallbacks)
-				{
-					callback->OnComponentDisabled(&componentData.component, ComponentHandle(typeid(ComponentType), index));
-				}
-			}
-			else if (lastEntityId == 0U)
-			{
-				// Component had no owner, but now has, so should call enable callback
-				for (auto callback : m_callbacks.enableCallbacks)
-				{
-					callback->OnComponentEnabled(&componentData.component, ComponentHandle(typeid(ComponentType), index));
-				}
-			}
-		}
 	}
 
 	std::size_t GetItemEntityId(const std::size_t index) const override
@@ -260,47 +186,35 @@ public:
 		auto chunkId = SplitObjectId(index);
 		assert(chunkId.first < m_chunks.size());
 
-		auto chunkIt = m_chunks.find(chunkId.first);
-		auto& chunk = chunkIt->second;
-		return chunk.data[chunkId.second].entityId;
-	}
-
-	std::size_t GetNextAliveIndex(const std::size_t chunkId, const std::size_t offset) const
-	{
-		auto it = m_chunks.find(chunkId);
-		const auto& chunk = it->second;
-
-		for (std::size_t i = offset; i < chunk.usedSpace; ++i)
+		std::size_t i = 0U;
+		for (auto& chunk : m_chunks)
 		{
-			if (chunk.holesList.find(i) == chunk.holesList.end())
+			if (i == chunkId.first)
 			{
-				return i;
+				return chunk.data[chunkId.second].entityId;
+				break;
 			}
+
+			++i;
 		}
 
-		return k_chunkSize;
-	}
-
-	std::size_t GetNextFreeIndex(const std::size_t chunkId, const std::size_t offset) const
-	{
-		auto it = m_chunks.find(chunkId);
-		const auto& chunk = it->second;
-
-		for (std::size_t i = offset + 1; i < chunk.usedSpace; ++i)
-		{
-			if (chunk.holesList.find(i) != chunk.holesList.end())
-			{
-				return i;
-			}
-		}
-
-		return chunk.usedSpace;
+		return static_cast<std::size_t>(-1);
 	}
 
 	// Registers callback in collection. Callback cannot be removed currently.
 	void RegisterCallback(CallbackType* callback)
 	{
 		m_callbacks.RegisterCallback(callback);
+	}
+
+	uint8_t GetTypeId() const override
+	{
+		return m_typeId;
+	}
+
+	void SetTypeId(const uint8_t typeId) override
+	{
+		m_typeId = typeId;
 	}
 
 	iterator begin()
@@ -335,11 +249,49 @@ private:
 	struct Chunk
 	{
 		StorageType data;
+		HandlesStorage handlesData;
 		std::size_t usedSpace = 0U;
-		std::size_t firstFreeIndex = 0U;
-		std::size_t lastAliveIndex = 0U;	// Unused (reserved for reverse iterators)
-		std::set<std::size_t> holesList;
+
+		Chunk() = default;
 	};
+
+	Chunk& CreateNewChunk(std::size_t* newChunkId = nullptr)
+	{
+		std::size_t chunkId = m_chunks.size();
+
+		m_chunks.emplace_back();
+		auto& chunk = m_chunks.back();
+
+		if (nullptr != newChunkId)
+		{
+			*newChunkId = chunkId;
+		}
+
+		// Create initial handles data set
+		for (std::size_t i = 0U; i < k_chunkSize; ++i)
+		{
+			chunk.handlesData[i].objectId = static_cast<uint32_t>(i);
+			chunk.handlesData[i].typeId = m_typeId;
+		}
+
+		return chunk;
+	}
+
+	Chunk* GetChunkByIndex(const std::size_t index)
+	{
+		std::size_t i = 0U;
+		for (auto& chunk : m_chunks)
+		{
+			if (i == index)
+			{
+				return &chunk;
+			}
+
+			++i;
+		}
+
+		return nullptr;
+	}
 
 	struct CallbacksPack
 	{
@@ -381,8 +333,9 @@ private:
 		}
 	};
 
-	std::map<std::size_t, Chunk> m_chunks;
+	std::list<Chunk> m_chunks;
 	CallbacksPack m_callbacks;
+	uint8_t m_typeId;
 };
 
 } // namespace ecs

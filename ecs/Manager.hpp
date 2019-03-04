@@ -34,20 +34,15 @@ public:
 	void RegisterSystem()
 	{
 		static_assert(std::is_base_of<System, SystemType>::value, "System type must be derived from ecs::System!");
-		assert(!m_initialized);
 
-		auto system = std::make_unique<SystemType>();
-		RegisterSystemInternal(typeid(SystemType), std::move(system));
+		RegisterSystemInternal(typeid(SystemType), std::make_unique<SystemType>());
 	}
 
 	template <typename ComponentType>
 	void RegisterComponentType(const std::string& name)
 	{
-		assert(!m_initialized);
-
-		// Register type storage
-		m_componentStorages.emplace(typeid(ComponentType), std::make_unique<ComponentCollectionImpl<ComponentType>>());
-		m_componentNames.emplace(name, typeid(ComponentType));
+		auto collection = std::make_unique<ComponentCollectionImpl<ComponentType>>();
+		RegisterComponentTypeInternal(name, typeid(ComponentType), std::move(collection));
 	}
 
 	template <class SystemType>
@@ -79,10 +74,8 @@ public:
 	template <typename ComponentType>
 	ComponentHandle CreateComponent()
 	{
-		auto collection = GetCollection(typeid(ComponentType));
-		assert(nullptr != collection);
-
-		return CreateComponentInternal(typeid(ComponentType), collection);
+		auto typeId = GetComponentTypeIdByIndex(typeid(ComponentType));
+		return CreateComponentInternal(typeId);
 	}
 
 	ComponentHandle CreateComponentByName(const std::string& name);
@@ -103,7 +96,13 @@ public:
 	template <typename ComponentType>
 	ComponentCollectionImpl<ComponentType>* GetComponentCollection()
 	{
-		return static_cast<ComponentCollectionImpl<ComponentType>*>(GetCollection(typeid(ComponentType)));
+		auto it = m_typeIndexToComponentTypeIdMapping.find(typeid(ComponentType));
+		if (it != m_typeIndexToComponentTypeIdMapping.end())
+		{
+			return static_cast<ComponentCollectionImpl<ComponentType>*>(GetCollection(it->second));
+		}
+		
+		return nullptr;
 	}
 
 	void SetComponentEntityId(const ComponentHandle& handle, const std::size_t id);
@@ -112,14 +111,40 @@ public:
 	EntitiesCollection& GetEntitiesCollection();
 
 private:
+	/**
+	* @brief Registers system inside internal systems collection
+	*/
 	void RegisterSystemInternal(const std::type_index& typeIndex, SystemPtr&& system);
-	IComponentCollection* GetCollection(const std::type_index& typeIndex) const;
-	ComponentHandle CreateComponentInternal(const std::type_index& typeIndex, IComponentCollection* collection);
+
+	/**
+	* @brief Returns component collection for components with particular id
+	* @param typeId - id of component type
+	* @return Component collection, associated with provided type id
+	*/
+	IComponentCollection* GetCollection(const uint8_t typeId) const;
+
+	/**
+	* @brief Requests component instance creation given the type id of requested component
+	* @param typeId - id of requested component type
+	* @return Handle to created component instance
+	*/
+	ComponentHandle CreateComponentInternal(const uint8_t typeId);
+
+	/**
+	* Returns component type id by type index
+	* @param typeIndex - type index of component
+	* @return Id of component type
+	*/
+	uint8_t GetComponentTypeIdByIndex(const std::type_index& typeIndex) const;
+
+	void RegisterComponentTypeInternal(const std::string& name, const std::type_index& typeIndex, std::unique_ptr<IComponentCollection>&& collection);
 
 private:
-	std::unordered_map<std::type_index, std::unique_ptr<IComponentCollection>> m_componentStorages;
+	std::vector<std::unique_ptr<IComponentCollection>> m_componentStorages;
+	std::vector<std::type_index> m_componentTypeIndexes;
 	std::unordered_map<std::type_index, SystemPtr> m_systems;
-	std::unordered_map<std::string, std::type_index> m_componentNames;
+	std::unordered_map<std::string, uint8_t> m_componentNameToIdMapping;
+	std::unordered_map<std::type_index, uint8_t> m_typeIndexToComponentTypeIdMapping;
 	EntitiesCollection m_entitiesCollection;
 	bool m_initialized = false;
 };
