@@ -21,6 +21,8 @@ class Manager
 	using SystemPtr = std::unique_ptr<System>;
 
 public:
+	Manager();
+
 	void Init() final;
 	void Destroy() final;
 	void Update() final;
@@ -62,13 +64,12 @@ public:
 	template <typename ComponentType>
 	ComponentHandle CreateComponent(ComponentType*& result)
 	{
-		auto collection = GetCollection(typeid(ComponentType));
-		assert(nullptr != collection);
-		
-		auto insertedId = collection->Create();
-		result = static_cast<ComponentType*>(collection->Get(insertedId));
+		auto typeId = GetComponentTypeIdByIndex(typeid(ComponentType));
+		auto handle = CreateComponentInternal(typeId);
 
-		return ComponentHandle(typeid(ComponentType), insertedId);
+		result = static_cast<ComponentType*>(GetCollection(typeId)->Get(handle.GetOffset()));
+
+		return handle;
 	}
 
 	template <typename ComponentType>
@@ -105,10 +106,17 @@ public:
 		return nullptr;
 	}
 
-	void SetComponentEntityId(const ComponentHandle& handle, const std::size_t id);
-	std::size_t GetComponentEntityId(const ComponentHandle& handle) const;
+	void SetComponentEntityId(const ComponentHandle& handle, const uint32_t id);
+	uint32_t GetComponentEntityId(const ComponentHandle& handle) const;
 
 	EntitiesCollection& GetEntitiesCollection();
+
+	/**
+	* Returns component type id by type index
+	* @param typeIndex - type index of component
+	* @return Id of component type
+	*/
+	uint8_t GetComponentTypeIdByIndex(const std::type_index& typeIndex) const;
 
 private:
 	/**
@@ -129,13 +137,6 @@ private:
 	* @return Handle to created component instance
 	*/
 	ComponentHandle CreateComponentInternal(const uint8_t typeId);
-
-	/**
-	* Returns component type id by type index
-	* @param typeIndex - type index of component
-	* @return Id of component type
-	*/
-	uint8_t GetComponentTypeIdByIndex(const std::type_index& typeIndex) const;
 
 	void RegisterComponentTypeInternal(const std::string& name, const std::type_index& typeIndex, std::unique_ptr<IComponentCollection>&& collection);
 

@@ -6,6 +6,13 @@
 #include "test/Transform.hpp"
 #include "test/SpriteRender.hpp"
 
+#include <ctime>
+#include <cstdlib>
+
+#ifdef OS_WINDOWS
+#include <Windows.h>
+#endif
+
 App* App::s_instance = nullptr;
 
 App::App()
@@ -32,8 +39,10 @@ bool App::Init()
 		return false;
 
 	m_sdlInitialized = true;
-	if (SDL_CreateWindowAndRenderer(1300, 600, SDL_WINDOW_SHOWN | SDL_RENDERER_ACCELERATED, &m_sdlWindow, &m_sdlRenderer) < 0)
+	if (SDL_CreateWindowAndRenderer(1800, 900, SDL_WINDOW_SHOWN | SDL_RENDERER_ACCELERATED, &m_sdlWindow, &m_sdlRenderer) < 0)
 		return false;
+
+	srand(static_cast<unsigned int>(time(nullptr)));
 
 	// Init ECS manager
 	m_ecsManager.RegisterSystem<RenderSystem>();
@@ -42,30 +51,6 @@ bool App::Init()
 	m_ecsManager.RegisterComponentType<SpriteRender>("SpriteRender");
 
 	m_ecsManager.Init();
-
-	// Fill all required space
-	/*ecs::ComponentHandle handles[103];
-	StaticMesh* meshes[103];
-	for (int i = 0; i < 100; ++i)
-	{
-		handles[i] = manager.CreateComponent<StaticMesh>(meshes[i]);
-		meshes[i]->id = i;
-	}
-
-	manager.DestroyComponent(handles[50]);
-	manager.DestroyComponent(handles[51]);
-	manager.CreateComponent<StaticMesh>(meshes[100]);
-	manager.CreateComponent<StaticMesh>(meshes[101]);
-	manager.CreateComponent<StaticMesh>(meshes[102]);
-	meshes[100]->id = 100;
-	meshes[101]->id = 101;
-	meshes[102]->id = 102;
-	manager.DestroyComponent(handles[0]);
-	manager.DestroyComponent(handles[1]);
-	manager.DestroyComponent(handles[2]);
-
-	auto testMesh = manager.GetComponent<StaticMesh>(handles[25]);
-	testMesh->id = 2500;*/
 
 	return true;
 }
@@ -82,6 +67,8 @@ int App::Run()
 
 void App::UpdateLoop()
 {
+	m_frameTimerPoint = std::chrono::high_resolution_clock::now();
+
 	SDL_Event e;
 	while (SDL_PollEvent(&e) != 0)
 	{
@@ -97,14 +84,37 @@ void App::UpdateLoop()
 	SDL_SetRenderDrawColor(m_sdlRenderer, 50, 50, 50, 255);
 	SDL_RenderClear(m_sdlRenderer);
 
-	//m_renderQueue->Render();
+	m_ecsManager.Update();
 
 	SDL_RenderPresent(m_sdlRenderer);
+
+	// Measure FPS
+	auto timePointEnd = std::chrono::high_resolution_clock::now();
+	m_frameNanosecondsElapsed += std::chrono::duration_cast<std::chrono::nanoseconds>(timePointEnd - m_frameTimerPoint).count();
+	std::swap(m_frameTimerPoint, timePointEnd);
+	m_fpsValue++;
+
+	if (m_frameNanosecondsElapsed > 1000000000)
+	{
+		m_frameNanosecondsElapsed %= 1000000000;
+
+#ifdef OS_WINDOWS
+		m_debugFPSString = "FPS: " + std::to_string(m_fpsValue) + "\n";
+		OutputDebugStringA(m_debugFPSString.c_str());
+#endif
+
+		m_fpsValue = 0;
+	}
 }
 
 ecs::Manager& App::GetECSManager()
 {
 	return m_ecsManager;
+}
+
+SDL_Renderer* App::GetRenderer() const
+{
+	return m_sdlRenderer;
 }
 
 App* App::GetInstance()

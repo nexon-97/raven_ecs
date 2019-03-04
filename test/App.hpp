@@ -2,6 +2,8 @@
 #include <SDL.h>
 #include "ecs/Manager.hpp"
 
+#include <chrono>
+
 class App
 {
 public:
@@ -14,6 +16,7 @@ public:
 	void UpdateLoop();
 
 	ecs::Manager& GetECSManager();
+	SDL_Renderer* GetRenderer() const;
 
 	static App* GetInstance();
 
@@ -24,6 +27,10 @@ private:
 	ecs::Manager m_ecsManager;
 	SDL_Window* m_sdlWindow = nullptr;
 	SDL_Renderer* m_sdlRenderer = nullptr;
+	std::chrono::high_resolution_clock::time_point m_frameTimerPoint;
+	long long m_frameNanosecondsElapsed = 0;
+	int m_fpsValue = 0;
+	std::string m_debugFPSString;
 	bool m_sdlInitialized = false;
 	bool m_wantQuit = false;
 };

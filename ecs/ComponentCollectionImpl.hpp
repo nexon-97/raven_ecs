@@ -18,7 +18,7 @@ class ComponentCollectionImpl
 	struct ComponentData
 	{
 		ComponentType component;
-		std::size_t entityId = 0U;
+		uint32_t entityId = 0U;
 		bool isEnabled = true;
 	};
 	using StorageType = ComponentData[k_chunkSize];
@@ -58,9 +58,8 @@ public:
 		using difference_type = std::ptrdiff_t;
 
 		iterator() = default;
-		iterator(const CollectionType* collection, typename StorageType::iterator curr, std::size_t index)
+		iterator(CollectionType* collection, std::size_t index)
 			: collection(collection)
-			, curr(curr)
 			, index(index)
 		{}
 
@@ -95,7 +94,7 @@ public:
 			return !(*this == other);
 		}
 
-		const CollectionType* collection;
+		CollectionType* collection;
 		std::size_t index;
 	};
 
@@ -170,18 +169,18 @@ public:
 		return chunk->data[chunkId.second];
 	}
 
-	void SetItemEntityId(const std::size_t index, const std::size_t entityId) override
+	void SetItemEntityId(const std::size_t index, const uint32_t entityId) override
 	{
 		auto chunkId = SplitObjectId(index);
 		assert(chunkId.first < m_chunks.size());
 
 		auto chunk = GetChunkByIndex(chunkId.first);
 		auto& componentData = chunk->data[chunkId.second];
-		std::size_t lastEntityId = componentData.entityId;
+		uint32_t lastEntityId = componentData.entityId;
 		componentData.entityId = entityId;
 	}
 
-	std::size_t GetItemEntityId(const std::size_t index) const override
+	uint32_t GetItemEntityId(const std::size_t index) const override
 	{
 		auto chunkId = SplitObjectId(index);
 		assert(chunkId.first < m_chunks.size());
@@ -192,13 +191,12 @@ public:
 			if (i == chunkId.first)
 			{
 				return chunk.data[chunkId.second].entityId;
-				break;
 			}
 
 			++i;
 		}
 
-		return static_cast<std::size_t>(-1);
+		return Entity::k_invalidId;
 	}
 
 	// Registers callback in collection. Callback cannot be removed currently.
@@ -219,24 +217,20 @@ public:
 
 	iterator begin()
 	{
-		for (std::size_t i = 0; i < m_chunks.size(); ++i)
-		{
-			auto& chunk = m_chunks[i];
-			std::size_t firstAliveIndex = GetNextAliveIndex(i, 0U);
-
-			if (firstAliveIndex < k_chunkSize)
-			{
-				auto arrayIt = chunk.data.begin() + firstAliveIndex;
-				return iterator(this, arrayIt, k_chunkSize * i + firstAliveIndex);
-			}
-		}
-
-		return end();
+		return iterator(this, 0U);
 	}
 
 	iterator end()
 	{
-		return iterator(this, m_chunks[m_chunks.size() - 1].data.end(), k_chunkSize);
+		if (m_chunks.empty())
+		{
+			return iterator(this, 0U);
+		}
+		else
+		{
+			auto& lastChunk = m_chunks.back();
+			return iterator(this, k_chunkSize * (m_chunks.size() - 1U) + lastChunk.usedSpace);
+		}
 	}
 
 private:

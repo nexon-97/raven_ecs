@@ -14,31 +14,45 @@ void RenderSystem::Init()
 	for (int i = 0; i < 100; ++i)
 	{
 		auto& entity = entitiesCollection.CreateEntity();
-		auto transformHandle = ecsManager.CreateComponent<Transform>();
-		auto spriteHandle = ecsManager.CreateComponent<SpriteRender>();
+
+		Transform* transform;
+		auto transformHandle = ecsManager.CreateComponent<Transform>(transform);
+
+		transform->positionX = static_cast<float>(rand() % 1600 + 100);
+		transform->positionY = static_cast<float>(rand() % 600 + 100);
+		transform->scale = static_cast<float>(rand() % 75 + 25);
+
+		// Create random sprite
+		SpriteRender* sprite;
+		auto spriteHandle = ecsManager.CreateComponent<SpriteRender>(sprite);
+		sprite->colorR = rand() % 255;
+		sprite->colorG = rand() % 255;
+		sprite->colorB = rand() % 255;
 
 		entitiesCollection.AddComponent(entity, transformHandle);
 		entitiesCollection.AddComponent(entity, spriteHandle);
 	}
-
-	ecs::ComponentHandleInternal dummyHandleInternal = { 50, 1 };
-	ecs::ComponentHandleInternal dummyHandleInternal2 = { 55, 1 };
-	ecs::ComponentHandleInternal dummyHandleInternal3 = { 60, 1 };
-	ecs::ComponentHandle dummyHandle(&dummyHandleInternal);
-	ecs::ComponentHandle dummyHandle2(&dummyHandleInternal2);
-	ecs::ComponentHandle dummyHandle3(&dummyHandleInternal3);
-	
-	ecsManager.DestroyComponent(dummyHandle);
-	ecsManager.DestroyComponent(dummyHandle2);
-	ecsManager.DestroyComponent(dummyHandle3);
-
-	auto transformHandle = ecsManager.CreateComponent<Transform>();
-	transformHandle = ecsManager.CreateComponent<Transform>();
-
-	int a = 0;
 }
 
 void RenderSystem::Update()
 {
-	
+	auto& ecsManager = App::GetInstance()->GetECSManager();
+	auto& spritesCollection = *ecsManager.GetComponentCollection<SpriteRender>();
+
+	auto renderer = App::GetInstance()->GetRenderer();
+
+	for (auto& sprite : spritesCollection)
+	{
+		auto& entity = ecsManager.GetEntitiesCollection().GetEntity(sprite.entityId);
+		auto transform = ecsManager.GetEntitiesCollection().GetComponent<Transform>(entity);
+
+		SDL_SetRenderDrawColor(renderer, sprite.component.colorR, sprite.component.colorG, sprite.component.colorB, 255);
+		
+		SDL_Rect rect;
+		rect.x = static_cast<int>(transform->positionX);
+		rect.y = static_cast<int>(transform->positionY);
+		rect.w = static_cast<int>(transform->scale);
+		rect.h = static_cast<int>(transform->scale);
+		SDL_RenderFillRect(renderer, &rect);
+	}
 }

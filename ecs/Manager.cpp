@@ -5,6 +5,10 @@ namespace ecs
 
 const uint8_t ComponentHandleInternal::k_invalidTypeId = static_cast<uint8_t>(-1);
 
+Manager::Manager()
+	: m_entitiesCollection(*this)
+{}
+
 void Manager::RegisterSystemInternal(const std::type_index& typeIndex, SystemPtr&& system)
 {
 	assert(!m_initialized);
@@ -103,13 +107,13 @@ IComponentCollection* Manager::GetCollection(const uint8_t typeId) const
 	return m_componentStorages[typeId].get();
 }
 
-void Manager::SetComponentEntityId(const ComponentHandle& handle, const std::size_t id)
+void Manager::SetComponentEntityId(const ComponentHandle& handle, const uint32_t id)
 {
 	auto collection = GetCollection(handle.GetTypeIndex());
 	collection->SetItemEntityId(handle.GetOffset(), id);
 }
 
-std::size_t Manager::GetComponentEntityId(const ComponentHandle& handle) const
+uint32_t Manager::GetComponentEntityId(const ComponentHandle& handle) const
 {
 	auto collection = GetCollection(handle.GetTypeIndex());
 	return collection->GetItemEntityId(handle.GetOffset());
