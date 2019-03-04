@@ -2,6 +2,7 @@
 #include "test/App.hpp"
 #include "test/Transform.hpp"
 #include "test/SpriteRender.hpp"
+#include "test/MovementBehavior.hpp"
 
 void RenderSystem::Init()
 {
@@ -11,7 +12,7 @@ void RenderSystem::Init()
 	auto& spritesCollection = *ecsManager.GetComponentCollection<SpriteRender>();
 
 	// Create 100 entities with transform and sprite render
-	for (int i = 0; i < 100; ++i)
+	for (int i = 0; i < 250; ++i)
 	{
 		auto& entity = entitiesCollection.CreateEntity();
 
@@ -29,8 +30,15 @@ void RenderSystem::Init()
 		sprite->colorG = rand() % 255;
 		sprite->colorB = rand() % 255;
 
+		// Create behavior
+		MovementBehavior* movement;
+		auto movementHandle = ecsManager.CreateComponent<MovementBehavior>(movement);
+		movement->velocityX = static_cast<float>(rand() % 100 - 50);
+		movement->velocityY = static_cast<float>(rand() % 100 - 50);
+
 		entitiesCollection.AddComponent(entity, transformHandle);
 		entitiesCollection.AddComponent(entity, spriteHandle);
+		entitiesCollection.AddComponent(entity, movementHandle);
 	}
 }
 

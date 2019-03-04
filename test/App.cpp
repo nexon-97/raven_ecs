@@ -2,9 +2,10 @@
 
 #include "ecs/Manager.hpp"
 #include "test/RenderSystem.hpp"
-#include "test/StaticMesh.hpp"
+#include "test/MovementSystem.hpp"
 #include "test/Transform.hpp"
 #include "test/SpriteRender.hpp"
+#include "test/MovementBehavior.hpp"
 
 #include <ctime>
 #include <cstdlib>
@@ -45,8 +46,9 @@ bool App::Init()
 	srand(static_cast<unsigned int>(time(nullptr)));
 
 	// Init ECS manager
+	m_ecsManager.RegisterSystem<MovementSystem>();
 	m_ecsManager.RegisterSystem<RenderSystem>();
-	m_ecsManager.RegisterComponentType<StaticMesh>("StaticMesh");
+	m_ecsManager.RegisterComponentType<MovementBehavior>("MovementBehavior");
 	m_ecsManager.RegisterComponentType<Transform>("Transform");
 	m_ecsManager.RegisterComponentType<SpriteRender>("SpriteRender");
 
@@ -90,9 +92,12 @@ void App::UpdateLoop()
 
 	// Measure FPS
 	auto timePointEnd = std::chrono::high_resolution_clock::now();
-	m_frameNanosecondsElapsed += std::chrono::duration_cast<std::chrono::nanoseconds>(timePointEnd - m_frameTimerPoint).count();
+	long long timeDeltaNanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(timePointEnd - m_frameTimerPoint).count();
+	m_frameNanosecondsElapsed += timeDeltaNanoseconds;
 	std::swap(m_frameTimerPoint, timePointEnd);
 	m_fpsValue++;
+
+	m_timeDelta = timeDeltaNanoseconds * 1e-9f;
 
 	if (m_frameNanosecondsElapsed > 1000000000)
 	{
@@ -115,6 +120,11 @@ ecs::Manager& App::GetECSManager()
 SDL_Renderer* App::GetRenderer() const
 {
 	return m_sdlRenderer;
+}
+
+float App::GetTimeDelta() const
+{
+	return m_timeDelta;
 }
 
 App* App::GetInstance()

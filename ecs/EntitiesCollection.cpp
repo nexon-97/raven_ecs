@@ -1,6 +1,10 @@
 #include "EntitiesCollection.hpp"
 #include "Manager.hpp"
 
+// TODO
+// * Make proper entities destruction, mark all owned entities as disabled
+// * Fix components iterator logic in order to skip unowned/disabled components
+
 namespace ecs
 {
 

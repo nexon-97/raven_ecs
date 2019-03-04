@@ -17,6 +17,7 @@ public:
 
 	ecs::Manager& GetECSManager();
 	SDL_Renderer* GetRenderer() const;
+	float GetTimeDelta() const;
 
 	static App* GetInstance();
 
@@ -31,6 +32,7 @@ private:
 	long long m_frameNanosecondsElapsed = 0;
 	int m_fpsValue = 0;
 	std::string m_debugFPSString;
+	float m_timeDelta = 0.f;
 	bool m_sdlInitialized = false;
 	bool m_wantQuit = false;
 };
