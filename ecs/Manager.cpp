@@ -69,6 +69,9 @@ void Manager::DestroyComponent(const ComponentHandle& handle)
 {
 	assert(handle.IsValid());
 
+	std::string debugStr = "Destroy component: " + std::to_string(handle.GetTypeIndex()) + "; 0x" +
+		std::to_string(reinterpret_cast<std::size_t>(handle.GetOffsetPtr())) + "; " + std::to_string(handle.GetDebugOffset()) + "\n";
+	OutputDebugStringA(debugStr.c_str());
 	auto collection = GetCollection(handle.GetTypeIndex());
 	collection->Destroy(handle.GetOffset());
 }
@@ -81,13 +84,13 @@ ComponentHandle Manager::CreateComponentByName(const std::string& name)
 		return CreateComponentInternal(typeIdIt->second);
 	}
 
-	return ComponentHandle(nullptr);
+	return ComponentHandle(ComponentHandleInternal::k_invalidTypeId, nullptr);
 }
 
 ComponentHandle Manager::CreateComponentInternal(const uint8_t typeId)
 {
-	auto handleInternal = GetCollection(typeId)->Create();
-	return ComponentHandle(handleInternal);
+	HandleIndex* handleIndex = GetCollection(typeId)->Create();
+	return ComponentHandle(typeId, handleIndex);
 }
 
 uint8_t Manager::GetComponentTypeIdByIndex(const std::type_index& typeIndex) const

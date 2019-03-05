@@ -12,7 +12,7 @@ void RenderSystem::Init()
 	auto& spritesCollection = *ecsManager.GetComponentCollection<SpriteRender>();
 
 	// Create 100 entities with transform and sprite render
-	for (int i = 0; i < 250; ++i)
+	for (int i = 0; i < 50; ++i)
 	{
 		auto& entity = entitiesCollection.CreateEntity();
 

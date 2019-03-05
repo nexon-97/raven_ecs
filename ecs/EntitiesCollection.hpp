@@ -48,9 +48,8 @@ private:
 
 	struct EntityComponentMapEntry
 	{
-		uint32_t componentId;
 		uint32_t nextItemPtr = Entity::k_invalidId;
-		uint8_t componentType;
+		ComponentHandle handle;
 	};
 
 	std::vector<EntityData> m_entities;

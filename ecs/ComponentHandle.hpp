@@ -7,41 +7,58 @@ namespace ecs
 struct ComponentHandleInternal
 {
 	static const uint8_t k_invalidTypeId;
-
-	uint32_t objectId;
-	uint8_t typeId;
 };
+
+using HandleIndex = uint16_t;
 
 struct ComponentHandle
 {
 public:
 	ComponentHandle() = default;
-	explicit ComponentHandle(const ComponentHandleInternal* handle)
-		: m_handle(handle)
-	{}
+	explicit ComponentHandle(const uint8_t typeId, HandleIndex* handleIndexPtr)
+		: m_typeId(typeId)
+		, m_handleIndexPtr(handleIndexPtr)
+	{
+		if (handleIndexPtr)
+		{
+			m_indexCopy = *handleIndexPtr;
+		}
+	}
 
 	bool operator==(const ComponentHandle& other) const
 	{
-		return m_handle == other.m_handle;
+		return m_typeId == other.m_typeId && m_handleIndexPtr == other.m_handleIndexPtr;
 	}
 
 	bool IsValid() const
 	{
-		return (nullptr != m_handle) && (m_handle->typeId != ComponentHandleInternal::k_invalidTypeId);
+		return (m_typeId != ComponentHandleInternal::k_invalidTypeId);
 	}
 
 	uint8_t GetTypeIndex() const
 	{
-		return m_handle->typeId;
+		return m_typeId;
 	}
 
-	uint32_t GetOffset() const
+	HandleIndex GetOffset() const
 	{
-		return m_handle->objectId;
+		return *m_handleIndexPtr;
+	}
+
+	HandleIndex* GetOffsetPtr() const
+	{
+		return m_handleIndexPtr;
+	}
+
+	HandleIndex GetDebugOffset() const
+	{
+		return m_indexCopy;
 	}
 
 private:
-	const ComponentHandleInternal* m_handle = nullptr;
+	uint8_t m_typeId;
+	HandleIndex* m_handleIndexPtr = nullptr;
+	HandleIndex m_indexCopy;
 };
 
 } // namespace ecs

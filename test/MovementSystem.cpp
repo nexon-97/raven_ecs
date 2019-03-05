@@ -7,10 +7,14 @@ void MovementSystem::Update()
 {
 	auto& ecsManager = App::GetInstance()->GetECSManager();
 	auto& movementsCollection = *ecsManager.GetComponentCollection<MovementBehavior>();
+	auto& transformCollection = *ecsManager.GetComponentCollection<Transform>();
 	float timeDelta = App::GetInstance()->GetTimeDelta();
 
-	for (auto& movement : movementsCollection)
+	auto end = movementsCollection.end();
+	for (auto it = movementsCollection.begin(); it != end;)
 	{
+		auto& movement = *it;
+
 		auto& entity = ecsManager.GetEntitiesCollection().GetEntity(movement.entityId);
 		auto transform = ecsManager.GetEntitiesCollection().GetComponent<Transform>(entity);
 
@@ -20,8 +24,19 @@ void MovementSystem::Update()
 		if (transform->positionX < 0 || transform->positionX > 1800
 			|| transform->positionY < 0 || transform->positionY > 800)
 		{
+			std::string actionStr = "Entity " + std::to_string(entity.id) + " destroyed.\n";
+			OutputDebugStringA(actionStr.c_str());
+
 			// Destroy entity
 			ecsManager.GetEntitiesCollection().DestroyEntity(entity.id);
+			end = movementsCollection.end();
+			
+			movementsCollection.DumpState();
+			//transformCollection.DumpState();
+		}
+		else
+		{
+			++it;
 		}
 	}
 }

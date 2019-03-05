@@ -31,17 +31,45 @@ Entity& EntitiesCollection::CreateEntity()
 
 	m_entityComponentsMapping.emplace_back();
 	auto& mappingItem = m_entityComponentsMapping.back();
-	mappingItem.componentId = 0U;
+	mappingItem.handle = ComponentHandle(ComponentHandleInternal::k_invalidTypeId, nullptr);
 	mappingItem.nextItemPtr = Entity::k_invalidId;
-	mappingItem.componentType = ComponentHandleInternal::k_invalidTypeId;
 
 	return entityData.entity;
 }
 
 void EntitiesCollection::DestroyEntity(const uint32_t id)
 {
-	m_entities[id].entity.id = Entity::k_invalidId;
-	m_entities[id].isAlive = false;
+	auto& entityData = m_entities[id];
+	auto& entity = entityData.entity;
+
+	// Disable all owned components
+	auto& componentNode = m_entityComponentsMapping[entity.componentsDataOffset];
+	bool reachedEndOfList = false;
+
+	while (!reachedEndOfList)
+	{
+		if (componentNode.handle.IsValid())
+		{
+			m_ecsManager.DestroyComponent(componentNode.handle);
+		}
+
+		reachedEndOfList = (componentNode.nextItemPtr == Entity::k_invalidId);
+
+		if (!reachedEndOfList)
+		{
+			componentNode = m_entityComponentsMapping[componentNode.nextItemPtr];
+		}
+	}
+
+	// Erase list items
+	componentNode = m_entityComponentsMapping[entity.componentsDataOffset];
+	componentNode.handle = ComponentHandle(ComponentHandleInternal::k_invalidTypeId, nullptr);
+	componentNode.nextItemPtr = Entity::k_invalidId;
+
+	// Mark entity as deleted
+	entity.id = Entity::k_invalidId;
+	entity.componentsMask = 0;
+	entityData.isAlive = false;
 }
 
 void EntitiesCollection::AddComponent(Entity& entity, const ComponentHandle& handle)
@@ -71,7 +99,7 @@ void EntitiesCollection::AddComponent(Entity& entity, const ComponentHandle& han
 	auto mappingEntryId = offset;
 	auto newEntryId = mappingEntryId;
 
-	if (m_entityComponentsMapping[mappingEntryId].componentType != ComponentHandleInternal::k_invalidTypeId)
+	if (m_entityComponentsMapping[mappingEntryId].handle.IsValid())
 	{
 		m_entityComponentsMapping.emplace_back();
 		newEntryId = m_entityComponentsMapping.size() - 1;
@@ -80,8 +108,7 @@ void EntitiesCollection::AddComponent(Entity& entity, const ComponentHandle& han
 	// Insert component id here
 	auto currentEntry = &m_entityComponentsMapping[mappingEntryId];
 	auto newEntry = &m_entityComponentsMapping[newEntryId];
-	newEntry->componentId = handle.GetOffset();
-	newEntry->componentType = handle.GetTypeIndex();
+	newEntry->handle = handle;
 	newEntry->nextItemPtr = Entity::k_invalidId;
 
 	if (currentEntry != newEntry)
@@ -117,12 +144,10 @@ void* EntitiesCollection::GetComponent(Entity& entity, const uint8_t componentTy
 
 	while (!reachedEndOfList)
 	{
-		if (componentNode.componentType == componentType)
+		if (componentNode.handle.GetTypeIndex() == componentType)
 		{
 			// Component type found, return it
-			ComponentHandleInternal handleInternal = { componentNode.componentId, componentNode.componentType };
-			ComponentHandle handle(&handleInternal);
-			return m_ecsManager.GetComponent<void>(handle);
+			return m_ecsManager.GetComponent<void>(componentNode.handle);
 		}
 
 		reachedEndOfList = (componentNode.nextItemPtr == Entity::k_invalidId);
