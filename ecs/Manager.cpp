@@ -69,9 +69,6 @@ void Manager::DestroyComponent(const ComponentHandle& handle)
 {
 	assert(handle.IsValid());
 
-	std::string debugStr = "Destroy component: " + std::to_string(handle.GetTypeIndex()) + "; 0x" +
-		std::to_string(reinterpret_cast<std::size_t>(handle.GetOffsetPtr())) + "; " + std::to_string(handle.GetDebugOffset()) + "\n";
-	OutputDebugStringA(debugStr.c_str());
 	auto collection = GetCollection(handle.GetTypeIndex());
 	collection->Destroy(handle.GetOffset());
 }

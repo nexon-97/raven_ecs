@@ -24,15 +24,9 @@ void MovementSystem::Update()
 		if (transform->positionX < 0 || transform->positionX > 1800
 			|| transform->positionY < 0 || transform->positionY > 800)
 		{
-			std::string actionStr = "Entity " + std::to_string(entity.id) + " destroyed.\n";
-			OutputDebugStringA(actionStr.c_str());
-
 			// Destroy entity
 			ecsManager.GetEntitiesCollection().DestroyEntity(entity.id);
 			end = movementsCollection.end();
-			
-			movementsCollection.DumpState();
-			//transformCollection.DumpState();
 		}
 		else
 		{

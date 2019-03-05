@@ -144,9 +144,6 @@ public:
 
 	void Destroy(const std::size_t index) override
 	{
-		std::string debugStr = "Component (" + std::to_string(m_typeId) + "; " + std::to_string(index) + ") destroyed\n";
-		OutputDebugStringA(debugStr.c_str());
-
 		auto chunkId = SplitObjectId(index);
 		assert(chunkId.first < m_chunks.size());
 
@@ -163,30 +160,21 @@ public:
 
 		--chunk->usedSpace;
 
+		// Swap handles to fill holes and keep handle pointers valid
 		if (chunkId.second < chunk->usedSpace)
 		{
 			std::size_t dataIndexL = chunkId.second;
 			std::size_t dataIndexR = chunk->usedSpace;
 
-			if (chunk->handlesData[dataIndexL] == chunk->handlesData[chunk->handleIndexes[dataIndexL]])
-			{
-				std::swap(chunk->handleIndexes[dataIndexL], chunk->handleIndexes[dataIndexR]);
-			}
-
-			//if (chunk->handlesData[dataIndexR] == chunk->handlesData[chunk->handleIndexes[dataIndexR]])
-			//{
-			//	std::swap(chunk->handleIndexes[dataIndexL], chunk->handleIndexes[dataIndexR]);
-			//}
-
-			//assert(chunk->handlesData[chunk->handleIndexes[dataIndexR]] == dataIndexR);
-			//assert(chunk->handlesData[chunk->handleIndexes[dataIndexL]] == dataIndexL);
+			auto handleL = chunk->handlesData[dataIndexL];
+			auto handleR = chunk->handlesData[dataIndexR];
 
 			// Swap handles to make fill the hole, made by destroyed item
 			std::swap(chunk->handlesData[dataIndexL], chunk->handlesData[dataIndexR]);
-		}
 
-		debugStr = "New size: " + std::to_string(chunk->usedSpace) + "\n";
-		OutputDebugStringA(debugStr.c_str());
+			// Swap handle pointers
+			std::swap(chunk->handleIndexes[handleL], chunk->handleIndexes[handleR]);
+		}
 	}
 
 	// Returns component value given data offset (usually retrieved from handle)
