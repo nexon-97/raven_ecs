@@ -122,24 +122,27 @@ public:
 
 	ChildrenData GetChildrenData(Entity& entity);
 
-private:
-	uint8_t GetComponentTypeIdByTypeIndex(const std::type_index& typeIndex) const;
-
-private:
+protected:
 	struct EntityData
 	{
 		Entity entity;
 		uint16_t childrenCount = 0U;
 		bool isAlive : 1;
 	};
+	using EntitiesStorageType = std::vector<EntityData>;
+	EntitiesStorageType& GetEntitiesData();
 
+private:
+	uint8_t GetComponentTypeIdByTypeIndex(const std::type_index& typeIndex) const;
+
+private:
 	struct EntityComponentMapEntry
 	{
 		uint32_t nextItemPtr = Entity::k_invalidId;
 		ComponentHandle handle;
 	};
 
-	std::vector<EntityData> m_entities;
+	EntitiesStorageType m_entities;
 	std::vector<EntityComponentMapEntry> m_entityComponentsMapping;
 	std::vector<EntityHierarchyData> m_entityHierarchyData;
 	Manager& m_ecsManager;

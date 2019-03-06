@@ -15,6 +15,8 @@ EntitiesCollection::EntitiesCollection(ecs::Manager& ecsManager)
 {
 	// [TODO] Remove this hack later
 	m_entities.reserve(1024);
+
+	Entity::s_collection = this;
 }
 
 Entity& EntitiesCollection::GetEntity(const uint32_t id)
@@ -32,6 +34,7 @@ Entity& EntitiesCollection::CreateEntity()
 	entityData.entity.id = newEntityId;
 	entityData.entity.componentsDataOffset = static_cast<uint32_t>(m_entityComponentsMapping.size());
 	entityData.entity.hierarchyDataOffset = static_cast<uint32_t>(m_entityHierarchyData.size());
+	entityData.entity.parentId = Entity::k_invalidId;
 
 	m_entityComponentsMapping.emplace_back();
 	auto& mappingItem = m_entityComponentsMapping.back();
@@ -217,11 +220,14 @@ void EntitiesCollection::AddChild(Entity& entity, Entity& child)
 	}
 
 	++m_entities[entity.id].childrenCount;
+	child.parentId = entity.id;
 }
 
 void EntitiesCollection::RemoveChild(Entity& entity, Entity& child)
 {
-	// Not implemented
+	// Partially implemented
+	child.parentId = Entity::k_invalidId;
+	--m_entities[entity.id].childrenCount;
 }
 
 uint16_t EntitiesCollection::GetChildrenCount(Entity& entity)
@@ -254,6 +260,11 @@ EntitiesCollection::ChildrenData EntitiesCollection::GetChildrenData(Entity& ent
 	}
 
 	return EntitiesCollection::ChildrenData(this, m_entityHierarchyData, offsetBegin, offsetEnd);
+}
+
+EntitiesCollection::EntitiesStorageType& EntitiesCollection::GetEntitiesData()
+{
+	return m_entities;
 }
 
 } // namespace ecs

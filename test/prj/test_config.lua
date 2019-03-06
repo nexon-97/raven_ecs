@@ -8,6 +8,7 @@ project "tests"
 	{
 		"../.",
 		"D:/GoogleTest/include",
+		EngineRootLocation.."/src",
 	}
 	links { "ecs" }
 
