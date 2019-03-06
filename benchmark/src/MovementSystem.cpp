@@ -1,7 +1,7 @@
-#include "test/MovementSystem.hpp"
-#include "test/App.hpp"
-#include "test/MovementBehavior.hpp"
-#include "test/Transform.hpp"
+#include "MovementSystem.hpp"
+#include "App.hpp"
+#include "MovementBehavior.hpp"
+#include "Transform.hpp"
 
 void MovementSystem::Update()
 {

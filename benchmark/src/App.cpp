@@ -1,11 +1,11 @@
 #include "App.hpp"
 
 #include "ecs/Manager.hpp"
-#include "test/RenderSystem.hpp"
-#include "test/MovementSystem.hpp"
-#include "test/Transform.hpp"
-#include "test/SpriteRender.hpp"
-#include "test/MovementBehavior.hpp"
+#include "RenderSystem.hpp"
+#include "MovementSystem.hpp"
+#include "Transform.hpp"
+#include "SpriteRender.hpp"
+#include "MovementBehavior.hpp"
 
 #include <ctime>
 #include <cstdlib>

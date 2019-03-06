@@ -1,8 +1,8 @@
-#include "test/RenderSystem.hpp"
-#include "test/App.hpp"
-#include "test/Transform.hpp"
-#include "test/SpriteRender.hpp"
-#include "test/MovementBehavior.hpp"
+#include "RenderSystem.hpp"
+#include "App.hpp"
+#include "Transform.hpp"
+#include "SpriteRender.hpp"
+#include "MovementBehavior.hpp"
 
 void RenderSystem::Init()
 {

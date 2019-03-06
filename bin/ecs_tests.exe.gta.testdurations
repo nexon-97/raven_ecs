@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<GtaTestDurations xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Executable>D:\Projects\Home\raven_ecs\bin\ecs_tests.exe</Executable>
+  <TestDurations>
+    <TestDuration Test="SomeTestCase.MyTest" Duration="1" />
+  </TestDurations>
+</GtaTestDurations>

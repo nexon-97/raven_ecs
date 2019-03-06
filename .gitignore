@@ -44,3 +44,5 @@
 *.suo
 *.sln
 *.exp
+*.db-wal
+*.db-shm
