@@ -36,6 +36,92 @@ public:
 		return static_cast<ComponentType*>(GetComponent(entity, componentTypeId));
 	}
 
+	void AddChild(Entity& entity, Entity& child);
+	void RemoveChild(Entity& entity, Entity& child);
+	uint16_t GetChildrenCount(Entity& entity);
+
+public:
+	struct EntityHierarchyData
+	{
+		uint32_t nextItemPtr = Entity::k_invalidId;
+		uint32_t childId = Entity::k_invalidId;
+	};
+
+	struct ChildrenData
+	{
+		struct iterator
+		{
+			using iterator_category = std::forward_iterator_tag;
+			using pointer = Entity * ;
+			using reference = Entity & ;
+
+			iterator() = default;
+			iterator(ChildrenData& data, std::size_t offset)
+				: data(data)
+				, offset(offset)
+			{}
+
+			reference operator*()
+			{
+				return data.collection->GetEntity(data.hierarchyData[offset].childId);
+			}
+
+			pointer operator->()
+			{
+				return &**this;
+			}
+
+			iterator& operator++()
+			{
+				offset = data.hierarchyData[offset].nextItemPtr;
+				return *this;
+			}
+
+			iterator operator++(int)
+			{
+				const auto temp(*this); ++*this; return temp;
+			}
+
+			bool operator==(const iterator& other) const
+			{
+				return offset == other.offset;
+			}
+
+			bool operator!=(const iterator& other) const
+			{
+				return !(*this == other);
+			}
+
+			ChildrenData& data;
+			std::size_t offset;
+		};
+
+		ChildrenData(EntitiesCollection* collection, std::vector<EntityHierarchyData>& hierarchyData, const std::size_t offsetBegin, const std::size_t offsetEnd)
+			: offsetBegin(offsetBegin)
+			, offsetEnd(offsetEnd)
+			, collection(collection)
+			, hierarchyData(hierarchyData)
+		{}
+
+		iterator begin()
+		{
+			return iterator(*this, offsetBegin);
+		}
+
+		iterator end()
+		{
+			return iterator(*this, offsetEnd);
+		}
+
+	private:
+		EntitiesCollection* collection;
+		std::vector<EntityHierarchyData>& hierarchyData;
+		std::size_t offsetBegin;
+		std::size_t offsetEnd;
+	};
+
+	ChildrenData GetChildrenData(Entity& entity);
+
 private:
 	uint8_t GetComponentTypeIdByTypeIndex(const std::type_index& typeIndex) const;
 
@@ -43,6 +129,7 @@ private:
 	struct EntityData
 	{
 		Entity entity;
+		uint16_t childrenCount = 0U;
 		bool isAlive : 1;
 	};
 
@@ -54,6 +141,7 @@ private:
 
 	std::vector<EntityData> m_entities;
 	std::vector<EntityComponentMapEntry> m_entityComponentsMapping;
+	std::vector<EntityHierarchyData> m_entityHierarchyData;
 	Manager& m_ecsManager;
 };
 

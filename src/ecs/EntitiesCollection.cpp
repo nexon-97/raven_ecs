@@ -12,7 +12,10 @@ const uint32_t Entity::k_invalidId = static_cast<uint32_t>(-1);
 
 EntitiesCollection::EntitiesCollection(ecs::Manager& ecsManager)
 	: m_ecsManager(ecsManager)
-{}
+{
+	// [TODO] Remove this hack later
+	m_entities.reserve(1024);
+}
 
 Entity& EntitiesCollection::GetEntity(const uint32_t id)
 {
@@ -28,11 +31,17 @@ Entity& EntitiesCollection::CreateEntity()
 	entityData.isAlive = true;
 	entityData.entity.id = newEntityId;
 	entityData.entity.componentsDataOffset = static_cast<uint32_t>(m_entityComponentsMapping.size());
+	entityData.entity.hierarchyDataOffset = static_cast<uint32_t>(m_entityHierarchyData.size());
 
 	m_entityComponentsMapping.emplace_back();
 	auto& mappingItem = m_entityComponentsMapping.back();
 	mappingItem.handle = ComponentHandle(ComponentHandleInternal::k_invalidTypeId, nullptr);
 	mappingItem.nextItemPtr = Entity::k_invalidId;
+
+	m_entityHierarchyData.emplace_back();
+	auto& hierarchyData = m_entityHierarchyData.back();
+	hierarchyData.childId = Entity::k_invalidId;
+	hierarchyData.nextItemPtr = Entity::k_invalidId;
 
 	return entityData.entity;
 }
@@ -164,6 +173,87 @@ void* EntitiesCollection::GetComponent(Entity& entity, const uint8_t componentTy
 uint8_t EntitiesCollection::GetComponentTypeIdByTypeIndex(const std::type_index& typeIndex) const
 {
 	return m_ecsManager.GetComponentTypeIdByIndex(typeIndex);
+}
+
+void EntitiesCollection::AddChild(Entity& entity, Entity& child)
+{
+	// Make entry in children mapping
+	bool placeForInsertionFound = false;
+	std::size_t offset = entity.hierarchyDataOffset;
+	while (!placeForInsertionFound)
+	{
+		const auto& hierarchyData = m_entityHierarchyData[offset];
+		if (hierarchyData.nextItemPtr == Entity::k_invalidId)
+		{
+			// This is the end of the list, can be used as insertion point
+			placeForInsertionFound = true;
+		}
+		else
+		{
+			// Jump to next item in the list
+			offset = hierarchyData.nextItemPtr;
+		}
+	}
+
+	auto hierarchyDataId = offset;
+	auto newEntryId = hierarchyDataId;
+
+	if (m_entityHierarchyData[hierarchyDataId].childId != Entity::k_invalidId)
+	{
+		m_entityHierarchyData.emplace_back();
+		newEntryId = m_entityHierarchyData.size() - 1;
+	}
+
+	// Insert component id here
+	auto currentEntry = &m_entityHierarchyData[hierarchyDataId];
+	auto newEntry = &m_entityHierarchyData[newEntryId];
+	newEntry->childId = child.id;
+	newEntry->nextItemPtr = Entity::k_invalidId;
+
+	if (currentEntry != newEntry)
+	{
+		// Link new entry to the list
+		currentEntry->nextItemPtr = static_cast<uint32_t>(newEntryId);
+	}
+
+	++m_entities[entity.id].childrenCount;
+}
+
+void EntitiesCollection::RemoveChild(Entity& entity, Entity& child)
+{
+	// Not implemented
+}
+
+uint16_t EntitiesCollection::GetChildrenCount(Entity& entity)
+{
+	return m_entities[entity.id].childrenCount;
+}
+
+EntitiesCollection::ChildrenData EntitiesCollection::GetChildrenData(Entity& entity)
+{
+	auto offsetBegin = m_entities[entity.id].entity.hierarchyDataOffset;
+
+	std::size_t offsetEnd = offsetBegin;
+	bool endFound = false;
+	while (!endFound)
+	{
+		const auto& hierarchyData = m_entityHierarchyData[offsetEnd];
+		if (hierarchyData.childId == Entity::k_invalidId)
+		{
+			endFound = true;
+		}
+		else
+		{
+			offsetEnd = hierarchyData.nextItemPtr;
+
+			if (offsetEnd == Entity::k_invalidId)
+			{
+				endFound = true;
+			}
+		}
+	}
+
+	return EntitiesCollection::ChildrenData(this, m_entityHierarchyData, offsetBegin, offsetEnd);
 }
 
 } // namespace ecs
