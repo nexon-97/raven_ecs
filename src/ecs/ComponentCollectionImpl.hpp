@@ -199,7 +199,10 @@ public:
 		auto chunkId = SplitObjectId(index);
 		auto componentData = GetComponentDataByPosition(chunkId);
 		componentData->entityId = entityId;
-		componentData->isEnabled = true;
+
+		bool wasEnabled = componentData->isEnabled;
+		// Mark component enabled, if it was assigned valid entity id, and was not disabled previously
+		componentData->isEnabled = (wasEnabled && entityId != Entity::k_invalidId);
 	}
 
 	uint32_t GetItemEntityId(const std::size_t index) override

@@ -225,14 +225,68 @@ void EntitiesCollection::AddChild(Entity& entity, Entity& child)
 
 void EntitiesCollection::RemoveChild(Entity& entity, Entity& child)
 {
-	// Partially implemented
-	child.parentId = Entity::k_invalidId;
-	--m_entities[entity.id].childrenCount;
+	assert(child.id != Entity::k_invalidId);
+
+	// Find the child in the list
+	bool itemFound = false;
+	std::size_t offset = entity.hierarchyDataOffset;
+	std::size_t prevOffset = Entity::k_invalidId;
+	while (!itemFound)
+	{
+		const auto& hierarchyData = m_entityHierarchyData[offset];
+
+		if (hierarchyData.childId == child.id)
+		{
+			itemFound = true;
+		}
+		else if (hierarchyData.nextItemPtr == Entity::k_invalidId)
+		{
+			break;
+		}
+		else
+		{
+			prevOffset = offset;
+			offset = hierarchyData.nextItemPtr;
+		}
+	}
+
+	if (itemFound)
+	{
+		// Item found, remove it from the list preserving connectivity
+		auto& hierarchyData = m_entityHierarchyData[offset];
+
+		if (prevOffset == Entity::k_invalidId)
+		{
+			entity.hierarchyDataOffset = hierarchyData.nextItemPtr;
+		}
+		else
+		{
+			m_entityHierarchyData[prevOffset].nextItemPtr = hierarchyData.nextItemPtr;
+		}
+
+		hierarchyData.childId = Entity::k_invalidId;
+		hierarchyData.nextItemPtr = Entity::k_invalidId;
+
+		child.parentId = Entity::k_invalidId;
+		--m_entities[entity.id].childrenCount;
+	}
 }
 
-uint16_t EntitiesCollection::GetChildrenCount(Entity& entity)
+uint16_t EntitiesCollection::GetChildrenCount(Entity& entity) const
 {
 	return m_entities[entity.id].childrenCount;
+}
+
+Entity* EntitiesCollection::GetParent(Entity& entity)
+{
+	if (entity.parentId != Entity::k_invalidId)
+	{
+		return &m_entities[entity.parentId].entity;
+	}
+	else
+	{
+		return nullptr;
+	}
 }
 
 EntitiesCollection::ChildrenData EntitiesCollection::GetChildrenData(Entity& entity)

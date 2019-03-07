@@ -27,4 +27,9 @@ void* Entity::GetComponent(const uint8_t componentType)
 	return s_collection->GetComponent(*this, componentType);
 }
 
+Entity* Entity::GetParent()
+{
+	return s_collection->GetParent(*this);
+}
+
 } // namespace ecs

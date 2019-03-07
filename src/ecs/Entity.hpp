@@ -22,6 +22,7 @@ struct Entity
 	void RemoveComponent(const ComponentHandle& handle);
 	bool HasComponent(const uint8_t componentType);
 	void* GetComponent(const uint8_t componentType);
+	Entity* GetParent();
 
 	template <typename ComponentType>
 	ComponentType* GetComponent() const

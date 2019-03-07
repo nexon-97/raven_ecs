@@ -38,7 +38,8 @@ public:
 
 	void AddChild(Entity& entity, Entity& child);
 	void RemoveChild(Entity& entity, Entity& child);
-	uint16_t GetChildrenCount(Entity& entity);
+	uint16_t GetChildrenCount(Entity& entity) const;
+	Entity* GetParent(Entity& entity);
 
 public:
 	struct EntityHierarchyData
@@ -47,6 +48,7 @@ public:
 		uint32_t childId = Entity::k_invalidId;
 	};
 
+	// Helper structure to make the particular entity children iterator
 	struct ChildrenData
 	{
 		struct iterator
