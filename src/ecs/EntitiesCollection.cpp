@@ -15,6 +15,8 @@ EntitiesCollection::EntitiesCollection(ecs::Manager& ecsManager)
 {
 	// [TODO] Remove this hack later
 	m_entities.reserve(1024);
+	m_entityComponentsMapping.reserve(1024);
+	m_entityHierarchyData.reserve(1024);
 
 	Entity::s_collection = this;
 }
