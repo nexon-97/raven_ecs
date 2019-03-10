@@ -151,24 +151,24 @@ bool EntitiesCollection::HasComponent(Entity& entity, const uint8_t componentTyp
 	return hasComponent;
 }
 
-void* EntitiesCollection::GetComponent(Entity& entity, const uint8_t componentType)
+void* EntitiesCollection::GetComponent(Entity& entity, const uint8_t componentType) const
 {
-	auto& componentNode = m_entityComponentsMapping[entity.componentsDataOffset];
+	EntityComponentMapEntry const* componentNode = &m_entityComponentsMapping[entity.componentsDataOffset];
 	bool reachedEndOfList = false;
 
 	while (!reachedEndOfList)
 	{
-		if (componentNode.handle.GetTypeIndex() == componentType)
+		if (componentNode->handle.GetTypeIndex() == componentType)
 		{
 			// Component type found, return it
-			return m_ecsManager.GetComponent<void>(componentNode.handle);
+			return m_ecsManager.GetComponent<void>(componentNode->handle);
 		}
 
-		reachedEndOfList = (componentNode.nextItemPtr == Entity::k_invalidId);
+		reachedEndOfList = (componentNode->nextItemPtr == Entity::k_invalidId);
 
 		if (!reachedEndOfList)
 		{
-			componentNode = m_entityComponentsMapping[componentNode.nextItemPtr];
+			componentNode = &m_entityComponentsMapping[componentNode->nextItemPtr];
 		}
 	}
 

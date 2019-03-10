@@ -27,10 +27,10 @@ public:
 	void AddComponent(Entity& entity, const ComponentHandle& handle);
 	void RemoveComponent(Entity& entity, const ComponentHandle& handle);
 	bool HasComponent(Entity& entity, const uint8_t componentType);
-	void* GetComponent(Entity& entity, const uint8_t componentType);
+	void* GetComponent(Entity& entity, const uint8_t componentType) const;
 
 	template <typename ComponentType>
-	ComponentType* GetComponent(Entity& entity)
+	ComponentType* GetComponent(Entity& entity) const
 	{
 		auto componentTypeId = GetComponentTypeIdByTypeIndex(typeid(ComponentType));
 		return static_cast<ComponentType*>(GetComponent(entity, componentTypeId));
