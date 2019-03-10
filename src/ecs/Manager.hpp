@@ -37,7 +37,7 @@ public:
 	{
 		static_assert(std::is_base_of<System, SystemType>::value, "System type must be derived from ecs::System!");
 
-		RegisterSystemInternal(typeid(SystemType), std::make_unique<SystemType>());
+		RegisterSystemInternal(typeid(SystemType), std::make_unique<SystemType>(*this));
 	}
 
 	template <typename ComponentType>
@@ -117,6 +117,7 @@ public:
 	* @return Id of component type
 	*/
 	uint8_t GetComponentTypeIdByIndex(const std::type_index& typeIndex) const;
+	std::type_index GetComponentTypeIndexByTypeId(const uint8_t typeId) const;
 
 private:
 	/**

@@ -101,6 +101,11 @@ uint8_t Manager::GetComponentTypeIdByIndex(const std::type_index& typeIndex) con
 	return ComponentHandleInternal::k_invalidTypeId;
 }
 
+std::type_index Manager::GetComponentTypeIndexByTypeId(const uint8_t typeId) const
+{
+	return m_componentTypeIndexes[typeId];
+}
+
 IComponentCollection* Manager::GetCollection(const uint8_t typeId) const
 {
 	assert(typeId < m_componentStorages.size());
