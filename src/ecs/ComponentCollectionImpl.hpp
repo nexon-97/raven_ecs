@@ -1,6 +1,7 @@
 #pragma once
 #include "IComponentCollection.hpp"
 #include "ComponentHandle.hpp"
+#include "storage/MemoryPool.hpp"
 
 #include <set>
 #include <cassert>
@@ -30,23 +31,12 @@ class ComponentCollectionImpl
 	using PositionId = std::pair<std::size_t, std::size_t>;
 
 public:
-	ComponentCollectionImpl() = default;
-
-	~ComponentCollectionImpl()
-	{
-		// Release all alive objects (call destructors)
-		std::size_t chunkId = 0U;
-		for (auto& chunk : m_chunks)
-		{
-			for (std::size_t i = 0; i < chunk.usedSpace; ++i)
-			{
-				auto objectId = chunk.handlesData[i];
-				chunk.data[objectId].component.~ComponentType();
-			}
-
-			++chunkId;
-		}
-	}
+	ComponentCollectionImpl()
+		: m_componentsData(1024U)
+		, m_handles(1024U)
+		, m_handleIndexes(1024U)
+	{}
+	~ComponentCollectionImpl() = default;
 
 	// Disable collection copy
 	ComponentCollectionImpl(const ComponentCollectionImpl&) = delete;
@@ -57,9 +47,8 @@ public:
 	{
 		using iterator_category = std::forward_iterator_tag;
 		using value_type = ComponentData;
-		using pointer = ComponentData * ;
-		using reference = ComponentData & ;
-		using difference_type = std::ptrdiff_t;
+		using pointer = ComponentData*;
+		using reference = ComponentData&;
 
 		iterator() = default;
 		iterator(CollectionType* collection, std::size_t index)
@@ -104,124 +93,66 @@ public:
 
 	HandleIndex* Create() override
 	{
-		// Pick a chunk for insertion
-		static const std::size_t k_notInsertedIndex = static_cast<std::size_t>(-1);
-		std::size_t insertedIndex = k_notInsertedIndex;
-		Chunk* selectedChunk = nullptr;
+		auto newComponentData = m_componentsData.CreateItem();
+		auto newHandleData = m_handles.CreateItem();
+		auto newHandleIndexData = m_handleIndexes.CreateItem();
 
-		// Check last chunk for available place
-		const bool hasPlaceInLastChunk = (!m_chunks.empty() && m_chunks.back().usedSpace < k_chunkSize);
+		*newHandleData.second = static_cast<uint32_t>(newComponentData.first);
+		*newHandleIndexData.second = static_cast<HandleIndex>(newHandleData.first);
 
-		// No place in existing chunks -> create new chunk
-		if (hasPlaceInLastChunk)
-		{
-			selectedChunk = &m_chunks.back();
-		}
-		else
-		{
-			selectedChunk = &CreateNewChunk();
-		}
-
-		insertedIndex = (m_chunks.size() - 1U) * k_chunkSize + selectedChunk->usedSpace;
-
-		// Get offset of created handle in selected chunk
-		std::size_t chunkOffset = insertedIndex % k_chunkSize;
-
-		// Get freshly created component handle
-		auto objectId = selectedChunk->handlesData[chunkOffset];
-		// Given the handle, get component pointer
-		auto componentPtr = &selectedChunk->data[objectId].component;
-		// Call constructor for created component instance
-		new (componentPtr) ComponentType();
-
-		// Increase used space counter
-		++selectedChunk->usedSpace;
-
-		return &selectedChunk->handleIndexes[chunkOffset];
+		return newHandleIndexData.second;
 	}
 
 	void Destroy(const std::size_t index) override
 	{
-		auto chunkId = SplitObjectId(index);
-		assert(chunkId.first < m_chunks.size());
-
-		auto chunk = GetChunkByIndex(chunkId.first);
-		auto objectId = chunk->handlesData[chunkId.second];
-		auto& object = chunk->data[objectId];
-
-		assert(object.entityId != Entity::GetInvalidId());
-
-		object.component.~ComponentType();
-
-		object.entityId = Entity::GetInvalidId();
-		object.isEnabled = false;
-
-		--chunk->usedSpace;
+		m_componentsData.DestroyItem(index);
 
 		// Swap handles to fill holes and keep handle pointers valid
-		if (chunkId.second < chunk->usedSpace)
-		{
-			std::size_t dataIndexL = chunkId.second;
-			std::size_t dataIndexR = chunk->usedSpace;
+		std::size_t dataIndexL = index;
+		std::size_t dataIndexR = m_handles.GetItemsCount() - 1U;
+		
+		auto handleL = m_handles[dataIndexL];
+		auto handleR = m_handles[dataIndexR];
 
-			auto handleL = chunk->handlesData[dataIndexL];
-			auto handleR = chunk->handlesData[dataIndexR];
+		// Swap handle pointers
+		m_handleIndexes.Swap(*handleL, *handleR);
 
-			// Swap handles to make fill the hole, made by destroyed item
-			std::swap(chunk->handlesData[dataIndexL], chunk->handlesData[dataIndexR]);
+		m_handles.DestroyItem(index);
 
-			// Swap handle pointers
-			std::swap(chunk->handleIndexes[handleL], chunk->handleIndexes[handleR]);
-		}
+		// Swap handles to make fill the hole, made by destroyed item
+		//m_handles.Swap(dataIndexL, dataIndexR);
 	}
 
 	// Returns component value given data offset (usually retrieved from handle)
 	void* Get(const std::size_t index) override
 	{
-		auto chunkId = SplitObjectId(index);
-		auto componentData = GetComponentDataByPosition(chunkId);
-
-		return &componentData->component;		
+		return &m_componentsData[index]->component;		
 	}
 
 	// Returns component data given handle index (translates handle to data offset)
 	ComponentData& GetComponentData(const std::size_t index)
 	{
-		auto chunkId = SplitObjectId(index);
-		auto componentData = GetComponentDataByPosition(chunkId);
-		return *componentData;
+		return *m_componentsData[index];
 	}
 
 	void SetItemEntityId(const std::size_t index, const uint32_t entityId) override
 	{
-		auto chunkId = SplitObjectId(index);
-		auto componentData = GetComponentDataByPosition(chunkId);
-		componentData->entityId = entityId;
-
-		bool wasEnabled = componentData->isEnabled;
-		// Mark component enabled, if it was assigned valid entity id, and was not disabled previously
-		componentData->isEnabled = (wasEnabled && entityId != Entity::GetInvalidId());
+		m_componentsData[index]->entityId = entityId;
 	}
 
 	uint32_t GetItemEntityId(const std::size_t index) override
 	{
-		auto chunkId = SplitObjectId(index);
-		auto componentData = GetComponentDataByPosition(chunkId);
-		return componentData->entityId;
+		return m_componentsData[index]->entityId;
 	}
 
 	void SetItemEnabled(const std::size_t index, const bool enabled) override
 	{
-		auto chunkId = SplitObjectId(index);
-		auto componentData = GetComponentDataByPosition(chunkId);
-		componentData->isEnabled = enabled;
+		m_componentsData[index]->isEnabled = enabled;
 	}
 
 	bool IsItemEnabled(const std::size_t index) override
 	{
-		auto chunkId = SplitObjectId(index);
-		auto componentData = GetComponentDataByPosition(chunkId);
-		return componentData->isEnabled;
+		return m_componentsData[index]->isEnabled;
 	}
 
 	uint8_t GetTypeId() const override
@@ -241,130 +172,53 @@ public:
 
 	iterator end()
 	{
-		if (m_chunks.empty())
-		{
-			return iterator(this, 0U);
-		}
-		else
-		{
-			auto& lastChunk = m_chunks.back();
-			return iterator(this, k_chunkSize * (m_chunks.size() - 1U) + lastChunk.usedSpace);
-		}
+		return iterator(this, m_handles.GetItemsCount());
 	}
 
-	// [TODO] Implement erasure collection methods
-	iterator erase(const iterator& pos)
-	{
-		return end();
-	}
+	//// [TODO] Implement erasure collection methods
+	//iterator erase(const iterator& pos)
+	//{
+	//	return end();
+	//}
 
-	iterator erase(const iterator& from, const iterator& to)
-	{
-		return end();
-	}
+	//iterator erase(const iterator& from, const iterator& to)
+	//{
+	//	return end();
+	//}
 
 	void DumpState() override
 	{
-		std::stringstream ss;
+		//std::stringstream ss;
 
-		ss << "==========================================" << std::endl;
-		ss << "Collection dump:" << std::endl;
+		//ss << "==========================================" << std::endl;
+		//ss << "Collection dump:" << std::endl;
 
-		std::size_t i = 0U;
-		for (auto& chunk : m_chunks)
-		{
-			ss << "Chunk [" << i << "]:" << std::endl;
+		//std::size_t i = 0U;
+		//for (auto& chunk : m_chunks)
+		//{
+		//	ss << "Chunk [" << i << "]:" << std::endl;
 
-			for (int j = 0; j < /*chunk.usedSpace*/ 55; ++j)
-			{
-				auto& data = chunk.data[chunk.handlesData[j]];
-				ss << "[" << j << "]: Handle: " << chunk.handlesData[j] << "; Data(entityId: " << data.entityId << "; enabled: " << data.isEnabled << " )" << "; ";
-				ss << "HandleIndex: [" << chunk.handleIndexes[j] << "] (Handle " << chunk.handlesData[chunk.handleIndexes[j]] << ")" << std::endl;
-			}
+		//	for (int j = 0; j < /*chunk.usedSpace*/ 55; ++j)
+		//	{
+		//		auto& data = chunk.data[chunk.handlesData[j]];
+		//		ss << "[" << j << "]: Handle: " << chunk.handlesData[j] << "; Data(entityId: " << data.entityId << "; enabled: " << data.isEnabled << " )" << "; ";
+		//		ss << "HandleIndex: [" << chunk.handleIndexes[j] << "] (Handle " << chunk.handlesData[chunk.handleIndexes[j]] << ")" << std::endl;
+		//	}
 
-			++i;
-		}
+		//	++i;
+		//}
 
-		ss << "==========================================" << std::endl;
+		//ss << "==========================================" << std::endl;
 
-		auto dumpStr = ss.str();
+		//auto dumpStr = ss.str();
 
-		OutputDebugStringA(dumpStr.c_str());
+		//OutputDebugStringA(dumpStr.c_str());
 	}
 
 private:
-	PositionId SplitObjectId(const std::size_t id) const
-	{
-		return std::make_pair(id / k_chunkSize, id % k_chunkSize);
-	}
-
-	ComponentData* GetComponentDataByPosition(const PositionId& position)
-	{
-		std::size_t i = 0U;
-		for (auto& chunk : m_chunks)
-		{
-			if (i == position.first)
-			{
-				auto objectId = chunk.handlesData[position.second];
-				return &chunk.data[objectId];
-			}
-
-			++i;
-		}
-
-		return nullptr;
-	}
-
-private:
-	struct Chunk
-	{
-		StorageType data;
-		HandlesStorage handlesData;
-		HandleIndexesStorage handleIndexes;
-		std::size_t usedSpace = 0U;
-
-		Chunk() = default;
-	};
-
-	Chunk& CreateNewChunk(std::size_t* newChunkId = nullptr)
-	{
-		std::size_t chunkId = m_chunks.size();
-
-		m_chunks.emplace_back();
-		auto& chunk = m_chunks.back();
-
-		if (nullptr != newChunkId)
-		{
-			*newChunkId = chunkId;
-		}
-
-		// Create initial handles data set
-		for (std::size_t i = 0U; i < k_chunkSize; ++i)
-		{
-			chunk.handlesData[i] = static_cast<uint32_t>(i);
-			chunk.handleIndexes[i] = static_cast<HandleIndex>(i);
-		}
-
-		return chunk;
-	}
-
-	Chunk* GetChunkByIndex(const std::size_t index)
-	{
-		std::size_t i = 0U;
-		for (auto& chunk : m_chunks)
-		{
-			if (i == index)
-			{
-				return &chunk;
-			}
-
-			++i;
-		}
-
-		return nullptr;
-	}
-
-	std::list<Chunk> m_chunks;
+	detail::MemoryPool<ComponentData> m_componentsData;
+	detail::MemoryPool<uint32_t> m_handles;
+	detail::MemoryPool<HandleIndex> m_handleIndexes;
 	uint8_t m_typeId;
 };
 

@@ -318,6 +318,12 @@ EntitiesCollection::ChildrenData EntitiesCollection::GetChildrenData(Entity& ent
 	return EntitiesCollection::ChildrenData(this, m_entityHierarchyData, offsetBegin, offsetEnd);
 }
 
+EntitiesCollection::ComponentsData EntitiesCollection::GetComponentsData(Entity& entity)
+{
+	auto offsetBegin = m_entities[entity.id]->entity.componentsDataOffset;
+	return EntitiesCollection::ComponentsData(m_entityComponentsMapping, offsetBegin);
+}
+
 EntitiesCollection::EntitiesStorageType& EntitiesCollection::GetEntitiesData()
 {
 	return m_entities;
@@ -329,22 +335,9 @@ void EntitiesCollection::SetEntityEnabled(Entity& entity, const bool enabled)
 
 	if (entityData->isEnabled != enabled)
 	{
-		auto componentNode = m_entityComponentsMapping[entity.componentsDataOffset];
-		bool reachedEndOfList = false;
-
-		while (!reachedEndOfList)
+		for (auto& componentHandle : GetComponentsData(entity))
 		{
-			if (componentNode->handle.GetTypeIndex() != ComponentHandleInternal::GetInvalidTypeId())
-			{
-				m_ecsManager.SetComponentEnabled(componentNode->handle, enabled);
-			}
-
-			reachedEndOfList = (componentNode->nextItemPtr == Entity::GetInvalidId());
-
-			if (!reachedEndOfList)
-			{
-				componentNode = m_entityComponentsMapping[componentNode->nextItemPtr];
-			}
+			m_ecsManager.SetComponentEnabled(componentHandle, enabled);
 		}
 
 		entityData->isEnabled = enabled;

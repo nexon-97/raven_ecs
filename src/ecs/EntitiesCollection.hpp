@@ -129,6 +129,88 @@ public:
 
 	ChildrenData ECS_API GetChildrenData(Entity& entity);
 
+public:
+	struct EntityComponentMapEntry
+	{
+		uint32_t nextItemPtr = Entity::GetInvalidId();
+		ComponentHandle handle;
+	};
+	using ComponentsMapStorageType = detail::MemoryPool<EntityComponentMapEntry>;
+
+	// Helper structure to make the particular entity children iterator
+	struct ComponentsData
+	{
+		struct iterator
+		{
+			using iterator_category = std::forward_iterator_tag;
+			using pointer = ComponentHandle *;
+			using reference = ComponentHandle&;
+
+			iterator() = delete;
+			iterator(ComponentsMapStorageType& data, std::size_t offset)
+				: data(data)
+				, offset(offset)
+			{}
+
+			reference operator*()
+			{
+				return data[offset]->handle;
+			}
+
+			pointer operator->()
+			{
+				return &**this;
+			}
+
+			iterator& operator++()
+			{
+				offset = data[offset]->nextItemPtr;
+				return *this;
+			}
+
+			iterator operator++(int)
+			{
+				const auto temp(*this); ++*this; return temp;
+			}
+
+			bool operator==(const iterator& other) const
+			{
+				return offset == other.offset;
+			}
+
+			bool operator!=(const iterator& other) const
+			{
+				return !(*this == other);
+			}
+
+			ComponentsMapStorageType& data;
+			std::size_t offset;
+		};
+
+		friend struct iterator;
+
+		ComponentsData(ComponentsMapStorageType& storage, const std::size_t offsetBegin)
+			: offsetBegin(offsetBegin)
+			, storage(storage)
+		{}
+
+		iterator begin()
+		{
+			return iterator(storage, offsetBegin);
+		}
+
+		iterator end()
+		{
+			return iterator(storage, Entity::GetInvalidId());
+		}
+
+	private:
+		ComponentsMapStorageType& storage;
+		std::size_t offsetBegin;
+	};
+
+	ComponentsData ECS_API GetComponentsData(Entity& entity);
+
 protected:
 	struct EntityData
 	{
@@ -144,13 +226,6 @@ private:
 	uint8_t ECS_API GetComponentTypeIdByTypeIndex(const std::type_index& typeIndex) const;
 
 private:
-	struct EntityComponentMapEntry
-	{
-		uint32_t nextItemPtr = Entity::GetInvalidId();
-		ComponentHandle handle;
-	};
-	using ComponentsMapStorageType = detail::MemoryPool<EntityComponentMapEntry>;
-
 	EntitiesStorageType m_entities;
 	ComponentsMapStorageType m_entityComponentsMapping;
 	EntityHierarchyDataStorageType m_entityHierarchyData;

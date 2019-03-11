@@ -161,6 +161,14 @@ public:
 		return GetItem(index);
 	}
 
+	void Swap(const std::size_t leftIndex, const std::size_t rightIndex)
+	{
+		auto leftPoolLocation = GetPoolLocation(leftIndex);
+		auto rightPoolLocation = GetPoolLocation(rightIndex);
+
+		std::swap(m_chunks[leftPoolLocation.first][leftPoolLocation.second], m_chunks[rightPoolLocation.first][rightPoolLocation.second]);
+	}
+
 private:
 	void AllocateNewChunk()
 	{
