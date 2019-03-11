@@ -15,7 +15,7 @@ class EntitiesCollection
 {
 public:
 	EntitiesCollection() = delete;
-	explicit EntitiesCollection(Manager& ecsManager);
+	explicit ECS_API EntitiesCollection(Manager& ecsManager);
 
 	// Disable collection copy
 	EntitiesCollection(const EntitiesCollection&) = delete;
@@ -220,7 +220,7 @@ protected:
 		bool isEnabled : 1;
 	};
 	using EntitiesStorageType = detail::MemoryPool<EntityData>;
-	EntitiesStorageType& GetEntitiesData();
+	ECS_API EntitiesStorageType& GetEntitiesData();
 
 private:
 	uint8_t ECS_API GetComponentTypeIdByTypeIndex(const std::type_index& typeIndex) const;

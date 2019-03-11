@@ -34,7 +34,7 @@ protected:
 	bool IsEntityDestoyed(ecs::Entity& entity)
 	{
 		return (entity.componentsMask == 0
-			&& entity.id == ecs::Entity::k_invalidId);
+			&& entity.id == ecs::Entity::GetInvalidId());
 	}
 
 	ecs::Manager manager;
@@ -44,7 +44,7 @@ protected:
 TEST_F(EntityCollectionTest, CreateEntityTest)
 {
 	auto& entity = entityCollection.CreateEntity();
-	EXPECT_NE(entity.id, ecs::Entity::k_invalidId);
+	EXPECT_NE(entity.id, ecs::Entity::GetInvalidId());
 }
 
 TEST_F(EntityCollectionTest, CreateMultipleEntitiesTest)

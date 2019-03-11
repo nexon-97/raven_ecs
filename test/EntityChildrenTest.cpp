@@ -34,7 +34,7 @@ protected:
 	bool IsEntityDestoyed(ecs::Entity& entity)
 	{
 		return (entity.componentsMask == 0
-			&& entity.id == ecs::Entity::k_invalidId);
+			&& entity.id == ecs::Entity::GetInvalidId());
 	}
 
 	void CreateMultipleChildren(ecs::Entity& entity, int count, uint32_t* ids)
@@ -57,7 +57,7 @@ TEST_F(EntityChildrenTest, AddChildTest)
 	auto& child = entityCollection.CreateEntity();
 	entityCollection.AddChild(entity, child);
 	
-	EXPECT_EQ(entity.parentId, ecs::Entity::k_invalidId) << "Parent entity has invalid id";
+	EXPECT_EQ(entity.parentId, ecs::Entity::GetInvalidId()) << "Parent entity has invalid id";
 	EXPECT_EQ(child.parentId, entity.id) << "Child entity parent id not equals to actual parent id";
 	EXPECT_EQ(entityCollection.GetChildrenCount(entity), 1) << "Invalid children count set for parent";
 }
@@ -70,7 +70,7 @@ TEST_F(EntityChildrenTest, RemoveChildTest)
 	entityCollection.AddChild(entity, child);
 
 	// Check child added successfully
-	EXPECT_EQ(entity.parentId, ecs::Entity::k_invalidId);
+	EXPECT_EQ(entity.parentId, ecs::Entity::GetInvalidId());
 	EXPECT_EQ(child.parentId, entity.id) << "Child entity parent id not equals to actual parent id";
 	EXPECT_EQ(entityCollection.GetChildrenCount(entity), 1) << "Invalid children count in parent";
 
@@ -78,8 +78,8 @@ TEST_F(EntityChildrenTest, RemoveChildTest)
 	entityCollection.RemoveChild(entity, child);
 
 	// Check child removed successfully
-	EXPECT_EQ(entity.parentId, ecs::Entity::k_invalidId);
-	EXPECT_EQ(child.parentId, ecs::Entity::k_invalidId);
+	EXPECT_EQ(entity.parentId, ecs::Entity::GetInvalidId());
+	EXPECT_EQ(child.parentId, ecs::Entity::GetInvalidId());
 	EXPECT_EQ(entityCollection.GetChildrenCount(entity), 0) << "Invalid children count in parent!";
 }
 
