@@ -4,15 +4,13 @@
 namespace ecs
 {
 
-const uint32_t Entity::k_invalidId = static_cast<uint32_t>(-1);
-
 EntitiesCollection::EntitiesCollection(ecs::Manager& ecsManager)
 	: m_ecsManager(ecsManager)
 	, m_entities(1024U)
 	, m_entityComponentsMapping(1024U)
 	, m_entityHierarchyData(1024U)
 {
-	Entity::s_collection = this;
+	//Entity::s_collection = this;
 }
 
 Entity& EntitiesCollection::GetEntity(const uint32_t id)
@@ -27,14 +25,15 @@ Entity& EntitiesCollection::CreateEntity()
 
 	auto& entityData = *entityCreationResult.second;
 	entityData.isAlive = true;
+	entityData.isEnabled = true;
 	entityData.entity.id = newEntityId;
-	entityData.entity.parentId = Entity::k_invalidId;
+	entityData.entity.parentId = Entity::GetInvalidId();
 
 	{
 		auto componentMappingCreationResult = m_entityComponentsMapping.CreateItem();
 		auto mappingItem = componentMappingCreationResult.second;
-		mappingItem->handle = ComponentHandle(ComponentHandleInternal::k_invalidTypeId, nullptr);
-		mappingItem->nextItemPtr = Entity::k_invalidId;
+		mappingItem->handle = ComponentHandle(ComponentHandleInternal::GetInvalidTypeId(), nullptr);
+		mappingItem->nextItemPtr = Entity::GetInvalidId();
 
 		entityData.entity.componentsDataOffset = static_cast<uint32_t>(componentMappingCreationResult.first);
 	}
@@ -42,8 +41,8 @@ Entity& EntitiesCollection::CreateEntity()
 	{
 		auto hierarchyDataCreationResult = m_entityHierarchyData.CreateItem();
 		auto hierarchyData = hierarchyDataCreationResult.second;
-		hierarchyData->childId = Entity::k_invalidId;
-		hierarchyData->nextItemPtr = Entity::k_invalidId;
+		hierarchyData->childId = Entity::GetInvalidId();
+		hierarchyData->nextItemPtr = Entity::GetInvalidId();
 
 		entityData.entity.hierarchyDataOffset = static_cast<uint32_t>(hierarchyDataCreationResult.first);
 	}
@@ -67,7 +66,7 @@ void EntitiesCollection::DestroyEntity(const uint32_t id)
 			m_ecsManager.DestroyComponent(componentNode->handle);
 		}
 
-		reachedEndOfList = (componentNode->nextItemPtr == Entity::k_invalidId);
+		reachedEndOfList = (componentNode->nextItemPtr == Entity::GetInvalidId());
 
 		if (!reachedEndOfList)
 		{
@@ -77,13 +76,14 @@ void EntitiesCollection::DestroyEntity(const uint32_t id)
 
 	// Erase list items
 	componentNode = m_entityComponentsMapping[entity.componentsDataOffset];
-	componentNode->handle = ComponentHandle(ComponentHandleInternal::k_invalidTypeId, nullptr);
-	componentNode->nextItemPtr = Entity::k_invalidId;
+	componentNode->handle = ComponentHandle(ComponentHandleInternal::GetInvalidTypeId(), nullptr);
+	componentNode->nextItemPtr = Entity::GetInvalidId();
 
 	// Mark entity as deleted
-	entity.id = Entity::k_invalidId;
+	entity.id = Entity::GetInvalidId();
 	entity.componentsMask = 0;
 	entityData.isAlive = false;
+	entityData.isEnabled = false;
 }
 
 void EntitiesCollection::AddComponent(Entity& entity, const ComponentHandle& handle)
@@ -98,7 +98,7 @@ void EntitiesCollection::AddComponent(Entity& entity, const ComponentHandle& han
 	while (!placeForInsertionFound)
 	{
 		const auto& mappingEntry = m_entityComponentsMapping[offset];
-		if (mappingEntry->nextItemPtr == Entity::k_invalidId)
+		if (mappingEntry->nextItemPtr == Entity::GetInvalidId())
 		{
 			// This is the end of the list, can be used as insertion point
 			placeForInsertionFound = true;
@@ -123,7 +123,7 @@ void EntitiesCollection::AddComponent(Entity& entity, const ComponentHandle& han
 	auto currentEntry = m_entityComponentsMapping[mappingEntryId];
 	auto newEntry = m_entityComponentsMapping[newEntryId];
 	newEntry->handle = handle;
-	newEntry->nextItemPtr = Entity::k_invalidId;
+	newEntry->nextItemPtr = Entity::GetInvalidId();
 
 	if (currentEntry != newEntry)
 	{
@@ -139,7 +139,7 @@ void EntitiesCollection::RemoveComponent(Entity& entity, const ComponentHandle& 
 		const int typeMask = 1 << handle.GetTypeIndex();
 		entity.componentsMask ^= typeMask;
 
-		m_ecsManager.SetComponentEntityId(handle, Entity::k_invalidId);
+		m_ecsManager.SetComponentEntityId(handle, Entity::GetInvalidId());
 	}
 }
 
@@ -164,7 +164,7 @@ void* EntitiesCollection::GetComponent(Entity& entity, const uint8_t componentTy
 			return m_ecsManager.GetComponent<void>(componentNode->handle);
 		}
 
-		reachedEndOfList = (componentNode->nextItemPtr == Entity::k_invalidId);
+		reachedEndOfList = (componentNode->nextItemPtr == Entity::GetInvalidId());
 
 		if (!reachedEndOfList)
 		{
@@ -188,7 +188,7 @@ void EntitiesCollection::AddChild(Entity& entity, Entity& child)
 	while (!placeForInsertionFound)
 	{
 		auto hierarchyData = m_entityHierarchyData[offset];
-		if (hierarchyData->nextItemPtr == Entity::k_invalidId)
+		if (hierarchyData->nextItemPtr == Entity::GetInvalidId())
 		{
 			// This is the end of the list, can be used as insertion point
 			placeForInsertionFound = true;
@@ -203,7 +203,7 @@ void EntitiesCollection::AddChild(Entity& entity, Entity& child)
 	auto hierarchyDataId = offset;
 	auto newEntryId = hierarchyDataId;
 
-	if (m_entityHierarchyData[hierarchyDataId]->childId != Entity::k_invalidId)
+	if (m_entityHierarchyData[hierarchyDataId]->childId != Entity::GetInvalidId())
 	{
 		auto creationResult = m_entityHierarchyData.CreateItem();
 		newEntryId = creationResult.first;
@@ -213,7 +213,7 @@ void EntitiesCollection::AddChild(Entity& entity, Entity& child)
 	auto currentEntry = m_entityHierarchyData[hierarchyDataId];
 	auto newEntry = m_entityHierarchyData[newEntryId];
 	newEntry->childId = child.id;
-	newEntry->nextItemPtr = Entity::k_invalidId;
+	newEntry->nextItemPtr = Entity::GetInvalidId();
 
 	if (currentEntry != newEntry)
 	{
@@ -227,12 +227,12 @@ void EntitiesCollection::AddChild(Entity& entity, Entity& child)
 
 void EntitiesCollection::RemoveChild(Entity& entity, Entity& child)
 {
-	assert(child.id != Entity::k_invalidId);
+	assert(child.id != Entity::GetInvalidId());
 
 	// Find the child in the list
 	bool itemFound = false;
 	std::size_t offset = entity.hierarchyDataOffset;
-	std::size_t prevOffset = Entity::k_invalidId;
+	std::size_t prevOffset = Entity::GetInvalidId();
 	while (!itemFound)
 	{
 		auto hierarchyData = m_entityHierarchyData[offset];
@@ -241,7 +241,7 @@ void EntitiesCollection::RemoveChild(Entity& entity, Entity& child)
 		{
 			itemFound = true;
 		}
-		else if (hierarchyData->nextItemPtr == Entity::k_invalidId)
+		else if (hierarchyData->nextItemPtr == Entity::GetInvalidId())
 		{
 			break;
 		}
@@ -257,7 +257,7 @@ void EntitiesCollection::RemoveChild(Entity& entity, Entity& child)
 		// Item found, remove it from the list preserving connectivity
 		auto hierarchyData = m_entityHierarchyData[offset];
 
-		if (prevOffset == Entity::k_invalidId)
+		if (prevOffset == Entity::GetInvalidId())
 		{
 			entity.hierarchyDataOffset = hierarchyData->nextItemPtr;
 		}
@@ -266,10 +266,10 @@ void EntitiesCollection::RemoveChild(Entity& entity, Entity& child)
 			m_entityHierarchyData[prevOffset]->nextItemPtr = hierarchyData->nextItemPtr;
 		}
 
-		hierarchyData->childId = Entity::k_invalidId;
-		hierarchyData->nextItemPtr = Entity::k_invalidId;
+		hierarchyData->childId = Entity::GetInvalidId();
+		hierarchyData->nextItemPtr = Entity::GetInvalidId();
 
-		child.parentId = Entity::k_invalidId;
+		child.parentId = Entity::GetInvalidId();
 		--m_entities[entity.id]->childrenCount;
 	}
 }
@@ -281,7 +281,7 @@ uint16_t EntitiesCollection::GetChildrenCount(Entity& entity) const
 
 Entity* EntitiesCollection::GetParent(Entity& entity)
 {
-	if (entity.parentId != Entity::k_invalidId)
+	if (entity.parentId != Entity::GetInvalidId())
 	{
 		return &m_entities[entity.parentId]->entity;
 	}
@@ -300,7 +300,7 @@ EntitiesCollection::ChildrenData EntitiesCollection::GetChildrenData(Entity& ent
 	while (!endFound)
 	{
 		auto hierarchyData = m_entityHierarchyData[offsetEnd];
-		if (hierarchyData->childId == Entity::k_invalidId)
+		if (hierarchyData->childId == Entity::GetInvalidId())
 		{
 			endFound = true;
 		}
@@ -308,7 +308,7 @@ EntitiesCollection::ChildrenData EntitiesCollection::GetChildrenData(Entity& ent
 		{
 			offsetEnd = hierarchyData->nextItemPtr;
 
-			if (offsetEnd == Entity::k_invalidId)
+			if (offsetEnd == Entity::GetInvalidId())
 			{
 				endFound = true;
 			}
@@ -321,6 +321,34 @@ EntitiesCollection::ChildrenData EntitiesCollection::GetChildrenData(Entity& ent
 EntitiesCollection::EntitiesStorageType& EntitiesCollection::GetEntitiesData()
 {
 	return m_entities;
+}
+
+void EntitiesCollection::SetEntityEnabled(Entity& entity, const bool enabled)
+{
+	auto entityData = m_entities[entity.id];
+
+	if (entityData->isEnabled != enabled)
+	{
+		auto componentNode = m_entityComponentsMapping[entity.componentsDataOffset];
+		bool reachedEndOfList = false;
+
+		while (!reachedEndOfList)
+		{
+			if (componentNode->handle.GetTypeIndex() != ComponentHandleInternal::GetInvalidTypeId())
+			{
+				m_ecsManager.SetComponentEnabled(componentNode->handle, enabled);
+			}
+
+			reachedEndOfList = (componentNode->nextItemPtr == Entity::GetInvalidId());
+
+			if (!reachedEndOfList)
+			{
+				componentNode = m_entityComponentsMapping[componentNode->nextItemPtr];
+			}
+		}
+
+		entityData->isEnabled = enabled;
+	}
 }
 
 } // namespace ecs

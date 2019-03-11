@@ -18,6 +18,8 @@ public:
 	// Associates entity id with the component at index
 	virtual void SetItemEntityId(const std::size_t index, const uint32_t entityId) = 0;
 	virtual uint32_t GetItemEntityId(const std::size_t index) = 0;
+	virtual void SetItemEnabled(const std::size_t index, const bool enabled) = 0;
+	virtual bool IsItemEnabled(const std::size_t index) = 0;
 	virtual void SetTypeId(const uint8_t typeId) = 0;
 	virtual uint8_t GetTypeId() const = 0;
 

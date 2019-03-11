@@ -3,8 +3,6 @@
 namespace ecs
 {
 
-const uint8_t ComponentHandleInternal::k_invalidTypeId = static_cast<uint8_t>(-1);
-
 Manager::Manager()
 	: m_entitiesCollection(*this)
 {}
@@ -81,7 +79,7 @@ ComponentHandle Manager::CreateComponentByName(const std::string& name)
 		return CreateComponentInternal(typeIdIt->second);
 	}
 
-	return ComponentHandle(ComponentHandleInternal::k_invalidTypeId, nullptr);
+	return ComponentHandle(ComponentHandleInternal::GetInvalidTypeId(), nullptr);
 }
 
 ComponentHandle Manager::CreateComponentInternal(const uint8_t typeId)
@@ -98,7 +96,7 @@ uint8_t Manager::GetComponentTypeIdByIndex(const std::type_index& typeIndex) con
 		return it->second;
 	}
 
-	return ComponentHandleInternal::k_invalidTypeId;
+	return ComponentHandleInternal::GetInvalidTypeId();
 }
 
 std::type_index Manager::GetComponentTypeIndexByTypeId(const uint8_t typeId) const
@@ -140,6 +138,12 @@ void Manager::RegisterComponentTypeInternal(const std::string& name, const std::
 	m_componentNameToIdMapping.emplace(name, typeId);
 	m_componentTypeIndexes.push_back(typeIndex);
 	m_typeIndexToComponentTypeIdMapping.emplace(typeIndex, typeId);
+}
+
+void Manager::SetComponentEnabled(const ComponentHandle& handle, const bool enabled)
+{
+	auto collection = GetCollection(handle.GetTypeIndex());
+	collection->SetItemEnabled(handle.GetOffset(), enabled);
 }
 
 } // namespace ecs

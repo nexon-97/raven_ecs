@@ -1,6 +1,5 @@
 #pragma once
 #include "IComponentCollection.hpp"
-#include "IComponentCollectionCallback.hpp"
 #include "ComponentHandle.hpp"
 
 #include <set>
@@ -21,14 +20,13 @@ class ComponentCollectionImpl
 	struct ComponentData
 	{
 		ComponentType component;
-		uint32_t entityId = Entity::k_invalidId;
+		uint32_t entityId = Entity::GetInvalidId();
 		bool isEnabled = false;
 	};
 	using StorageType = ComponentData[k_chunkSize];
 	using HandlesStorage = uint32_t[k_chunkSize];
 	using HandleIndexesStorage = HandleIndex[k_chunkSize];
 	using CollectionType = ComponentCollectionImpl<ComponentType>;
-	using CallbackType = IComponentCollectionCallback<ComponentType>;
 	using PositionId = std::pair<std::size_t, std::size_t>;
 
 public:
@@ -151,11 +149,11 @@ public:
 		auto objectId = chunk->handlesData[chunkId.second];
 		auto& object = chunk->data[objectId];
 
-		assert(object.entityId != Entity::k_invalidId);
+		assert(object.entityId != Entity::GetInvalidId());
 
 		object.component.~ComponentType();
 
-		object.entityId = Entity::k_invalidId;
+		object.entityId = Entity::GetInvalidId();
 		object.isEnabled = false;
 
 		--chunk->usedSpace;
@@ -202,7 +200,7 @@ public:
 
 		bool wasEnabled = componentData->isEnabled;
 		// Mark component enabled, if it was assigned valid entity id, and was not disabled previously
-		componentData->isEnabled = (wasEnabled && entityId != Entity::k_invalidId);
+		componentData->isEnabled = (wasEnabled && entityId != Entity::GetInvalidId());
 	}
 
 	uint32_t GetItemEntityId(const std::size_t index) override
@@ -212,10 +210,18 @@ public:
 		return componentData->entityId;
 	}
 
-	// Registers callback in collection. Callback cannot be removed currently.
-	void RegisterCallback(CallbackType* callback)
+	void SetItemEnabled(const std::size_t index, const bool enabled) override
 	{
-		m_callbacks.RegisterCallback(callback);
+		auto chunkId = SplitObjectId(index);
+		auto componentData = GetComponentDataByPosition(chunkId);
+		componentData->isEnabled = enabled;
+	}
+
+	bool IsItemEnabled(const std::size_t index) override
+	{
+		auto chunkId = SplitObjectId(index);
+		auto componentData = GetComponentDataByPosition(chunkId);
+		return componentData->isEnabled;
 	}
 
 	uint8_t GetTypeId() const override
@@ -358,48 +364,7 @@ private:
 		return nullptr;
 	}
 
-	struct CallbacksPack
-	{
-		struct PrioritySorter
-		{
-			bool operator()(CallbackType* lhs, CallbackType* rhs) const
-			{
-				return lhs->GetPriority() > rhs->GetPriority();
-			}
-		};
-		using CallbackCollection = std::set<CallbackType*, PrioritySorter>;
-
-		CallbackCollection createCallbacks;
-		CallbackCollection destroyCallbacks;
-		CallbackCollection enableCallbacks;
-		CallbackCollection disableCallbacks;
-
-		void RegisterCallback(CallbackType* callback)
-		{
-			if (callback->WantsCreateNotifications())
-			{
-				createCallbacks.insert(callback);
-			}
-
-			if (callback->WantsDestroyNotifications())
-			{
-				destroyCallbacks.insert(callback);
-			}
-
-			if (callback->WantsEnableNotifications())
-			{
-				enableCallbacks.insert(callback);
-			}
-
-			if (callback->WantsDisableNotifications())
-			{
-				disableCallbacks.insert(callback);
-			}
-		}
-	};
-
 	std::list<Chunk> m_chunks;
-	CallbacksPack m_callbacks;
 	uint8_t m_typeId;
 };
 

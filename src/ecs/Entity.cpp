@@ -5,31 +5,38 @@
 namespace ecs
 {
 
-EntitiesCollection* Entity::s_collection = nullptr;
+const uint32_t k_invalidId = static_cast<uint32_t>(-1);
 
-void Entity::AddComponent(const ComponentHandle& handle)
+const uint32_t Entity::GetInvalidId()
 {
-	s_collection->AddComponent(*this, handle);
+	return k_invalidId;
 }
 
-void Entity::RemoveComponent(const ComponentHandle& handle)
-{
-	return s_collection->RemoveComponent(*this, handle);
-}
-
-bool Entity::HasComponent(const uint8_t componentType)
-{
-	return s_collection->HasComponent(*this, componentType);
-}
-
-void* Entity::GetComponent(const uint8_t componentType)
-{
-	return s_collection->GetComponent(*this, componentType);
-}
-
-Entity* Entity::GetParent()
-{
-	return s_collection->GetParent(*this);
-}
+//EntitiesCollection* Entity::s_collection = nullptr;
+//
+//void Entity::AddComponent(const ComponentHandle& handle)
+//{
+//	s_collection->AddComponent(*this, handle);
+//}
+//
+//void Entity::RemoveComponent(const ComponentHandle& handle)
+//{
+//	return s_collection->RemoveComponent(*this, handle);
+//}
+//
+//bool Entity::HasComponent(const uint8_t componentType)
+//{
+//	return s_collection->HasComponent(*this, componentType);
+//}
+//
+//void* Entity::GetComponent(const uint8_t componentType)
+//{
+//	return s_collection->GetComponent(*this, componentType);
+//}
+//
+//Entity* Entity::GetParent()
+//{
+//	return s_collection->GetParent(*this);
+//}
 
 } // namespace ecs

@@ -1,4 +1,5 @@
 #pragma once
+#include "ecs/ECSApiDef.hpp"
 #include <cstdint>
 
 namespace ecs
@@ -6,7 +7,11 @@ namespace ecs
 
 struct ComponentHandleInternal
 {
-	static const uint8_t k_invalidTypeId;
+	static const uint8_t ECS_API GetInvalidTypeId()
+	{
+		static const uint8_t k_invalidTypeId = static_cast<uint8_t>(-1);
+		return k_invalidTypeId;
+	}
 };
 
 using HandleIndex = uint16_t;
@@ -32,7 +37,7 @@ public:
 
 	bool IsValid() const
 	{
-		return (m_typeId != ComponentHandleInternal::k_invalidTypeId);
+		return (m_typeId != ComponentHandleInternal::GetInvalidTypeId());
 	}
 
 	uint8_t GetTypeIndex() const

@@ -21,12 +21,12 @@ class Manager
 	using SystemPtr = std::unique_ptr<System>;
 
 public:
-	Manager();
+	ECS_API Manager();
 
-	void Init() final;
-	void Destroy() final;
-	void Update() final;
-	void Render() final;
+	void ECS_API Init() final;
+	void ECS_API Destroy() final;
+	void ECS_API Update() final;
+	void ECS_API Render() final;
 
 	/**
 	* @brief Register system type, provided as template parameter SystemType, in ECS.
@@ -79,8 +79,8 @@ public:
 		return CreateComponentInternal(typeId);
 	}
 
-	ComponentHandle CreateComponentByName(const std::string& name);
-	void DestroyComponent(const ComponentHandle& handle);
+	ComponentHandle ECS_API CreateComponentByName(const std::string& name);
+	void ECS_API DestroyComponent(const ComponentHandle& handle);
 
 	template <typename ComponentType>
 	ComponentType* GetComponent(const ComponentHandle& handle)
@@ -106,40 +106,42 @@ public:
 		return nullptr;
 	}
 
-	void SetComponentEntityId(const ComponentHandle& handle, const uint32_t id);
-	uint32_t GetComponentEntityId(const ComponentHandle& handle) const;
+	void ECS_API SetComponentEntityId(const ComponentHandle& handle, const uint32_t id);
+	uint32_t ECS_API GetComponentEntityId(const ComponentHandle& handle) const;
 
-	EntitiesCollection& GetEntitiesCollection();
+	ECS_API EntitiesCollection& GetEntitiesCollection();
 
 	/**
 	* Returns component type id by type index
 	* @param typeIndex - type index of component
 	* @return Id of component type
 	*/
-	uint8_t GetComponentTypeIdByIndex(const std::type_index& typeIndex) const;
-	std::type_index GetComponentTypeIndexByTypeId(const uint8_t typeId) const;
+	uint8_t ECS_API GetComponentTypeIdByIndex(const std::type_index& typeIndex) const;
+	std::type_index ECS_API GetComponentTypeIndexByTypeId(const uint8_t typeId) const;
+
+	void ECS_API SetComponentEnabled(const ComponentHandle& handle, const bool enabled);
 
 private:
 	/**
 	* @brief Registers system inside internal systems collection
 	*/
-	void RegisterSystemInternal(const std::type_index& typeIndex, SystemPtr&& system);
+	void ECS_API RegisterSystemInternal(const std::type_index& typeIndex, SystemPtr&& system);
 
 	/**
 	* @brief Returns component collection for components with particular id
 	* @param typeId - id of component type
 	* @return Component collection, associated with provided type id
 	*/
-	IComponentCollection* GetCollection(const uint8_t typeId) const;
+	ECS_API IComponentCollection* GetCollection(const uint8_t typeId) const;
 
 	/**
 	* @brief Requests component instance creation given the type id of requested component
 	* @param typeId - id of requested component type
 	* @return Handle to created component instance
 	*/
-	ComponentHandle CreateComponentInternal(const uint8_t typeId);
+	ComponentHandle ECS_API CreateComponentInternal(const uint8_t typeId);
 
-	void RegisterComponentTypeInternal(const std::string& name, const std::type_index& typeIndex, std::unique_ptr<IComponentCollection>&& collection);
+	void ECS_API RegisterComponentTypeInternal(const std::string& name, const std::type_index& typeIndex, std::unique_ptr<IComponentCollection>&& collection);
 
 private:
 	std::vector<std::unique_ptr<IComponentCollection>> m_componentStorages;

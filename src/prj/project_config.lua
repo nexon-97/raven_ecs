@@ -1,5 +1,5 @@
 project "ecs"
-	kind "StaticLib"	
+	kind "SharedLib"	
 	language "C++"
 	location (_ACTION)
 
@@ -12,6 +12,8 @@ project "ecs"
 	targetdir(EngineRootLocation.."/bin")
 	
 	configureWindowsSDK()
+	
+	defines { "ECS_EXPORTS" }
 
 	configuration "Debug"
 		defines { "DEBUG" }

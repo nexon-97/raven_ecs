@@ -1,6 +1,7 @@
 #pragma once
 #include "Entity.hpp"
 #include "ecs/ComponentHandle.hpp"
+#include "ecs/ECSApiDef.hpp"
 #include "storage/MemoryPool.hpp"
 
 #include <typeindex>
@@ -20,14 +21,14 @@ public:
 	EntitiesCollection(const EntitiesCollection&) = delete;
 	EntitiesCollection& operator=(const EntitiesCollection&) = delete;
 
-	Entity& GetEntity(const uint32_t id);
-	Entity& CreateEntity();
-	void DestroyEntity(const uint32_t id);
+	ECS_API Entity& GetEntity(const uint32_t id);
+	ECS_API Entity& CreateEntity();
+	void ECS_API DestroyEntity(const uint32_t id);
 
-	void AddComponent(Entity& entity, const ComponentHandle& handle);
-	void RemoveComponent(Entity& entity, const ComponentHandle& handle);
-	bool HasComponent(Entity& entity, const uint8_t componentType);
-	void* GetComponent(Entity& entity, const uint8_t componentType) const;
+	void ECS_API AddComponent(Entity& entity, const ComponentHandle& handle);
+	void ECS_API RemoveComponent(Entity& entity, const ComponentHandle& handle);
+	bool ECS_API HasComponent(Entity& entity, const uint8_t componentType);
+	ECS_API void* GetComponent(Entity& entity, const uint8_t componentType) const;
 
 	template <typename ComponentType>
 	ComponentType* GetComponent(Entity& entity) const
@@ -36,16 +37,18 @@ public:
 		return static_cast<ComponentType*>(GetComponent(entity, componentTypeId));
 	}
 
-	void AddChild(Entity& entity, Entity& child);
-	void RemoveChild(Entity& entity, Entity& child);
-	uint16_t GetChildrenCount(Entity& entity) const;
-	Entity* GetParent(Entity& entity);
+	void ECS_API AddChild(Entity& entity, Entity& child);
+	void ECS_API RemoveChild(Entity& entity, Entity& child);
+	uint16_t ECS_API GetChildrenCount(Entity& entity) const;
+	ECS_API Entity* GetParent(Entity& entity);
+
+	void ECS_API SetEntityEnabled(Entity& entity, const bool enabled);
 
 public:
 	struct EntityHierarchyData
 	{
-		uint32_t nextItemPtr = Entity::k_invalidId;
-		uint32_t childId = Entity::k_invalidId;
+		uint32_t nextItemPtr = Entity::GetInvalidId();
+		uint32_t childId = Entity::GetInvalidId();
 	};
 	using EntityHierarchyDataStorageType = detail::MemoryPool<EntityHierarchyData>;
 
@@ -124,7 +127,7 @@ public:
 		std::size_t offsetEnd;
 	};
 
-	ChildrenData GetChildrenData(Entity& entity);
+	ChildrenData ECS_API GetChildrenData(Entity& entity);
 
 protected:
 	struct EntityData
@@ -132,17 +135,18 @@ protected:
 		Entity entity;
 		uint16_t childrenCount = 0U;
 		bool isAlive : 1;
+		bool isEnabled : 1;
 	};
 	using EntitiesStorageType = detail::MemoryPool<EntityData>;
 	EntitiesStorageType& GetEntitiesData();
 
 private:
-	uint8_t GetComponentTypeIdByTypeIndex(const std::type_index& typeIndex) const;
+	uint8_t ECS_API GetComponentTypeIdByTypeIndex(const std::type_index& typeIndex) const;
 
 private:
 	struct EntityComponentMapEntry
 	{
-		uint32_t nextItemPtr = Entity::k_invalidId;
+		uint32_t nextItemPtr = Entity::GetInvalidId();
 		ComponentHandle handle;
 	};
 	using ComponentsMapStorageType = detail::MemoryPool<EntityComponentMapEntry>;
