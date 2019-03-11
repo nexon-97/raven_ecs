@@ -5,7 +5,7 @@ class RenderSystem
 	: public ecs::System
 {
 public:
-	RenderSystem() = default;
+	RenderSystem(ecs::Manager& manager);
 
 	void Init() override;
 	void Update() override;

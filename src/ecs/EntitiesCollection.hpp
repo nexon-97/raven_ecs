@@ -1,8 +1,8 @@
 #pragma once
 #include "Entity.hpp"
 #include "ecs/ComponentHandle.hpp"
+#include "storage/MemoryPool.hpp"
 
-#include <vector>
 #include <typeindex>
 
 namespace ecs
@@ -47,6 +47,7 @@ public:
 		uint32_t nextItemPtr = Entity::k_invalidId;
 		uint32_t childId = Entity::k_invalidId;
 	};
+	using EntityHierarchyDataStorageType = detail::MemoryPool<EntityHierarchyData>;
 
 	// Helper structure to make the particular entity children iterator
 	struct ChildrenData
@@ -54,8 +55,8 @@ public:
 		struct iterator
 		{
 			using iterator_category = std::forward_iterator_tag;
-			using pointer = Entity * ;
-			using reference = Entity & ;
+			using pointer = Entity*;
+			using reference = Entity&;
 
 			iterator() = default;
 			iterator(ChildrenData& data, std::size_t offset)
@@ -65,7 +66,7 @@ public:
 
 			reference operator*()
 			{
-				return data.collection->GetEntity(data.hierarchyData[offset].childId);
+				return data.collection->GetEntity(data.hierarchyData[offset]->childId);
 			}
 
 			pointer operator->()
@@ -75,7 +76,7 @@ public:
 
 			iterator& operator++()
 			{
-				offset = data.hierarchyData[offset].nextItemPtr;
+				offset = data.hierarchyData[offset]->nextItemPtr;
 				return *this;
 			}
 
@@ -98,7 +99,8 @@ public:
 			std::size_t offset;
 		};
 
-		ChildrenData(EntitiesCollection* collection, std::vector<EntityHierarchyData>& hierarchyData, const std::size_t offsetBegin, const std::size_t offsetEnd)
+		ChildrenData(EntitiesCollection* collection, EntityHierarchyDataStorageType& hierarchyData
+			, const std::size_t offsetBegin, const std::size_t offsetEnd)
 			: offsetBegin(offsetBegin)
 			, offsetEnd(offsetEnd)
 			, collection(collection)
@@ -117,7 +119,7 @@ public:
 
 	private:
 		EntitiesCollection* collection;
-		std::vector<EntityHierarchyData>& hierarchyData;
+		EntityHierarchyDataStorageType& hierarchyData;
 		std::size_t offsetBegin;
 		std::size_t offsetEnd;
 	};
@@ -131,7 +133,7 @@ protected:
 		uint16_t childrenCount = 0U;
 		bool isAlive : 1;
 	};
-	using EntitiesStorageType = std::vector<EntityData>;
+	using EntitiesStorageType = detail::MemoryPool<EntityData>;
 	EntitiesStorageType& GetEntitiesData();
 
 private:
@@ -143,10 +145,11 @@ private:
 		uint32_t nextItemPtr = Entity::k_invalidId;
 		ComponentHandle handle;
 	};
+	using ComponentsMapStorageType = detail::MemoryPool<EntityComponentMapEntry>;
 
 	EntitiesStorageType m_entities;
-	std::vector<EntityComponentMapEntry> m_entityComponentsMapping;
-	std::vector<EntityHierarchyData> m_entityHierarchyData;
+	ComponentsMapStorageType m_entityComponentsMapping;
+	EntityHierarchyDataStorageType m_entityHierarchyData;
 	Manager& m_ecsManager;
 };
 

@@ -4,6 +4,10 @@
 #include "SpriteRender.hpp"
 #include "MovementBehavior.hpp"
 
+RenderSystem::RenderSystem(ecs::Manager& manager)
+	: ecs::System(manager)
+{}
+
 void RenderSystem::Init()
 {
 	auto& ecsManager = App::GetInstance()->GetECSManager();

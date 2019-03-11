@@ -3,6 +3,10 @@
 #include "MovementBehavior.hpp"
 #include "Transform.hpp"
 
+MovementSystem::MovementSystem(ecs::Manager& manager)
+	: ecs::System(manager)
+{}
+
 void MovementSystem::Update()
 {
 	auto& ecsManager = App::GetInstance()->GetECSManager();

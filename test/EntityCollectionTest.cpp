@@ -59,7 +59,7 @@ TEST_F(EntityCollectionTest, CreateMultipleEntitiesTest)
 	}
 	
 	EXPECT_EQ(lastCreatedEntity->id, k_testEntitiesCount - 1);
-	EXPECT_EQ(entitiesData.size(), k_testEntitiesCount);
+	EXPECT_EQ(entitiesData.GetItemsCount(), k_testEntitiesCount);
 }
 
 TEST_F(EntityCollectionTest, DestroyEntityTest)
