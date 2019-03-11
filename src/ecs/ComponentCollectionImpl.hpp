@@ -99,6 +99,9 @@ public:
 
 		*newHandleData.second = static_cast<uint32_t>(newComponentData.first);
 		*newHandleIndexData.second = static_cast<HandleIndex>(newHandleData.first);
+		newComponentData.second->isEnabled = true;
+
+		++m_enabledCount;
 
 		return newHandleIndexData.second;
 	}
@@ -119,17 +122,14 @@ public:
 
 		m_handles.DestroyItem(index);
 
-		// Swap handles to make fill the hole, made by destroyed item
-		//m_handles.Swap(dataIndexL, dataIndexR);
+		--m_enabledCount;
 	}
 
-	// Returns component value given data offset (usually retrieved from handle)
 	void* Get(const std::size_t index) override
 	{
 		return &m_componentsData[index]->component;		
 	}
 
-	// Returns component data given handle index (translates handle to data offset)
 	ComponentData& GetComponentData(const std::size_t index)
 	{
 		return *m_componentsData[index];
@@ -147,7 +147,22 @@ public:
 
 	void SetItemEnabled(const std::size_t index, const bool enabled) override
 	{
-		m_componentsData[index]->isEnabled = enabled;
+		auto componentData = m_componentsData[index];
+		if (enabled != componentData->isEnabled)
+		{
+			componentData->isEnabled = enabled;
+
+			if (enabled)
+			{
+				++m_enabledCount;
+			}
+			else
+			{
+				--m_enabledCount;
+			}
+
+			SwapHandles(index, m_enabledCount);
+		}
 	}
 
 	bool IsItemEnabled(const std::size_t index) override
@@ -172,7 +187,7 @@ public:
 
 	iterator end()
 	{
-		return iterator(this, m_handles.GetItemsCount());
+		return iterator(this, m_enabledCount);
 	}
 
 	//// [TODO] Implement erasure collection methods
@@ -216,9 +231,21 @@ public:
 	}
 
 private:
+	void SwapHandles(const std::size_t lhs, const std::size_t rhs)
+	{
+		auto handleL = m_handles[lhs];
+		auto handleR = m_handles[rhs];
+
+		// Swap handle pointers
+		m_handleIndexes.Swap(*handleL, *handleR);
+		m_handles.Swap(lhs, rhs);
+	}
+
+private:
 	detail::MemoryPool<ComponentData> m_componentsData;
 	detail::MemoryPool<uint32_t> m_handles;
 	detail::MemoryPool<HandleIndex> m_handleIndexes;
+	std::size_t m_enabledCount = 0U;
 	uint8_t m_typeId;
 };
 
