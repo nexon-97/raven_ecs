@@ -7,7 +7,7 @@ project "tests"
 	includedirs
 	{
 		"../.",
-		"D:/GoogleTest/include",
+		build_config["gtest_location"].."/include",
 		EngineRootLocation.."/src",
 	}
 	links { "ecs" }
@@ -19,7 +19,7 @@ project "tests"
 
 	configuration "Debug"
 		defines { "DEBUG" }
-		libdirs { "D:/GoogleTest/lib/Debug" }
+		libdirs { build_config["gtest_location"].."/lib/Debug" }
 		links { "gtestd" }
 		symbols "on"
 		optimize "Off"
@@ -27,7 +27,7 @@ project "tests"
 		objdir(_ACTION.."/obj/Debug")
 
 	configuration "Release"
-		libdirs { "D:/GoogleTest/lib/Release" }
+		libdirs { build_config["gtest_location"].."/lib/Release" }
 		links { "gtest" }
 		optimize "Full"
 		targetname "ecs_tests"

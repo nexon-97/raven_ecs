@@ -10,4 +10,4 @@ Solution comprises from several projects:
 
 * **[ECS management project](docs/ECS_Overview.md)**
 * Benchmarking project, based on SDL2 library for rendering purposes.
-* Unit test project
+* **[Unit test project](docs/TestsProjectConfig.md)**

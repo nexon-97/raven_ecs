@@ -1,3 +1,5 @@
+include "build_config.lua"
+
 function latestSDK10Version()
 	local arch = iif(os.is64bit(), "\\WOW6432Node\\", "\\")
 	local version = os.getWindowsRegistry("HKLM:SOFTWARE" .. arch .."Microsoft\\Microsoft SDKs\\Windows\\v10.0\\ProductVersion")
@@ -24,4 +26,7 @@ solution "raven_ecs"
 
 	include ("../benchmark/prj/benchmark_config.lua")
 	include ("../src/prj/project_config.lua")
-	include ("../test/prj/test_config.lua")
+	
+	if build_config["gtest_location"] then
+		include ("../test/prj/test_config.lua")
+	end
