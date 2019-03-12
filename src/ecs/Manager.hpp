@@ -120,6 +120,7 @@ public:
 	std::type_index ECS_API GetComponentTypeIndexByTypeId(const uint8_t typeId) const;
 
 	void ECS_API SetComponentEnabled(const ComponentHandle& handle, const bool enabled);
+	void ECS_API RefreshComponentActivation(const ComponentHandle& handle, const bool ownerEnabled, const bool ownerActivated);
 
 private:
 	/**

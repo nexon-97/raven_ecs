@@ -146,4 +146,10 @@ void Manager::SetComponentEnabled(const ComponentHandle& handle, const bool enab
 	collection->SetItemEnabled(handle.GetOffset(), enabled);
 }
 
+void Manager::RefreshComponentActivation(const ComponentHandle& handle, const bool ownerEnabled, const bool ownerActivated)
+{
+	auto collection = GetCollection(handle.GetTypeIndex());
+	collection->RefreshComponentActivation(handle.GetOffset(), ownerEnabled, ownerActivated);
+}
+
 } // namespace ecs

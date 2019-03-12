@@ -18,6 +18,14 @@ struct Entity
 
 	static const uint32_t ECS_API GetInvalidId();
 
+	Entity()
+		: id(Entity::GetInvalidId())
+		, parentId(Entity::GetInvalidId())
+		, hierarchyDataOffset(0U)
+		, componentsMask(0U)
+		, componentsDataOffset(0U)
+	{}
+
 	//void ECS_API AddComponent(const ComponentHandle& handle);
 	//void ECS_API RemoveComponent(const ComponentHandle& handle);
 	//bool ECS_API HasComponent(const uint8_t componentType);

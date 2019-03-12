@@ -43,6 +43,11 @@ public:
 	ECS_API Entity* GetParent(Entity& entity);
 
 	void ECS_API SetEntityEnabled(Entity& entity, const bool enabled);
+	void ECS_API ActivateEntity(Entity& entity, const bool activate);
+
+	void ECS_API RefreshActivation(Entity& entity, bool forceActivate = false);
+	void ECS_API RefreshComponentsActivation(Entity& entity);
+	void ECS_API RefreshChildrenActivation(Entity& entity);
 
 public:
 	struct EntityHierarchyData
@@ -215,9 +220,15 @@ protected:
 	struct EntityData
 	{
 		Entity entity;
-		uint16_t childrenCount = 0U;
-		bool isAlive : 1;
-		bool isEnabled : 1;
+		uint16_t childrenCount;
+		bool isEnabled : 1;		// Indicates if the entity is enabled (though can be not registered in world)
+		bool isActivated : 1;	// Indicates if the entity is currently activated (is actually registered in world)
+
+		EntityData()
+			: childrenCount(0U)
+			, isEnabled(true)
+			, isActivated(false)
+		{}
 	};
 	using EntitiesStorageType = detail::MemoryPool<EntityData>;
 	ECS_API EntitiesStorageType& GetEntitiesData();
@@ -229,6 +240,7 @@ private:
 	EntitiesStorageType m_entities;
 	ComponentsMapStorageType m_entityComponentsMapping;
 	EntityHierarchyDataStorageType m_entityHierarchyData;
+	std::size_t m_activeEntitiesCount = 0U;
 	Manager& m_ecsManager;
 };
 

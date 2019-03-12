@@ -22,7 +22,14 @@ class ComponentCollectionImpl
 	{
 		ComponentType component;
 		uint32_t entityId = Entity::GetInvalidId();
-		bool isEnabled = false;
+		bool isEnabled : 1;
+		bool isActivated : 1;
+
+		ComponentData()
+			: entityId(Entity::GetInvalidId())
+			, isEnabled(true)
+			, isActivated(false)
+		{}
 	};
 	using StorageType = ComponentData[k_chunkSize];
 	using HandlesStorage = uint32_t[k_chunkSize];
@@ -100,6 +107,7 @@ public:
 		*newHandleData.second = static_cast<uint32_t>(newComponentData.first);
 		*newHandleIndexData.second = static_cast<HandleIndex>(newHandleData.first);
 		newComponentData.second->isEnabled = true;
+		newComponentData.second->isActivated = false;
 
 		++m_enabledCount;
 
@@ -162,12 +170,34 @@ public:
 			}
 
 			SwapHandles(index, m_enabledCount);
+
+			// [TODO] Check the activation changes
 		}
 	}
 
 	bool IsItemEnabled(const std::size_t index) override
 	{
 		return m_componentsData[index]->isEnabled;
+	}
+
+	void RefreshComponentActivation(const std::size_t index, const bool ownerEnabled, const bool ownerActivated) override
+	{
+		bool shouldBeActivated = ownerActivated && ownerEnabled && m_componentsData[index]->isEnabled;
+		if (shouldBeActivated != m_componentsData[index]->isActivated)
+		{
+			m_componentsData[index]->isActivated = shouldBeActivated;
+			
+			if (shouldBeActivated)
+			{
+				++m_activatedCount;
+			}
+			else
+			{
+				--m_activatedCount;
+			}
+
+			SwapHandles(index, m_activatedCount);
+		}
 	}
 
 	uint8_t GetTypeId() const override
@@ -187,7 +217,7 @@ public:
 
 	iterator end()
 	{
-		return iterator(this, m_enabledCount);
+		return iterator(this, m_activatedCount);
 	}
 
 	//// [TODO] Implement erasure collection methods
@@ -245,6 +275,9 @@ private:
 	detail::MemoryPool<ComponentData> m_componentsData;
 	detail::MemoryPool<uint32_t> m_handles;
 	detail::MemoryPool<HandleIndex> m_handleIndexes;
+	// Handles are oredered in a way, that first go activated items (0 : m_activatedCount - 1),
+	// then enabled, but not activated items (m_activatedCount : m_enabledCount - 1), then disabled items.
+	std::size_t m_activatedCount = 0U;
 	std::size_t m_enabledCount = 0U;
 	uint8_t m_typeId;
 };

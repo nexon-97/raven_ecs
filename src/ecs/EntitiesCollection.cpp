@@ -24,8 +24,6 @@ Entity& EntitiesCollection::CreateEntity()
 	uint32_t newEntityId = static_cast<uint32_t>(entityCreationResult.first);
 
 	auto& entityData = *entityCreationResult.second;
-	entityData.isAlive = true;
-	entityData.isEnabled = true;
 	entityData.entity.id = newEntityId;
 	entityData.entity.parentId = Entity::GetInvalidId();
 
@@ -82,8 +80,6 @@ void EntitiesCollection::DestroyEntity(const uint32_t id)
 	// Mark entity as deleted
 	entity.id = Entity::GetInvalidId();
 	entity.componentsMask = 0;
-	entityData.isAlive = false;
-	entityData.isEnabled = false;
 }
 
 void EntitiesCollection::AddComponent(Entity& entity, const ComponentHandle& handle)
@@ -130,6 +126,9 @@ void EntitiesCollection::AddComponent(Entity& entity, const ComponentHandle& han
 		// Link new entry to the list
 		currentEntry->nextItemPtr = static_cast<uint32_t>(newEntryId);
 	}
+
+	const auto& entityData = m_entities[entity.id];
+	m_ecsManager.RefreshComponentActivation(handle, entityData->isEnabled, entityData->isActivated);
 }
 
 void EntitiesCollection::RemoveComponent(Entity& entity, const ComponentHandle& handle)
@@ -140,6 +139,8 @@ void EntitiesCollection::RemoveComponent(Entity& entity, const ComponentHandle& 
 		entity.componentsMask ^= typeMask;
 
 		m_ecsManager.SetComponentEntityId(handle, Entity::GetInvalidId());
+		const auto& entityData = m_entities[entity.id];
+		m_ecsManager.RefreshComponentActivation(handle, entityData->isEnabled, entityData->isActivated);
 	}
 }
 
@@ -223,6 +224,8 @@ void EntitiesCollection::AddChild(Entity& entity, Entity& child)
 
 	++m_entities[entity.id]->childrenCount;
 	child.parentId = entity.id;
+
+	RefreshActivation(child);
 }
 
 void EntitiesCollection::RemoveChild(Entity& entity, Entity& child)
@@ -271,6 +274,8 @@ void EntitiesCollection::RemoveChild(Entity& entity, Entity& child)
 
 		child.parentId = Entity::GetInvalidId();
 		--m_entities[entity.id]->childrenCount;
+
+		RefreshActivation(child);
 	}
 }
 
@@ -341,6 +346,54 @@ void EntitiesCollection::SetEntityEnabled(Entity& entity, const bool enabled)
 		}
 
 		entityData->isEnabled = enabled;
+
+		RefreshActivation(entity);
+	}
+}
+
+void EntitiesCollection::ActivateEntity(Entity& entity, const bool activate)
+{
+	auto entityData = m_entities[entity.id];
+
+	if (activate != entityData->isActivated)
+	{
+		RefreshActivation(entity, activate);
+	}
+}
+
+void EntitiesCollection::RefreshActivation(Entity& entity, bool forceActivate)
+{
+	auto entityData = m_entities[entity.id];
+	bool shouldBeAddedToWorld = forceActivate;
+
+	if (!shouldBeAddedToWorld)
+	{
+		auto parentData = (entity.parentId != Entity::GetInvalidId()) ? m_entities[entity.parentId] : nullptr;
+		shouldBeAddedToWorld = entityData->isEnabled && (nullptr != parentData && parentData->isActivated);
+	}
+	
+	if (shouldBeAddedToWorld != entityData->isActivated)
+	{
+		entityData->isActivated = shouldBeAddedToWorld;
+		RefreshComponentsActivation(entity);
+		RefreshChildrenActivation(entity);
+	}
+}
+
+void EntitiesCollection::RefreshComponentsActivation(Entity& entity)
+{
+	const auto& entityData = m_entities[entity.id];
+	for (auto& componentHandle : GetComponentsData(entity))
+	{
+		m_ecsManager.RefreshComponentActivation(componentHandle, entityData->isEnabled, entityData->isActivated);
+	}
+}
+
+void EntitiesCollection::RefreshChildrenActivation(Entity& entity)
+{
+	for (auto& childData : GetChildrenData(entity))
+	{
+		RefreshActivation(childData);
 	}
 }
 
