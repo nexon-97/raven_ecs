@@ -29,6 +29,7 @@ public:
 	void ECS_API RemoveComponent(Entity& entity, const ComponentHandle& handle);
 	bool ECS_API HasComponent(const Entity& entity, const uint8_t componentType);
 	ECS_API void* GetComponent(const Entity& entity, const uint8_t componentType) const;
+	ECS_API void* GetComponent(const std::size_t entityId, const uint8_t componentType) const;
 	ECS_API void* GetComponent(const Entity& entity, const uint8_t componentType, ComponentHandle& handle) const;
 
 	template <typename ComponentType>
@@ -36,6 +37,13 @@ public:
 	{
 		auto componentTypeId = GetComponentTypeIdByTypeIndex(typeid(ComponentType));
 		return static_cast<ComponentType*>(GetComponent(entity, componentTypeId));
+	}
+
+	template <typename ComponentType>
+	ComponentType* GetComponent(const std::size_t entityId) const
+	{
+		auto componentTypeId = GetComponentTypeIdByTypeIndex(typeid(ComponentType));
+		return static_cast<ComponentType*>(GetComponent(entityId, componentTypeId));
 	}
 
 	template <typename ComponentType>

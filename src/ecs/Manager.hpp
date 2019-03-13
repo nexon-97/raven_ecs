@@ -107,7 +107,7 @@ public:
 	ComponentType* GetSibling(const ComponentHandle& handle)
 	{
 		auto entityId = handle.GetEntityId();
-		return GetComponent<ComponentType>(handle);
+		return m_entitiesCollection.GetComponent<ComponentType>(entityId);
 	}
 
 	void ECS_API SetComponentEntityId(const ComponentHandle& handle, const uint32_t id);

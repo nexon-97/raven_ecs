@@ -176,6 +176,12 @@ void* EntitiesCollection::GetComponent(const Entity& entity, const uint8_t compo
 	return nullptr;
 }
 
+void* EntitiesCollection::GetComponent(const std::size_t entityId, const uint8_t componentType) const
+{
+	const auto& entity = m_entities[entityId]->entity;
+	return GetComponent(entity, componentType);
+}
+
 void* EntitiesCollection::GetComponent(const Entity& entity, const uint8_t componentType, ComponentHandle& handle) const
 {
 	auto componentNode = m_entityComponentsMapping[entity.componentsDataOffset];
