@@ -5,6 +5,8 @@
 namespace ecs
 {
 
+class Manager;
+
 struct ComponentHandleInternal
 {
 	static const uint8_t ECS_API GetInvalidTypeId()
@@ -20,50 +22,20 @@ struct ComponentHandle
 {
 public:
 	ComponentHandle() = default;
-	explicit ComponentHandle(const uint8_t typeId, HandleIndex* handleIndexPtr)
-		: m_typeId(typeId)
-		, m_handleIndexPtr(handleIndexPtr)
-	{
-		if (handleIndexPtr)
-		{
-			m_indexCopy = *handleIndexPtr;
-		}
-	}
+	explicit ECS_API ComponentHandle(const uint8_t typeId, HandleIndex* handleIndexPtr);
 
-	bool operator==(const ComponentHandle& other) const
-	{
-		return m_typeId == other.m_typeId && m_handleIndexPtr == other.m_handleIndexPtr;
-	}
+	bool ECS_API operator==(const ComponentHandle& other) const;
 
-	bool IsValid() const
-	{
-		return (m_typeId != ComponentHandleInternal::GetInvalidTypeId());
-	}
+	bool ECS_API IsValid() const;
+	uint8_t ECS_API GetTypeIndex() const;
+	HandleIndex ECS_API GetOffset() const;
+	uint32_t ECS_API GetEntityId() const;
 
-	uint8_t GetTypeIndex() const
-	{
-		return m_typeId;
-	}
-
-	HandleIndex GetOffset() const
-	{
-		return *m_handleIndexPtr;
-	}
-
-	HandleIndex* GetOffsetPtr() const
-	{
-		return m_handleIndexPtr;
-	}
-
-	HandleIndex GetDebugOffset() const
-	{
-		return m_indexCopy;
-	}
+	static void ECS_API SetManagerInstance(ecs::Manager* manager);
 
 private:
 	uint8_t m_typeId;
 	HandleIndex* m_handleIndexPtr = nullptr;
-	HandleIndex m_indexCopy;
 };
 
 } // namespace ecs

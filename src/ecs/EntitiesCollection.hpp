@@ -29,6 +29,7 @@ public:
 	void ECS_API RemoveComponent(Entity& entity, const ComponentHandle& handle);
 	bool ECS_API HasComponent(Entity& entity, const uint8_t componentType);
 	ECS_API void* GetComponent(Entity& entity, const uint8_t componentType) const;
+	ECS_API void* GetComponent(Entity& entity, const uint8_t componentType, ComponentHandle& handle) const;
 
 	template <typename ComponentType>
 	ComponentType* GetComponent(Entity& entity) const
@@ -37,10 +38,18 @@ public:
 		return static_cast<ComponentType*>(GetComponent(entity, componentTypeId));
 	}
 
+	template <typename ComponentType>
+	ComponentType* GetComponent(Entity& entity, ComponentHandle& handle) const
+	{
+		auto componentTypeId = GetComponentTypeIdByTypeIndex(typeid(ComponentType));
+		return static_cast<ComponentType*>(GetComponent(entity, componentTypeId, handle));
+	}
+
 	void ECS_API AddChild(Entity& entity, Entity& child);
 	void ECS_API RemoveChild(Entity& entity, Entity& child);
 	uint16_t ECS_API GetChildrenCount(Entity& entity) const;
 	ECS_API Entity* GetParent(Entity& entity);
+	ECS_API Entity* GetParent(const ComponentHandle& handle);
 
 	void ECS_API SetEntityEnabled(Entity& entity, const bool enabled);
 	void ECS_API ActivateEntity(Entity& entity, const bool activate);

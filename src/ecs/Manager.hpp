@@ -106,6 +106,13 @@ public:
 		return nullptr;
 	}
 
+	template <typename ComponentType>
+	ComponentType* GetSibling(const ComponentHandle& handle)
+	{
+		auto entityId = handle.GetEntityId();
+		return GetComponent<ComponentType>(handle);
+	}
+
 	void ECS_API SetComponentEntityId(const ComponentHandle& handle, const uint32_t id);
 	uint32_t ECS_API GetComponentEntityId(const ComponentHandle& handle) const;
 

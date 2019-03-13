@@ -176,6 +176,32 @@ void* EntitiesCollection::GetComponent(Entity& entity, const uint8_t componentTy
 	return nullptr;
 }
 
+void* EntitiesCollection::GetComponent(Entity& entity, const uint8_t componentType, ComponentHandle& handle) const
+{
+	auto componentNode = m_entityComponentsMapping[entity.componentsDataOffset];
+	bool reachedEndOfList = false;
+
+	while (!reachedEndOfList)
+	{
+		if (componentNode->handle.GetTypeIndex() == componentType)
+		{
+			// Component type found, return it
+			handle = componentNode->handle;
+			return m_ecsManager.GetComponent<void>(handle);
+		}
+
+		reachedEndOfList = (componentNode->nextItemPtr == Entity::GetInvalidId());
+
+		if (!reachedEndOfList)
+		{
+			componentNode = m_entityComponentsMapping[componentNode->nextItemPtr];
+		}
+	}
+
+	handle = ComponentHandle(ComponentHandleInternal::GetInvalidTypeId(), nullptr);
+	return nullptr;
+}
+
 uint8_t EntitiesCollection::GetComponentTypeIdByTypeIndex(const std::type_index& typeIndex) const
 {
 	return m_ecsManager.GetComponentTypeIdByIndex(typeIndex);
@@ -289,6 +315,22 @@ Entity* EntitiesCollection::GetParent(Entity& entity)
 	if (entity.parentId != Entity::GetInvalidId())
 	{
 		return &m_entities[entity.parentId]->entity;
+	}
+	else
+	{
+		return nullptr;
+	}
+}
+
+Entity* EntitiesCollection::GetParent(const ComponentHandle& handle)
+{
+	auto entityId = handle.GetEntityId();
+	auto entityData = m_entities[entityId];
+	auto parentId = entityData->entity.parentId;
+
+	if (parentId != Entity::GetInvalidId())
+	{
+		return &m_entities[parentId]->entity;
 	}
 	else
 	{

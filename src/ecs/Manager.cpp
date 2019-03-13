@@ -5,7 +5,9 @@ namespace ecs
 
 Manager::Manager()
 	: m_entitiesCollection(*this)
-{}
+{
+	ComponentHandle::SetManagerInstance(this);
+}
 
 void Manager::RegisterSystemInternal(const std::type_index& typeIndex, SystemPtr&& system)
 {
