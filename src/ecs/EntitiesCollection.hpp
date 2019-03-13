@@ -31,6 +31,7 @@ public:
 	ECS_API void* GetComponent(const Entity& entity, const uint8_t componentType) const;
 	ECS_API void* GetComponent(const std::size_t entityId, const uint8_t componentType) const;
 	ECS_API void* GetComponent(const Entity& entity, const uint8_t componentType, ComponentHandle& handle) const;
+	ECS_API void* GetComponent(const std::size_t entityId, const uint8_t componentType, ComponentHandle& handle) const;
 
 	template <typename ComponentType>
 	ComponentType* GetComponent(Entity& entity) const
@@ -51,6 +52,13 @@ public:
 	{
 		auto componentTypeId = GetComponentTypeIdByTypeIndex(typeid(ComponentType));
 		return static_cast<ComponentType*>(GetComponent(entity, componentTypeId, handle));
+	}
+
+	template <typename ComponentType>
+	ComponentType* GetComponent(const std::size_t entityId, ComponentHandle& handle) const
+	{
+		auto componentTypeId = GetComponentTypeIdByTypeIndex(typeid(ComponentType));
+		return static_cast<ComponentType*>(GetComponent(entityId, componentTypeId, handle));
 	}
 
 	void ECS_API AddChild(Entity& entity, Entity& child);

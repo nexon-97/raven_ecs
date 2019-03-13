@@ -208,6 +208,12 @@ void* EntitiesCollection::GetComponent(const Entity& entity, const uint8_t compo
 	return nullptr;
 }
 
+void* EntitiesCollection::GetComponent(const std::size_t entityId, const uint8_t componentType, ComponentHandle& handle) const
+{
+	const auto& entity = m_entities[entityId]->entity;
+	return GetComponent(entity, componentType, handle);
+}
+
 uint8_t EntitiesCollection::GetComponentTypeIdByTypeIndex(const std::type_index& typeIndex) const
 {
 	return m_ecsManager.GetComponentTypeIdByIndex(typeIndex);
