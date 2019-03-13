@@ -1,5 +1,4 @@
 #pragma once
-#include "ILifecycleCallback.hpp"
 
 namespace ecs
 {
@@ -8,7 +7,6 @@ class Manager;
 
 // Dummy class, which should be implemented
 class System
-	: public ILifecycleCallback
 {
 public:
 	System() = delete;
@@ -16,6 +14,10 @@ public:
 		: m_ecsManager(manager)
 	{}
 	virtual ~System() = default;
+
+	virtual void Init() {};
+	virtual void Destroy() {};
+	virtual void Update() = 0;
 
 protected:
 	Manager& m_ecsManager;

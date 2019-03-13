@@ -13,6 +13,32 @@
 namespace ecs
 {
 
+struct Entity;
+
+namespace detail
+{
+
+// Helper class, that helps components collection to deal with entities stuff
+class ComponentCollectionManagerConnection
+{
+public:
+	struct EntityData
+	{
+		bool isEnabled;
+		bool isActivated;
+
+		explicit ECS_API EntityData(const bool isEnabled, const bool isActivated)
+			: isEnabled(isEnabled)
+			, isActivated(isActivated)
+		{}
+	};
+
+	EntityData ECS_API GetEntityData(const std::size_t id) const;
+	static void ECS_API SetManagerInstance(ecs::Manager* manager);
+};
+
+} // namespace detail
+
 template <typename ComponentType>
 class ComponentCollectionImpl
 	: public IComponentCollection
@@ -42,6 +68,7 @@ public:
 		: m_componentsData(1024U)
 		, m_handles(1024U)
 		, m_handleIndexes(1024U)
+		, m_typeId(ComponentHandleInternal::GetInvalidTypeId())
 	{}
 	~ComponentCollectionImpl() = default;
 
@@ -109,13 +136,12 @@ public:
 		newComponentData.second->isEnabled = true;
 		newComponentData.second->isActivated = false;
 
-		++m_enabledCount;
-
 		return newHandleIndexData.second;
 	}
 
 	void Destroy(const std::size_t index) override
 	{
+		bool wasActivated = m_componentsData[index]->isActivated;
 		m_componentsData.DestroyItem(index);
 
 		// Swap handles to fill holes and keep handle pointers valid
@@ -130,7 +156,10 @@ public:
 
 		m_handles.DestroyItem(index);
 
-		--m_enabledCount;
+		if (wasActivated)
+		{
+			--m_activatedCount;
+		}
 	}
 
 	void* Get(const std::size_t index) override
@@ -146,9 +175,10 @@ public:
 	void SetItemEntityId(const std::size_t index, const uint32_t entityId) override
 	{
 		m_componentsData[index]->entityId = entityId;
+		RefreshComponentActivation(index);
 	}
 
-	uint32_t GetItemEntityId(const std::size_t index) override
+	uint32_t GetItemEntityId(const std::size_t index) const override
 	{
 		return m_componentsData[index]->entityId;
 	}
@@ -159,25 +189,19 @@ public:
 		if (enabled != componentData->isEnabled)
 		{
 			componentData->isEnabled = enabled;
-
-			if (enabled)
-			{
-				++m_enabledCount;
-			}
-			else
-			{
-				--m_enabledCount;
-			}
-
-			SwapHandles(index, m_enabledCount);
-
-			// [TODO] Check the activation changes
+			RefreshComponentActivation(index);
 		}
 	}
 
-	bool IsItemEnabled(const std::size_t index) override
+	bool IsItemEnabled(const std::size_t index) const override
 	{
 		return m_componentsData[index]->isEnabled;
+	}
+
+	void RefreshComponentActivation(const std::size_t index) override
+	{
+		auto entityData = m_managerConnection.GetEntityData(m_componentsData[index]->entityId);
+		RefreshComponentActivation(index, entityData.isEnabled, entityData.isActivated);
 	}
 
 	void RefreshComponentActivation(const std::size_t index, const bool ownerEnabled, const bool ownerActivated) override
@@ -189,10 +213,12 @@ public:
 			
 			if (shouldBeActivated)
 			{
+				assert(index >= m_activatedCount);
 				++m_activatedCount;
 			}
 			else
 			{
+				assert(index < m_activatedCount);
 				--m_activatedCount;
 			}
 
@@ -275,10 +301,10 @@ private:
 	detail::MemoryPool<ComponentData> m_componentsData;
 	detail::MemoryPool<uint32_t> m_handles;
 	detail::MemoryPool<HandleIndex> m_handleIndexes;
-	// Handles are oredered in a way, that first go activated items (0 : m_activatedCount - 1),
-	// then enabled, but not activated items (m_activatedCount : m_enabledCount - 1), then disabled items.
-	std::size_t m_activatedCount = 0U;
-	std::size_t m_enabledCount = 0U;
+	// Collection is always sorted in a way, that there are activated items first (that means they are enabled too,
+	// then go deactivated items, and enabled and disabled items are mixed)
+	std::size_t m_activatedCount = 0U; 
+	detail::ComponentCollectionManagerConnection m_managerConnection;
 	uint8_t m_typeId;
 };
 

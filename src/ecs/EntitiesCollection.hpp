@@ -27,9 +27,9 @@ public:
 
 	void ECS_API AddComponent(Entity& entity, const ComponentHandle& handle);
 	void ECS_API RemoveComponent(Entity& entity, const ComponentHandle& handle);
-	bool ECS_API HasComponent(Entity& entity, const uint8_t componentType);
-	ECS_API void* GetComponent(Entity& entity, const uint8_t componentType) const;
-	ECS_API void* GetComponent(Entity& entity, const uint8_t componentType, ComponentHandle& handle) const;
+	bool ECS_API HasComponent(const Entity& entity, const uint8_t componentType);
+	ECS_API void* GetComponent(const Entity& entity, const uint8_t componentType) const;
+	ECS_API void* GetComponent(const Entity& entity, const uint8_t componentType, ComponentHandle& handle) const;
 
 	template <typename ComponentType>
 	ComponentType* GetComponent(Entity& entity) const
@@ -47,8 +47,8 @@ public:
 
 	void ECS_API AddChild(Entity& entity, Entity& child);
 	void ECS_API RemoveChild(Entity& entity, Entity& child);
-	uint16_t ECS_API GetChildrenCount(Entity& entity) const;
-	ECS_API Entity* GetParent(Entity& entity);
+	uint16_t ECS_API GetChildrenCount(const Entity& entity) const;
+	ECS_API Entity* GetParent(const Entity& entity);
 	ECS_API Entity* GetParent(const ComponentHandle& handle);
 
 	void ECS_API SetEntityEnabled(Entity& entity, const bool enabled);
@@ -57,6 +57,9 @@ public:
 	void ECS_API RefreshActivation(Entity& entity, bool forceActivate = false);
 	void ECS_API RefreshComponentsActivation(Entity& entity);
 	void ECS_API RefreshChildrenActivation(Entity& entity);
+
+	bool ECS_API IsEntityEnabled(const std::size_t entityId) const;
+	bool ECS_API IsEntityActivated(const std::size_t entityId) const;
 
 public:
 	struct EntityHierarchyData

@@ -1,4 +1,5 @@
 #include "Manager.hpp"
+#include "ComponentCollectionImpl.hpp"
 
 namespace ecs
 {
@@ -7,6 +8,7 @@ Manager::Manager()
 	: m_entitiesCollection(*this)
 {
 	ComponentHandle::SetManagerInstance(this);
+	detail::ComponentCollectionManagerConnection::SetManagerInstance(this);
 }
 
 void Manager::RegisterSystemInternal(const std::type_index& typeIndex, SystemPtr&& system)
@@ -52,16 +54,6 @@ void Manager::Update()
 	for (const auto& system : m_systems)
 	{
 		system.second->Update();
-	}
-}
-
-void Manager::Render()
-{
-	assert(m_initialized);
-
-	for (const auto& system : m_systems)
-	{
-		system.second->Render();
 	}
 }
 

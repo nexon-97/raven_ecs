@@ -44,4 +44,14 @@ void ComponentHandle::SetManagerInstance(ecs::Manager* manager)
 	gManager = manager;
 }
 
+bool ComponentHandle::IsOfType(const std::type_index& typeIndex) const
+{
+	return gManager->GetComponentTypeIdByIndex(typeIndex) == m_typeId;
+}
+
+std::type_index ECS_API ComponentHandle::GetStdTypeIndex() const
+{
+	return gManager->GetComponentTypeIndexByTypeId(m_typeId);
+}
+
 } // namespace ecs

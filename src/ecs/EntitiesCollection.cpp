@@ -144,7 +144,7 @@ void EntitiesCollection::RemoveComponent(Entity& entity, const ComponentHandle& 
 	}
 }
 
-bool EntitiesCollection::HasComponent(Entity& entity, const uint8_t componentType)
+bool EntitiesCollection::HasComponent(const Entity& entity, const uint8_t componentType)
 {
 	const int typeMask = 1 << componentType;
 	bool hasComponent = entity.componentsMask & typeMask;
@@ -152,7 +152,7 @@ bool EntitiesCollection::HasComponent(Entity& entity, const uint8_t componentTyp
 	return hasComponent;
 }
 
-void* EntitiesCollection::GetComponent(Entity& entity, const uint8_t componentType) const
+void* EntitiesCollection::GetComponent(const Entity& entity, const uint8_t componentType) const
 {
 	auto componentNode = m_entityComponentsMapping[entity.componentsDataOffset];
 	bool reachedEndOfList = false;
@@ -176,7 +176,7 @@ void* EntitiesCollection::GetComponent(Entity& entity, const uint8_t componentTy
 	return nullptr;
 }
 
-void* EntitiesCollection::GetComponent(Entity& entity, const uint8_t componentType, ComponentHandle& handle) const
+void* EntitiesCollection::GetComponent(const Entity& entity, const uint8_t componentType, ComponentHandle& handle) const
 {
 	auto componentNode = m_entityComponentsMapping[entity.componentsDataOffset];
 	bool reachedEndOfList = false;
@@ -305,12 +305,12 @@ void EntitiesCollection::RemoveChild(Entity& entity, Entity& child)
 	}
 }
 
-uint16_t EntitiesCollection::GetChildrenCount(Entity& entity) const
+uint16_t EntitiesCollection::GetChildrenCount(const Entity& entity) const
 {
 	return m_entities[entity.id]->childrenCount;
 }
 
-Entity* EntitiesCollection::GetParent(Entity& entity)
+Entity* EntitiesCollection::GetParent(const Entity& entity)
 {
 	if (entity.parentId != Entity::GetInvalidId())
 	{
@@ -401,6 +401,16 @@ void EntitiesCollection::ActivateEntity(Entity& entity, const bool activate)
 	{
 		RefreshActivation(entity, activate);
 	}
+}
+
+bool EntitiesCollection::IsEntityEnabled(const std::size_t entityId) const
+{
+	return m_entities[entityId]->isEnabled;
+}
+
+bool EntitiesCollection::IsEntityActivated(const std::size_t entityId) const
+{
+	return m_entities[entityId]->isActivated;
 }
 
 void EntitiesCollection::RefreshActivation(Entity& entity, bool forceActivate)

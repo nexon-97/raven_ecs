@@ -6,7 +6,6 @@
 #include <typeindex>
 
 #include "ComponentCollectionImpl.hpp"
-#include "ILifecycleCallback.hpp"
 #include "System.hpp"
 #include "EntitiesCollection.hpp"
 
@@ -16,17 +15,15 @@ namespace ecs
 constexpr std::size_t k_defaultComponentPoolSize = 1024U;
 
 class Manager
-	: public ILifecycleCallback
 {
 	using SystemPtr = std::unique_ptr<System>;
 
 public:
 	ECS_API Manager();
 
-	void ECS_API Init() final;
-	void ECS_API Destroy() final;
-	void ECS_API Update() final;
-	void ECS_API Render() final;
+	void ECS_API Init();
+	void ECS_API Destroy();
+	void ECS_API Update();
 
 	/**
 	* @brief Register system type, provided as template parameter SystemType, in ECS.

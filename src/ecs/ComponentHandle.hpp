@@ -1,6 +1,7 @@
 #pragma once
 #include "ecs/ECSApiDef.hpp"
 #include <cstdint>
+#include <typeindex>
 
 namespace ecs
 {
@@ -20,6 +21,8 @@ using HandleIndex = uint16_t;
 
 struct ComponentHandle
 {
+	friend class Manager;
+
 public:
 	ComponentHandle() = default;
 	explicit ECS_API ComponentHandle(const uint8_t typeId, HandleIndex* handleIndexPtr);
@@ -28,10 +31,19 @@ public:
 
 	bool ECS_API IsValid() const;
 	uint8_t ECS_API GetTypeIndex() const;
+	std::type_index ECS_API GetStdTypeIndex() const; // Weird method name, rename
 	HandleIndex ECS_API GetOffset() const;
 	uint32_t ECS_API GetEntityId() const;
 
+	template <typename T>
+	bool IsOfType() const
+	{
+		return IsOfTypeImpl(typeid(T));
+	}
+
+private:
 	static void ECS_API SetManagerInstance(ecs::Manager* manager);
+	bool ECS_API IsOfType(const std::type_index& typeIndex) const;
 
 private:
 	uint8_t m_typeId;
