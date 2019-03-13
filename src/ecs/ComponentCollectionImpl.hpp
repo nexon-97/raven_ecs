@@ -147,14 +147,9 @@ public:
 		// Swap handles to fill holes and keep handle pointers valid
 		std::size_t dataIndexL = index;
 		std::size_t dataIndexR = m_handles.GetItemsCount() - 1U;
-		
-		auto handleL = m_handles[dataIndexL];
-		auto handleR = m_handles[dataIndexR];
 
-		// Swap handle pointers
-		m_handleIndexes.Swap(*handleL, *handleR);
-
-		m_handles.DestroyItem(index);
+		SwapHandles(dataIndexL, dataIndexR);
+		m_handles.DestroyItem(dataIndexR);
 
 		if (wasActivated)
 		{
@@ -164,65 +159,70 @@ public:
 
 	void* Get(const std::size_t index) override
 	{
-		return &m_componentsData[index]->component;		
+		return &GetItemByHandleIndex(index).component;
 	}
 
 	ComponentData& GetComponentData(const std::size_t index)
 	{
-		return *m_componentsData[index];
+		return GetItemByHandleIndex(index);
 	}
 
 	void SetItemEntityId(const std::size_t index, const uint32_t entityId) override
 	{
-		m_componentsData[index]->entityId = entityId;
+		auto& componentData = GetItemByHandleIndex(index);
+		componentData.entityId = entityId;
 		RefreshComponentActivation(index);
 	}
 
 	uint32_t GetItemEntityId(const std::size_t index) const override
 	{
-		return m_componentsData[index]->entityId;
+		return GetItemByHandleIndex(index).entityId;
 	}
 
 	void SetItemEnabled(const std::size_t index, const bool enabled) override
 	{
-		auto componentData = m_componentsData[index];
-		if (enabled != componentData->isEnabled)
+		auto& componentData = GetItemByHandleIndex(index);
+		if (enabled != componentData.isEnabled)
 		{
-			componentData->isEnabled = enabled;
+			componentData.isEnabled = enabled;
 			RefreshComponentActivation(index);
 		}
 	}
 
 	bool IsItemEnabled(const std::size_t index) const override
 	{
-		return m_componentsData[index]->isEnabled;
+		return GetItemByHandleIndex(index).isEnabled;
 	}
 
 	void RefreshComponentActivation(const std::size_t index) override
 	{
-		auto entityData = m_managerConnection.GetEntityData(m_componentsData[index]->entityId);
+		auto& componentData = GetItemByHandleIndex(index);
+		auto entityData = m_managerConnection.GetEntityData(componentData.entityId);
 		RefreshComponentActivation(index, entityData.isEnabled, entityData.isActivated);
 	}
 
 	void RefreshComponentActivation(const std::size_t index, const bool ownerEnabled, const bool ownerActivated) override
 	{
-		bool shouldBeActivated = ownerActivated && ownerEnabled && m_componentsData[index]->isEnabled;
-		if (shouldBeActivated != m_componentsData[index]->isActivated)
+		auto& componentData = GetItemByHandleIndex(index);
+		bool shouldBeActivated = ownerActivated && ownerEnabled && componentData.isEnabled;
+		if (shouldBeActivated != componentData.isActivated)
 		{
-			m_componentsData[index]->isActivated = shouldBeActivated;
+			componentData.isActivated = shouldBeActivated;
 			
 			if (shouldBeActivated)
 			{
 				assert(index >= m_activatedCount);
+				SwapHandles(index, m_activatedCount);
 				++m_activatedCount;
 			}
 			else
 			{
 				assert(index < m_activatedCount);
 				--m_activatedCount;
+				SwapHandles(index, m_activatedCount);
 			}
 
-			SwapHandles(index, m_activatedCount);
+			assert(Validate());
 		}
 	}
 
@@ -286,6 +286,24 @@ public:
 		//OutputDebugStringA(dumpStr.c_str());
 	}
 
+	bool Validate() override
+	{
+		auto count = m_componentsData.GetItemsCount();
+
+		for (std::size_t i = 0U; i < count; ++i)
+		{
+			auto handleValue = *m_handles[i];
+
+			bool check1 = m_componentsData[handleValue]->isActivated == (i < m_activatedCount);
+			bool check2 = *m_handles[*m_handleIndexes[i]] == i;
+
+			if (!check1 || !check2)
+				return false;
+		}
+
+		return true;
+	}
+
 private:
 	void SwapHandles(const std::size_t lhs, const std::size_t rhs)
 	{
@@ -295,6 +313,19 @@ private:
 		// Swap handle pointers
 		m_handleIndexes.Swap(*handleL, *handleR);
 		m_handles.Swap(lhs, rhs);
+	}
+
+	// Mutable and immutable versions of item accessor by handle index
+	ComponentData& GetItemByHandleIndex(const std::size_t handleIndex)
+	{
+		auto handleValue = *m_handles[handleIndex];
+		return *m_componentsData[handleValue];
+	}
+
+	const ComponentData& GetItemByHandleIndex(const std::size_t handleIndex) const
+	{
+		auto handleValue = *m_handles[handleIndex];
+		return *m_componentsData[handleValue];
 	}
 
 private:

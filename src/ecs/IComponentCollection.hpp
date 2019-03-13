@@ -28,6 +28,8 @@ public:
 
 	// Debug method to dump collection internal state
 	virtual void DumpState() = 0;
+	// Debug method to validate collection internal state
+	virtual bool Validate() = 0;
 };
 
 } // namespace ecs
