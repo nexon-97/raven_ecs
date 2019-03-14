@@ -236,6 +236,19 @@ public:
 		m_typeId = typeId;
 	}
 
+	HandleIndex* CloneComponent(const std::size_t index) override
+	{
+		auto handleIndex = Create();
+
+		auto& originalData = GetItemByHandleIndex(index);
+		auto& cloneData = GetItemByHandleIndex(*handleIndex);
+
+		// Actually copy data
+		cloneData.component = originalData.component;
+
+		return handleIndex;
+	}
+
 	iterator begin()
 	{
 		return iterator(this, 0U);

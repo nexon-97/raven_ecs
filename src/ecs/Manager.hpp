@@ -133,6 +133,8 @@ public:
 	void ECS_API SetComponentEnabled(const ComponentHandle& handle, const bool enabled);
 	void ECS_API RefreshComponentActivation(const ComponentHandle& handle, const bool ownerEnabled, const bool ownerActivated);
 
+	ComponentHandle ECS_API CloneComponent(const ComponentHandle& handle);
+
 private:
 	/**
 	* @brief Registers system inside internal systems collection

@@ -23,6 +23,7 @@ public:
 	virtual bool IsItemEnabled(const std::size_t index) const = 0;
 	virtual void RefreshComponentActivation(const std::size_t index) = 0;
 	virtual void RefreshComponentActivation(const std::size_t index, const bool ownerEnabled, const bool ownerActivated) = 0;
+	virtual HandleIndex* CloneComponent(const std::size_t index) = 0;
 	virtual void SetTypeId(const uint8_t typeId) = 0;
 	virtual uint8_t GetTypeId() const = 0;
 

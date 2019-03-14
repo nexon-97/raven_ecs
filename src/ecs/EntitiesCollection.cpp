@@ -350,6 +350,23 @@ Entity* EntitiesCollection::GetParent(const ComponentHandle& handle)
 	}
 }
 
+void EntitiesCollection::ClearChildren(Entity& entity)
+{
+	for (auto& child : GetChildrenData(entity))
+	{
+		child.parentId = Entity::GetInvalidId();
+
+		RefreshActivation(child);
+	}
+
+	auto entityData = m_entities[entity.id];
+	entityData->childrenCount = 0;
+
+	auto entityHierarchyEntry = m_entityHierarchyData[entity.hierarchyDataOffset];
+	entityHierarchyEntry->childId = Entity::GetInvalidId();
+	entityHierarchyEntry->nextItemPtr = Entity::GetInvalidId();
+}
+
 EntitiesCollection::ChildrenData EntitiesCollection::GetChildrenData(Entity& entity)
 {
 	auto offsetBegin = m_entities[entity.id]->entity.hierarchyDataOffset;
@@ -394,13 +411,7 @@ void EntitiesCollection::SetEntityEnabled(Entity& entity, const bool enabled)
 
 	if (entityData->isEnabled != enabled)
 	{
-		for (auto& componentHandle : GetComponentsData(entity))
-		{
-			m_ecsManager.SetComponentEnabled(componentHandle, enabled);
-		}
-
 		entityData->isEnabled = enabled;
-
 		RefreshActivation(entity);
 	}
 }
@@ -459,6 +470,27 @@ void EntitiesCollection::RefreshChildrenActivation(Entity& entity)
 	{
 		RefreshActivation(childData);
 	}
+}
+
+Entity& EntitiesCollection::CloneEntity(Entity& entity)
+{
+	auto& clone = CreateEntity();
+
+	// Clone components
+	for (auto& componentHandle : GetComponentsData(entity))
+	{
+		auto componentCloneHandle = m_ecsManager.CloneComponent(componentHandle);
+		AddComponent(clone, componentCloneHandle);
+	}
+
+	// Clone children
+	for (auto& child : GetChildrenData(entity))
+	{
+		auto& childClone = CloneEntity(child);
+		AddChild(clone, childClone);
+	}
+
+	return clone;
 }
 
 } // namespace ecs

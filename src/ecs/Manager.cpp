@@ -146,4 +146,11 @@ void Manager::RefreshComponentActivation(const ComponentHandle& handle, const bo
 	collection->RefreshComponentActivation(handle.GetOffset(), ownerEnabled, ownerActivated);
 }
 
+ComponentHandle Manager::CloneComponent(const ComponentHandle& handle)
+{
+	auto collection = GetCollection(handle.GetTypeIndex());
+	auto handleIndex = collection->CloneComponent(handle.GetOffset());
+	return ComponentHandle(handle.GetTypeIndex(), handleIndex);
+}
+
 } // namespace ecs

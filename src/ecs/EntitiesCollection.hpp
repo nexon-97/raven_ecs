@@ -34,6 +34,13 @@ public:
 	ECS_API void* GetComponent(const std::size_t entityId, const uint8_t componentType, ComponentHandle& handle) const;
 
 	template <typename ComponentType>
+	bool HasComponent(const Entity& entity)
+	{
+		auto componentTypeId = GetComponentTypeIdByTypeIndex(typeid(ComponentType));
+		return HasComponent(entity, componentTypeId);
+	}
+
+	template <typename ComponentType>
 	ComponentType* GetComponent(Entity& entity) const
 	{
 		auto componentTypeId = GetComponentTypeIdByTypeIndex(typeid(ComponentType));
@@ -66,6 +73,7 @@ public:
 	uint16_t ECS_API GetChildrenCount(const Entity& entity) const;
 	ECS_API Entity* GetParent(const Entity& entity);
 	ECS_API Entity* GetParent(const ComponentHandle& handle);
+	void ECS_API ClearChildren(Entity& entity);
 
 	void ECS_API SetEntityEnabled(Entity& entity, const bool enabled);
 	void ECS_API ActivateEntity(Entity& entity, const bool activate);
@@ -76,6 +84,8 @@ public:
 
 	bool ECS_API IsEntityEnabled(const std::size_t entityId) const;
 	bool ECS_API IsEntityActivated(const std::size_t entityId) const;
+
+	ECS_API Entity& CloneEntity(Entity& entity);
 
 public:
 	struct EntityHierarchyData
