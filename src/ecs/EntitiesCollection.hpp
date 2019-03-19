@@ -77,6 +77,7 @@ public:
 
 	void ECS_API SetEntityEnabled(Entity& entity, const bool enabled);
 	void ECS_API ActivateEntity(Entity& entity, const bool activate);
+	void ECS_API ActivateEntity(const std::size_t entityId, const bool activate);
 
 	void ECS_API RefreshActivation(Entity& entity, bool forceActivate = false);
 	void ECS_API RefreshComponentsActivation(Entity& entity);

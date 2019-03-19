@@ -426,6 +426,16 @@ void EntitiesCollection::ActivateEntity(Entity& entity, const bool activate)
 	}
 }
 
+void EntitiesCollection::ActivateEntity(const std::size_t entityId, const bool activate)
+{
+	auto entityData = m_entities[entityId];
+
+	if (activate != entityData->isActivated)
+	{
+		RefreshActivation(entityData->entity, activate);
+	}
+}
+
 bool EntitiesCollection::IsEntityEnabled(const std::size_t entityId) const
 {
 	return m_entities[entityId]->isEnabled;
