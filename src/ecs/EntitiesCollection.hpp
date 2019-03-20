@@ -91,7 +91,11 @@ public:
 
 	ECS_API Entity& CloneEntity(const Entity& entity);
 
+	// Entity hierarchy manager interface copy
 	bool ECS_API CompareEntitiesInHierarchy(const Entity& lhs, const Entity& rhs) const;
+	std::size_t ECS_API GetEntitiesCountInBranch(const EntityId& rootEntityId) const;
+	std::size_t ECS_API GetActiveEntitiesCountInBranch(const EntityId& rootEntityId) const;
+	std::size_t ECS_API GetEntityHierarchyOffsetRelativeToEntity(const EntityId& entityId, const EntityId& pivotId) const;
 
 public:
 	struct EntityHierarchyData

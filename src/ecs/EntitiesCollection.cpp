@@ -537,4 +537,20 @@ bool EntitiesCollection::CompareEntitiesInHierarchy(const Entity& lhs, const Ent
 	return m_hierarchyManager.CompareEntitiesInHierarchy(lhs, rhs);
 }
 
+std::size_t EntitiesCollection::GetEntitiesCountInBranch(const EntityId& rootEntityId) const
+{
+	return m_hierarchyManager.GetEntitiesCountInBranch(rootEntityId);
+}
+
+std::size_t EntitiesCollection::GetActiveEntitiesCountInBranch(const EntityId& rootEntityId) const
+{
+	return m_hierarchyManager.GetActiveEntitiesCountInBranch(rootEntityId);
+}
+
+std::size_t EntitiesCollection::GetEntityHierarchyOffsetRelativeToEntity(const EntityId& entityId, const EntityId& pivotId) const
+{
+	// TODO: Redesign this to use hierarchy manager
+	return static_cast<std::size_t>(static_cast<int>(entityId) - static_cast<int>(pivotId));
+}
+
 } // namespace ecs
