@@ -5,11 +5,17 @@
 namespace ecs
 {
 
-const uint32_t k_invalidId = static_cast<uint32_t>(-1);
+const EntityId k_invalidId = std::numeric_limits<EntityId>::max();
+const HierarchyDepth k_invalidHierarchyDepth = std::numeric_limits<HierarchyDepth>::max();
 
-const uint32_t Entity::GetInvalidId()
+const EntityId Entity::GetInvalidId()
 {
 	return k_invalidId;
+}
+
+const HierarchyDepth Entity::GetInvalidHierarchyDepth()
+{
+	return k_invalidHierarchyDepth;
 }
 
 //EntitiesCollection* Entity::s_collection = nullptr;

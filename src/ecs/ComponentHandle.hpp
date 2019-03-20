@@ -2,6 +2,9 @@
 #include "ecs/ECSApiDef.hpp"
 #include <cstdint>
 #include <typeindex>
+#include <limits>
+
+#undef max
 
 namespace ecs
 {
@@ -12,7 +15,7 @@ struct ComponentHandleInternal
 {
 	static const uint8_t ECS_API GetInvalidTypeId()
 	{
-		static const uint8_t k_invalidTypeId = static_cast<uint8_t>(-1);
+		static const uint8_t k_invalidTypeId = std::numeric_limits<uint8_t>::max();
 		return k_invalidTypeId;
 	}
 };

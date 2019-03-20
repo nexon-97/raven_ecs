@@ -6,6 +6,7 @@ namespace ecs
 
 EntitiesCollection::EntitiesCollection(ecs::Manager& ecsManager)
 	: m_ecsManager(ecsManager)
+	, m_hierarchyManager(&ecsManager)
 	, m_entities(1024U)
 	, m_entityComponentsMapping(1024U)
 	, m_entityHierarchyData(1024U)
@@ -13,7 +14,7 @@ EntitiesCollection::EntitiesCollection(ecs::Manager& ecsManager)
 	//Entity::s_collection = this;
 }
 
-Entity& EntitiesCollection::GetEntity(const uint32_t id)
+Entity& EntitiesCollection::GetEntity(const EntityId id)
 {
 	return m_entities[id]->entity;
 }
@@ -26,6 +27,8 @@ Entity& EntitiesCollection::CreateEntity()
 	auto& entityData = *entityCreationResult.second;
 	entityData.entity.id = newEntityId;
 	entityData.entity.parentId = Entity::GetInvalidId();
+	entityData.entity.orderInParent = Entity::GetInvalidHierarchyDepth();
+	entityData.entity.hierarchyDepth = 0U;
 
 	{
 		auto componentMappingCreationResult = m_entityComponentsMapping.CreateItem();
@@ -48,7 +51,7 @@ Entity& EntitiesCollection::CreateEntity()
 	return entityData.entity;
 }
 
-void EntitiesCollection::DestroyEntity(const uint32_t id)
+void EntitiesCollection::DestroyEntity(const EntityId id)
 {
 	auto& entityData = *m_entities[id];
 	auto& entity = entityData.entity;
@@ -76,10 +79,6 @@ void EntitiesCollection::DestroyEntity(const uint32_t id)
 	componentNode = m_entityComponentsMapping[entity.componentsDataOffset];
 	componentNode->handle = ComponentHandle(ComponentHandleInternal::GetInvalidTypeId(), nullptr);
 	componentNode->nextItemPtr = Entity::GetInvalidId();
-
-	// Mark entity as deleted
-	entity.id = Entity::GetInvalidId();
-	entity.componentsMask = 0;
 }
 
 void EntitiesCollection::AddComponent(Entity& entity, const ComponentHandle& handle)
@@ -144,7 +143,7 @@ void EntitiesCollection::RemoveComponent(Entity& entity, const ComponentHandle& 
 	}
 }
 
-bool EntitiesCollection::HasComponent(const Entity& entity, const uint8_t componentType)
+bool EntitiesCollection::HasComponent(const Entity& entity, const uint8_t componentType) const
 {
 	const int typeMask = 1 << componentType;
 	bool hasComponent = entity.componentsMask & typeMask;
@@ -154,29 +153,32 @@ bool EntitiesCollection::HasComponent(const Entity& entity, const uint8_t compon
 
 void* EntitiesCollection::GetComponent(const Entity& entity, const uint8_t componentType) const
 {
-	auto componentNode = m_entityComponentsMapping[entity.componentsDataOffset];
-	bool reachedEndOfList = false;
-
-	while (!reachedEndOfList)
+	if (HasComponent(entity, componentType))
 	{
-		if (componentNode->handle.GetTypeIndex() == componentType)
-		{
-			// Component type found, return it
-			return m_ecsManager.GetComponent<void>(componentNode->handle);
-		}
+		auto componentNode = m_entityComponentsMapping[entity.componentsDataOffset];
+		bool reachedEndOfList = false;
 
-		reachedEndOfList = (componentNode->nextItemPtr == Entity::GetInvalidId());
-
-		if (!reachedEndOfList)
+		while (!reachedEndOfList)
 		{
-			componentNode = m_entityComponentsMapping[componentNode->nextItemPtr];
+			if (componentNode->handle.GetTypeIndex() == componentType)
+			{
+				// Component type found, return it
+				return m_ecsManager.GetComponent<void>(componentNode->handle);
+			}
+
+			reachedEndOfList = (componentNode->nextItemPtr == Entity::GetInvalidId());
+
+			if (!reachedEndOfList)
+			{
+				componentNode = m_entityComponentsMapping[componentNode->nextItemPtr];
+			}
 		}
 	}
 
 	return nullptr;
 }
 
-void* EntitiesCollection::GetComponent(const std::size_t entityId, const uint8_t componentType) const
+void* EntitiesCollection::GetComponent(const EntityId entityId, const uint8_t componentType) const
 {
 	const auto& entity = m_entities[entityId]->entity;
 	return GetComponent(entity, componentType);
@@ -184,23 +186,29 @@ void* EntitiesCollection::GetComponent(const std::size_t entityId, const uint8_t
 
 void* EntitiesCollection::GetComponent(const Entity& entity, const uint8_t componentType, ComponentHandle& handle) const
 {
-	auto componentNode = m_entityComponentsMapping[entity.componentsDataOffset];
-	bool reachedEndOfList = false;
+	const int typeMask = 1 << componentType;
+	bool hasComponent = entity.componentsMask & typeMask;
 
-	while (!reachedEndOfList)
+	if (hasComponent)
 	{
-		if (componentNode->handle.GetTypeIndex() == componentType)
-		{
-			// Component type found, return it
-			handle = componentNode->handle;
-			return m_ecsManager.GetComponent<void>(handle);
-		}
+		auto componentNode = m_entityComponentsMapping[entity.componentsDataOffset];
+		bool reachedEndOfList = false;
 
-		reachedEndOfList = (componentNode->nextItemPtr == Entity::GetInvalidId());
-
-		if (!reachedEndOfList)
+		while (!reachedEndOfList)
 		{
-			componentNode = m_entityComponentsMapping[componentNode->nextItemPtr];
+			if (componentNode->handle.GetTypeIndex() == componentType)
+			{
+				// Component type found, return it
+				handle = componentNode->handle;
+				return m_ecsManager.GetComponent<void>(handle);
+			}
+
+			reachedEndOfList = (componentNode->nextItemPtr == Entity::GetInvalidId());
+
+			if (!reachedEndOfList)
+			{
+				componentNode = m_entityComponentsMapping[componentNode->nextItemPtr];
+			}
 		}
 	}
 
@@ -208,7 +216,7 @@ void* EntitiesCollection::GetComponent(const Entity& entity, const uint8_t compo
 	return nullptr;
 }
 
-void* EntitiesCollection::GetComponent(const std::size_t entityId, const uint8_t componentType, ComponentHandle& handle) const
+void* EntitiesCollection::GetComponent(const EntityId entityId, const uint8_t componentType, ComponentHandle& handle) const
 {
 	const auto& entity = m_entities[entityId]->entity;
 	return GetComponent(entity, componentType, handle);
@@ -260,8 +268,11 @@ void EntitiesCollection::AddChild(Entity& entity, Entity& child)
 		currentEntry->nextItemPtr = static_cast<uint32_t>(newEntryId);
 	}
 
-	++m_entities[entity.id]->childrenCount;
+	auto parentData = m_entities[entity.id];
 	child.parentId = entity.id;
+	child.orderInParent = parentData->childrenCount;
+	child.hierarchyDepth = entity.hierarchyDepth + 1;
+	++parentData->childrenCount;
 
 	RefreshActivation(child);
 }
@@ -311,6 +322,8 @@ void EntitiesCollection::RemoveChild(Entity& entity, Entity& child)
 		hierarchyData->nextItemPtr = Entity::GetInvalidId();
 
 		child.parentId = Entity::GetInvalidId();
+		child.hierarchyDepth = 0U;
+		child.orderInParent = Entity::GetInvalidHierarchyDepth();
 		--m_entities[entity.id]->childrenCount;
 
 		RefreshActivation(child);
@@ -319,10 +332,15 @@ void EntitiesCollection::RemoveChild(Entity& entity, Entity& child)
 
 uint16_t EntitiesCollection::GetChildrenCount(const Entity& entity) const
 {
-	return m_entities[entity.id]->childrenCount;
+	return GetChildrenCount(entity.id);
 }
 
-Entity* EntitiesCollection::GetParent(const Entity& entity)
+uint16_t EntitiesCollection::GetChildrenCount(EntityId entityId) const
+{
+	return m_entities[entityId]->childrenCount;
+}
+
+Entity* EntitiesCollection::GetParent(const Entity& entity) const
 {
 	if (entity.parentId != Entity::GetInvalidId())
 	{
@@ -334,7 +352,7 @@ Entity* EntitiesCollection::GetParent(const Entity& entity)
 	}
 }
 
-Entity* EntitiesCollection::GetParent(const ComponentHandle& handle)
+Entity* EntitiesCollection::GetParent(const ComponentHandle& handle) const
 {
 	auto entityId = handle.GetEntityId();
 	auto entityData = m_entities[entityId];
@@ -348,6 +366,12 @@ Entity* EntitiesCollection::GetParent(const ComponentHandle& handle)
 	{
 		return nullptr;
 	}
+}
+
+Entity* EntitiesCollection::GetParent(const EntityId entityId) const
+{
+	assert(entityId != Entity::GetInvalidId());
+	return GetParent(m_entities[entityId]->entity);
 }
 
 void EntitiesCollection::ClearChildren(Entity& entity)
@@ -367,9 +391,14 @@ void EntitiesCollection::ClearChildren(Entity& entity)
 	entityHierarchyEntry->nextItemPtr = Entity::GetInvalidId();
 }
 
-EntitiesCollection::ChildrenData EntitiesCollection::GetChildrenData(Entity& entity)
+EntitiesCollection::ChildrenData EntitiesCollection::GetChildrenData(const Entity& entity)
 {
-	auto offsetBegin = m_entities[entity.id]->entity.hierarchyDataOffset;
+	return GetChildrenData(entity.id);
+}
+
+EntitiesCollection::ChildrenData EntitiesCollection::GetChildrenData(const EntityId entityId)
+{
+	auto offsetBegin = m_entities[entityId]->entity.hierarchyDataOffset;
 
 	std::size_t offsetEnd = offsetBegin;
 	bool endFound = false;
@@ -394,7 +423,7 @@ EntitiesCollection::ChildrenData EntitiesCollection::GetChildrenData(Entity& ent
 	return EntitiesCollection::ChildrenData(this, m_entityHierarchyData, offsetBegin, offsetEnd);
 }
 
-EntitiesCollection::ComponentsData EntitiesCollection::GetComponentsData(Entity& entity)
+EntitiesCollection::ComponentsData EntitiesCollection::GetComponentsData(const Entity& entity)
 {
 	auto offsetBegin = m_entities[entity.id]->entity.componentsDataOffset;
 	return EntitiesCollection::ComponentsData(m_entityComponentsMapping, offsetBegin);
@@ -482,7 +511,7 @@ void EntitiesCollection::RefreshChildrenActivation(Entity& entity)
 	}
 }
 
-Entity& EntitiesCollection::CloneEntity(Entity& entity)
+Entity& EntitiesCollection::CloneEntity(const Entity& entity)
 {
 	auto& clone = CreateEntity();
 
@@ -501,6 +530,11 @@ Entity& EntitiesCollection::CloneEntity(Entity& entity)
 	}
 
 	return clone;
+}
+
+bool EntitiesCollection::CompareEntitiesInHierarchy(const Entity& lhs, const Entity& rhs) const
+{
+	return m_hierarchyManager.CompareEntitiesInHierarchy(lhs, rhs);
 }
 
 } // namespace ecs

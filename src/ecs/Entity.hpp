@@ -1,22 +1,28 @@
 #pragma once
 #include "ecs/ECSApiDef.hpp"
 #include <cstdint>
+#include <limits>
 
 namespace ecs
 {
 
 class EntitiesCollection;
 struct ComponentHandle;
+using EntityId = uint32_t;
+using HierarchyDepth = uint16_t;
 
 struct Entity
 {
-	uint32_t id;
-	uint32_t parentId;
+	EntityId id;
+	EntityId parentId;
 	uint32_t hierarchyDataOffset;
 	uint32_t componentsMask;
 	uint32_t componentsDataOffset;
+	HierarchyDepth hierarchyDepth;
+	uint16_t orderInParent;
 
-	static const uint32_t ECS_API GetInvalidId();
+	static const EntityId ECS_API GetInvalidId();
+	static const HierarchyDepth ECS_API GetInvalidHierarchyDepth();
 
 	Entity()
 		: id(Entity::GetInvalidId())
@@ -24,6 +30,8 @@ struct Entity
 		, hierarchyDataOffset(0U)
 		, componentsMask(0U)
 		, componentsDataOffset(0U)
+		, hierarchyDepth(GetInvalidHierarchyDepth())
+		, orderInParent(GetInvalidHierarchyDepth())
 	{}
 
 	//void ECS_API AddComponent(const ComponentHandle& handle);

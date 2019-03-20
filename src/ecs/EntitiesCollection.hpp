@@ -1,6 +1,7 @@
 #pragma once
 #include "Entity.hpp"
 #include "ecs/ComponentHandle.hpp"
+#include "ecs/EntityHierarchyManager.hpp"
 #include "ecs/ECSApiDef.hpp"
 #include "storage/MemoryPool.hpp"
 
@@ -21,17 +22,17 @@ public:
 	EntitiesCollection(const EntitiesCollection&) = delete;
 	EntitiesCollection& operator=(const EntitiesCollection&) = delete;
 
-	ECS_API Entity& GetEntity(const uint32_t id);
+	ECS_API Entity& GetEntity(const EntityId id);
 	ECS_API Entity& CreateEntity();
-	void ECS_API DestroyEntity(const uint32_t id);
+	void ECS_API DestroyEntity(const EntityId id);
 
 	void ECS_API AddComponent(Entity& entity, const ComponentHandle& handle);
 	void ECS_API RemoveComponent(Entity& entity, const ComponentHandle& handle);
-	bool ECS_API HasComponent(const Entity& entity, const uint8_t componentType);
+	bool ECS_API HasComponent(const Entity& entity, const uint8_t componentType) const;
 	ECS_API void* GetComponent(const Entity& entity, const uint8_t componentType) const;
-	ECS_API void* GetComponent(const std::size_t entityId, const uint8_t componentType) const;
+	ECS_API void* GetComponent(const EntityId entityId, const uint8_t componentType) const;
 	ECS_API void* GetComponent(const Entity& entity, const uint8_t componentType, ComponentHandle& handle) const;
-	ECS_API void* GetComponent(const std::size_t entityId, const uint8_t componentType, ComponentHandle& handle) const;
+	ECS_API void* GetComponent(const EntityId entityId, const uint8_t componentType, ComponentHandle& handle) const;
 
 	template <typename ComponentType>
 	bool HasComponent(const Entity& entity)
@@ -41,28 +42,28 @@ public:
 	}
 
 	template <typename ComponentType>
-	ComponentType* GetComponent(Entity& entity) const
+	ComponentType* GetComponent(const Entity& entity) const
 	{
 		auto componentTypeId = GetComponentTypeIdByTypeIndex(typeid(ComponentType));
 		return static_cast<ComponentType*>(GetComponent(entity, componentTypeId));
 	}
 
 	template <typename ComponentType>
-	ComponentType* GetComponent(const std::size_t entityId) const
+	ComponentType* GetComponent(const EntityId entityId) const
 	{
 		auto componentTypeId = GetComponentTypeIdByTypeIndex(typeid(ComponentType));
 		return static_cast<ComponentType*>(GetComponent(entityId, componentTypeId));
 	}
 
 	template <typename ComponentType>
-	ComponentType* GetComponent(Entity& entity, ComponentHandle& handle) const
+	ComponentType* GetComponent(const Entity& entity, ComponentHandle& handle) const
 	{
 		auto componentTypeId = GetComponentTypeIdByTypeIndex(typeid(ComponentType));
 		return static_cast<ComponentType*>(GetComponent(entity, componentTypeId, handle));
 	}
 
 	template <typename ComponentType>
-	ComponentType* GetComponent(const std::size_t entityId, ComponentHandle& handle) const
+	ComponentType* GetComponent(const EntityId entityId, ComponentHandle& handle) const
 	{
 		auto componentTypeId = GetComponentTypeIdByTypeIndex(typeid(ComponentType));
 		return static_cast<ComponentType*>(GetComponent(entityId, componentTypeId, handle));
@@ -71,8 +72,10 @@ public:
 	void ECS_API AddChild(Entity& entity, Entity& child);
 	void ECS_API RemoveChild(Entity& entity, Entity& child);
 	uint16_t ECS_API GetChildrenCount(const Entity& entity) const;
-	ECS_API Entity* GetParent(const Entity& entity);
-	ECS_API Entity* GetParent(const ComponentHandle& handle);
+	uint16_t ECS_API GetChildrenCount(EntityId entityId) const;
+	ECS_API Entity* GetParent(const Entity& entity) const;
+	ECS_API Entity* GetParent(const ComponentHandle& handle) const;
+	ECS_API Entity* GetParent(const EntityId entityId) const;
 	void ECS_API ClearChildren(Entity& entity);
 
 	void ECS_API SetEntityEnabled(Entity& entity, const bool enabled);
@@ -86,7 +89,9 @@ public:
 	bool ECS_API IsEntityEnabled(const std::size_t entityId) const;
 	bool ECS_API IsEntityActivated(const std::size_t entityId) const;
 
-	ECS_API Entity& CloneEntity(Entity& entity);
+	ECS_API Entity& CloneEntity(const Entity& entity);
+
+	bool ECS_API CompareEntitiesInHierarchy(const Entity& lhs, const Entity& rhs) const;
 
 public:
 	struct EntityHierarchyData
@@ -171,7 +176,8 @@ public:
 		std::size_t offsetEnd;
 	};
 
-	ChildrenData ECS_API GetChildrenData(Entity& entity);
+	ChildrenData ECS_API GetChildrenData(const Entity& entity);
+	ChildrenData ECS_API GetChildrenData(const EntityId entityId);
 
 public:
 	struct EntityComponentMapEntry
@@ -253,7 +259,7 @@ public:
 		std::size_t offsetBegin;
 	};
 
-	ComponentsData ECS_API GetComponentsData(Entity& entity);
+	ComponentsData ECS_API GetComponentsData(const Entity& entity);
 
 protected:
 	struct EntityData
@@ -279,6 +285,7 @@ private:
 	EntitiesStorageType m_entities;
 	ComponentsMapStorageType m_entityComponentsMapping;
 	EntityHierarchyDataStorageType m_entityHierarchyData;
+	EntityHierarchyManager m_hierarchyManager;
 	std::size_t m_activeEntitiesCount = 0U;
 	Manager& m_ecsManager;
 };
