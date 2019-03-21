@@ -137,7 +137,7 @@ void EntityHierarchyManager::GetActiveEntitiesCountInBranchInternal(const Entity
 
 std::size_t EntityHierarchyManager::GetEntitiesCountInBranch(const EntityId rootEntityId) const
 {
-	std::size_t result;
+	std::size_t result = 0U;
 	GetEntitiesCountInBranchInternal(rootEntityId, result);
 
 	return result;
@@ -145,7 +145,7 @@ std::size_t EntityHierarchyManager::GetEntitiesCountInBranch(const EntityId root
 
 std::size_t EntityHierarchyManager::GetActiveEntitiesCountInBranch(const EntityId rootEntityId) const
 {
-	std::size_t result;
+	std::size_t result = 0U;
 	GetActiveEntitiesCountInBranchInternal(rootEntityId, result);
 
 	return result;
