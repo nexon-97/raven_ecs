@@ -1,6 +1,8 @@
 #include "ecs/EntityHierarchyManager.hpp"
 #include "ecs/Manager.hpp"
 
+#include <algorithm>
+
 // Undefine max to avoid macro collisions
 #undef max
 
@@ -9,15 +11,35 @@ namespace ecs
 
 Manager* g_ecsManager = nullptr;
 EntitiesCollection* g_entitiesCollection = nullptr;
+EntityHierarchyManager* g_hierarchyManager = nullptr;
+
+///////////////////////////////////////////////////////////////////////////////////////
+
+struct EntitiesComparator
+{
+	bool operator()(const EntityId lhsId, const EntityId rhsId) const
+	{
+		auto& lhs = g_entitiesCollection->GetEntity(lhsId);
+		auto& rhs = g_entitiesCollection->GetEntity(rhsId);
+		return g_hierarchyManager->CompareEntitiesInHierarchy(lhs, rhs);
+	}
+};
+EntitiesComparator g_comparator;
+
+///////////////////////////////////////////////////////////////////////////////////////
 
 EntityHierarchyManager::EntityHierarchyManager(Manager* manager)
 {
+	g_hierarchyManager = this;
 	g_ecsManager = manager;
 	g_entitiesCollection = &g_ecsManager->GetEntitiesCollection();
 }
 
 bool EntityHierarchyManager::CompareEntitiesInHierarchy(const Entity& lhs, const Entity& rhs) const
 {
+	if (&lhs == &rhs)
+		return false;
+
 	assert(lhs.hierarchyDepth != Entity::GetInvalidHierarchyDepth());
 	assert(rhs.hierarchyDepth != Entity::GetInvalidHierarchyDepth());
 
@@ -63,13 +85,7 @@ bool EntityHierarchyManager::CompareEntitiesInHierarchy(const Entity& lhs, const
 		auto parent1 = g_entitiesCollection->GetParent(parents[0]->id);
 		auto parent2 = g_entitiesCollection->GetParent(parents[1]->id);
 
-		if (nullptr == parent1 || nullptr == parent2)
-		{
-			//LOG_ERROR("Compared entities not in same hierarchy tree?");
-			return &lhs < &rhs;
-		}
-		//assert(nullptr != parent1);
-		//assert(nullptr != parent2);
+		assert(nullptr != parent1 && nullptr != parent2);
 
 		if (parent1 == parent2)
 		{
@@ -87,7 +103,17 @@ bool EntityHierarchyManager::CompareEntitiesInHierarchy(const Entity& lhs, const
 	return &lhs < &rhs;
 }
 
-void EntityHierarchyManager::GetEntitiesCountInBranchInternal(const EntityId& rootEntityId, std::size_t& result) const
+int EntityHierarchyManager::GetHierarchyOrderDiff(const EntityId lhsId, const EntityId rhsId) const
+{
+	auto lhsIt = std::lower_bound(m_hierarchyOrder.begin(), m_hierarchyOrder.end(), lhsId, g_comparator);
+	auto rhsIt = std::lower_bound(m_hierarchyOrder.begin(), m_hierarchyOrder.end(), rhsId, g_comparator);
+	assert(lhsIt != m_hierarchyOrder.end());
+	assert(rhsIt != m_hierarchyOrder.end());
+	
+	return static_cast<int>(rhsIt - lhsIt);
+}
+
+void EntityHierarchyManager::GetEntitiesCountInBranchInternal(const EntityId rootEntityId, std::size_t& result) const
 {
 	result += g_entitiesCollection->GetChildrenCount(rootEntityId);
 	for (const auto& child : g_entitiesCollection->GetChildrenData(rootEntityId))
@@ -96,7 +122,7 @@ void EntityHierarchyManager::GetEntitiesCountInBranchInternal(const EntityId& ro
 	}
 }
 
-void EntityHierarchyManager::GetActiveEntitiesCountInBranchInternal(const EntityId& rootEntityId, std::size_t& result) const
+void EntityHierarchyManager::GetActiveEntitiesCountInBranchInternal(const EntityId rootEntityId, std::size_t& result) const
 {
 	if (g_entitiesCollection->IsEntityActivated(rootEntityId))
 	{
@@ -109,7 +135,7 @@ void EntityHierarchyManager::GetActiveEntitiesCountInBranchInternal(const Entity
 	}
 }
 
-std::size_t EntityHierarchyManager::GetEntitiesCountInBranch(const EntityId& rootEntityId) const
+std::size_t EntityHierarchyManager::GetEntitiesCountInBranch(const EntityId rootEntityId) const
 {
 	std::size_t result;
 	GetEntitiesCountInBranchInternal(rootEntityId, result);
@@ -117,12 +143,30 @@ std::size_t EntityHierarchyManager::GetEntitiesCountInBranch(const EntityId& roo
 	return result;
 }
 
-std::size_t EntityHierarchyManager::GetActiveEntitiesCountInBranch(const EntityId& rootEntityId) const
+std::size_t EntityHierarchyManager::GetActiveEntitiesCountInBranch(const EntityId rootEntityId) const
 {
 	std::size_t result;
 	GetActiveEntitiesCountInBranchInternal(rootEntityId, result);
 
 	return result;
+}
+
+void EntityHierarchyManager::AddEntity(const EntityId id)
+{
+	auto it = std::lower_bound(m_hierarchyOrder.begin(), m_hierarchyOrder.end(), id, g_comparator);
+	if (it == m_hierarchyOrder.end())
+	{
+		m_hierarchyOrder.insert(it, id);
+	}
+}
+
+void EntityHierarchyManager::RemoveEntity(const EntityId id)
+{
+	auto it = std::find(m_hierarchyOrder.begin(), m_hierarchyOrder.end(), id);
+	if (it != m_hierarchyOrder.end())
+	{
+		m_hierarchyOrder.erase(it);
+	}
 }
 
 } // namespace ecs

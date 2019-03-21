@@ -22,13 +22,14 @@ Entity& EntitiesCollection::GetEntity(const EntityId id)
 Entity& EntitiesCollection::CreateEntity()
 {
 	auto entityCreationResult = m_entities.CreateItem();
-	uint32_t newEntityId = static_cast<uint32_t>(entityCreationResult.first);
+	EntityId newEntityId = static_cast<EntityId>(entityCreationResult.first);
 
 	auto& entityData = *entityCreationResult.second;
 	entityData.entity.id = newEntityId;
 	entityData.entity.parentId = Entity::GetInvalidId();
 	entityData.entity.orderInParent = Entity::GetInvalidHierarchyDepth();
-	entityData.entity.hierarchyDepth = 0U;
+	// Invalid hierarchy depth means that entity is not a part of any hierarchy currently
+	entityData.entity.hierarchyDepth = Entity::GetInvalidHierarchyDepth();
 
 	{
 		auto componentMappingCreationResult = m_entityComponentsMapping.CreateItem();
@@ -79,6 +80,8 @@ void EntitiesCollection::DestroyEntity(const EntityId id)
 	componentNode = m_entityComponentsMapping[entity.componentsDataOffset];
 	componentNode->handle = ComponentHandle(ComponentHandleInternal::GetInvalidTypeId(), nullptr);
 	componentNode->nextItemPtr = Entity::GetInvalidId();
+
+	// TODO: Performs logic consistency checks. Entity should be properly logically unloaded before actually destroying it...
 }
 
 void EntitiesCollection::AddComponent(Entity& entity, const ComponentHandle& handle)
@@ -269,11 +272,11 @@ void EntitiesCollection::AddChild(Entity& entity, Entity& child)
 	}
 
 	auto parentData = m_entities[entity.id];
-	child.parentId = entity.id;
+	//child.parentId = entity.id;
 	child.orderInParent = parentData->childrenCount;
-	child.hierarchyDepth = entity.hierarchyDepth + 1;
 	++parentData->childrenCount;
 
+	RefreshHierarchyDepth(child.id, entity.id, false);
 	RefreshActivation(child);
 }
 
@@ -321,11 +324,11 @@ void EntitiesCollection::RemoveChild(Entity& entity, Entity& child)
 		hierarchyData->childId = Entity::GetInvalidId();
 		hierarchyData->nextItemPtr = Entity::GetInvalidId();
 
-		child.parentId = Entity::GetInvalidId();
-		child.hierarchyDepth = 0U;
+		//child.parentId = Entity::GetInvalidId();
 		child.orderInParent = Entity::GetInvalidHierarchyDepth();
 		--m_entities[entity.id]->childrenCount;
 
+		RefreshHierarchyDepth(child.id, Entity::GetInvalidId(), false);
 		RefreshActivation(child);
 	}
 }
@@ -378,8 +381,10 @@ void EntitiesCollection::ClearChildren(Entity& entity)
 {
 	for (auto& child : GetChildrenData(entity))
 	{
-		child.parentId = Entity::GetInvalidId();
+		//child.parentId = Entity::GetInvalidId();
+		child.orderInParent = Entity::GetInvalidHierarchyDepth();
 
+		RefreshHierarchyDepth(child.id, Entity::GetInvalidId(), false);
 		RefreshActivation(child);
 	}
 
@@ -488,7 +493,13 @@ void EntitiesCollection::RefreshActivation(Entity& entity, bool forceActivate)
 	
 	if (shouldBeAddedToWorld != entityData->isActivated)
 	{
-		entityData->isActivated = shouldBeAddedToWorld;
+		entityData->isActivated = shouldBeAddedToWorld;	
+
+		if (forceActivate)
+		{
+			RefreshHierarchyDepth(entity.id, entity.parentId, true);
+		}
+
 		RefreshComponentsActivation(entity);
 		RefreshChildrenActivation(entity);
 	}
@@ -532,6 +543,62 @@ Entity& EntitiesCollection::CloneEntity(const Entity& entity)
 	return clone;
 }
 
+void EntitiesCollection::RefreshHierarchyDepth(const EntityId entityId, const EntityId newParentId, bool constructNewHierarchyTree)
+{
+	static const HierarchyDepth k_invalidDepth = Entity::GetInvalidHierarchyDepth();
+	auto& entity = m_entities[entityId]->entity;
+	auto parent = (newParentId != Entity::GetInvalidId()) ? &GetEntity(newParentId) : nullptr;
+
+	EntityId currentDepth = entity.hierarchyDepth;
+	EntityId newDepth;
+	
+	if (nullptr != parent)
+	{
+		newDepth = (parent->hierarchyDepth != k_invalidDepth) ? parent->hierarchyDepth + 1U : k_invalidDepth;
+	}
+	else if (constructNewHierarchyTree)
+	{
+		newDepth = 0U;
+	}
+	else
+	{
+		// If have no parent, should reset hierarchy depth to detached state
+		newDepth = Entity::GetInvalidHierarchyDepth();
+	}
+
+	if (newDepth != currentDepth)
+	{
+		if (newDepth == Entity::GetInvalidHierarchyDepth())
+		{
+			m_hierarchyManager.RemoveEntity(entityId);
+			entity.hierarchyDepth = newDepth;
+			entity.parentId = newParentId;
+		}
+		else if (currentDepth == Entity::GetInvalidHierarchyDepth())
+		{
+			entity.hierarchyDepth = newDepth;
+			entity.parentId = newParentId;
+			m_hierarchyManager.AddEntity(entityId);
+		}
+		else
+		{
+			m_hierarchyManager.RemoveEntity(entityId);
+			entity.hierarchyDepth = newDepth;
+			entity.parentId = newParentId;
+			m_hierarchyManager.AddEntity(entityId);
+		}
+	}
+
+	if (newDepth != currentDepth)
+	{
+		// Refresh children hierarchy depths
+		for (auto& child : GetChildrenData(entityId))
+		{
+			RefreshHierarchyDepth(child.id, entityId, false);
+		}
+	}
+}
+
 bool EntitiesCollection::CompareEntitiesInHierarchy(const Entity& lhs, const Entity& rhs) const
 {
 	return m_hierarchyManager.CompareEntitiesInHierarchy(lhs, rhs);
@@ -547,10 +614,9 @@ std::size_t EntitiesCollection::GetActiveEntitiesCountInBranch(const EntityId& r
 	return m_hierarchyManager.GetActiveEntitiesCountInBranch(rootEntityId);
 }
 
-std::size_t EntitiesCollection::GetEntityHierarchyOffsetRelativeToEntity(const EntityId& entityId, const EntityId& pivotId) const
+int EntitiesCollection::GetEntityHierarchyOffsetRelativeToEntity(const EntityId& entityId, const EntityId& pivotId) const
 {
-	// TODO: Redesign this to use hierarchy manager
-	return static_cast<std::size_t>(static_cast<int>(entityId) - static_cast<int>(pivotId));
+	return m_hierarchyManager.GetHierarchyOrderDiff(entityId, pivotId);
 }
 
 } // namespace ecs

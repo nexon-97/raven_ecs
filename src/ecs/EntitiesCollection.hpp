@@ -82,10 +82,6 @@ public:
 	void ECS_API ActivateEntity(Entity& entity, const bool activate);
 	void ECS_API ActivateEntity(const std::size_t entityId, const bool activate);
 
-	void ECS_API RefreshActivation(Entity& entity, bool forceActivate = false);
-	void ECS_API RefreshComponentsActivation(Entity& entity);
-	void ECS_API RefreshChildrenActivation(Entity& entity);
-
 	bool ECS_API IsEntityEnabled(const std::size_t entityId) const;
 	bool ECS_API IsEntityActivated(const std::size_t entityId) const;
 
@@ -95,7 +91,7 @@ public:
 	bool ECS_API CompareEntitiesInHierarchy(const Entity& lhs, const Entity& rhs) const;
 	std::size_t ECS_API GetEntitiesCountInBranch(const EntityId& rootEntityId) const;
 	std::size_t ECS_API GetActiveEntitiesCountInBranch(const EntityId& rootEntityId) const;
-	std::size_t ECS_API GetEntityHierarchyOffsetRelativeToEntity(const EntityId& entityId, const EntityId& pivotId) const;
+	int ECS_API GetEntityHierarchyOffsetRelativeToEntity(const EntityId& entityId, const EntityId& pivotId) const;
 
 public:
 	struct EntityHierarchyData
@@ -250,7 +246,12 @@ public:
 
 		iterator begin()
 		{
-			return iterator(storage, offsetBegin);
+			if (storage[offsetBegin]->handle.IsValid())
+			{
+				return iterator(storage, offsetBegin);
+			}
+			
+			return end();
 		}
 
 		iterator end()
@@ -284,6 +285,12 @@ protected:
 
 private:
 	uint8_t ECS_API GetComponentTypeIdByTypeIndex(const std::type_index& typeIndex) const;
+
+	void RefreshActivation(Entity& entity, bool forceActivate = false);
+	void RefreshComponentsActivation(Entity& entity);
+	void RefreshChildrenActivation(Entity& entity);
+
+	void RefreshHierarchyDepth(const EntityId entityId, const EntityId newParentId, bool constructNewHierarchyTree);
 
 private:
 	EntitiesStorageType m_entities;

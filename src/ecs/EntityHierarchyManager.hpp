@@ -1,5 +1,7 @@
 #pragma once
 #include "ecs/Entity.hpp"
+#include <set>
+#include <vector>
 
 namespace ecs
 {
@@ -15,13 +17,21 @@ public:
 	bool CompareEntitiesInHierarchy(const Entity& lhs, const Entity& rhs) const;
 
 	// Method to count child entities in some entity (including the root entity)
-	std::size_t GetEntitiesCountInBranch(const EntityId& rootEntityId) const;
+	std::size_t GetEntitiesCountInBranch(const EntityId rootEntityId) const;
 	// Method to count only activated child entities in some entity (including the root entity)
-	std::size_t GetActiveEntitiesCountInBranch(const EntityId& rootEntityId) const;
+	std::size_t GetActiveEntitiesCountInBranch(const EntityId rootEntityId) const;
+
+	int GetHierarchyOrderDiff(const EntityId lhsId, const EntityId rhsId) const;
+
+	void AddEntity(const EntityId id);
+	void RemoveEntity(const EntityId id);
 
 private:
-	void GetEntitiesCountInBranchInternal(const EntityId& rootEntityId, std::size_t& result) const;
-	void GetActiveEntitiesCountInBranchInternal(const EntityId& rootEntityId, std::size_t& result) const;
+	void GetEntitiesCountInBranchInternal(const EntityId rootEntityId, std::size_t& result) const;
+	void GetActiveEntitiesCountInBranchInternal(const EntityId rootEntityId, std::size_t& result) const;
+
+private:
+	std::vector<EntityId> m_hierarchyOrder;
 };
 
 } // namespace ecs
