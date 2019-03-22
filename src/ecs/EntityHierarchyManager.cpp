@@ -110,7 +110,7 @@ int EntityHierarchyManager::GetHierarchyOrderDiff(const EntityId lhsId, const En
 	assert(lhsIt != m_hierarchyOrder.end());
 	assert(rhsIt != m_hierarchyOrder.end());
 	
-	return static_cast<int>(rhsIt - lhsIt);
+	return static_cast<int>(lhsIt - rhsIt);
 }
 
 void EntityHierarchyManager::GetEntitiesCountInBranchInternal(const EntityId rootEntityId, std::size_t& result) const
