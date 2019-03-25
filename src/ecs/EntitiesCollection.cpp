@@ -314,7 +314,10 @@ void EntitiesCollection::RemoveChild(Entity& entity, Entity& child)
 
 		if (prevOffset == Entity::GetInvalidId())
 		{
-			entity.hierarchyDataOffset = hierarchyData->nextItemPtr;
+			if (hierarchyData->nextItemPtr != Entity::GetInvalidId())
+			{
+				entity.hierarchyDataOffset = hierarchyData->nextItemPtr;
+			}
 		}
 		else
 		{

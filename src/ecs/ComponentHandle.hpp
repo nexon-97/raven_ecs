@@ -1,5 +1,6 @@
 #pragma once
 #include "ecs/ECSApiDef.hpp"
+#include "ecs/Entity.hpp"
 #include <cstdint>
 #include <typeindex>
 #include <limits>
@@ -21,22 +22,23 @@ struct ComponentHandleInternal
 };
 
 using HandleIndex = uint16_t;
+using ComponentTypeId = uint8_t;
 
 struct ComponentHandle
 {
 	friend class Manager;
 
 public:
-	ComponentHandle() = default;
-	explicit ECS_API ComponentHandle(const uint8_t typeId, HandleIndex* handleIndexPtr);
+	ECS_API ComponentHandle();
+	explicit ECS_API ComponentHandle(const ComponentTypeId typeId, HandleIndex* handleIndexPtr);
 
 	bool ECS_API operator==(const ComponentHandle& other) const;
 
 	bool ECS_API IsValid() const;
-	uint8_t ECS_API GetTypeIndex() const;
+	ComponentTypeId ECS_API GetTypeIndex() const;
 	std::type_index ECS_API GetStdTypeIndex() const; // Weird method name, rename
 	HandleIndex ECS_API GetOffset() const;
-	uint32_t ECS_API GetEntityId() const;
+	EntityId ECS_API GetEntityId() const;
 
 	template <typename T>
 	bool IsOfType() const
@@ -49,7 +51,7 @@ private:
 	bool ECS_API IsOfType(const std::type_index& typeIndex) const;
 
 private:
-	uint8_t m_typeId;
+	ComponentTypeId m_typeId;
 	HandleIndex* m_handleIndexPtr = nullptr;
 };
 

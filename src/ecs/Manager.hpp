@@ -78,6 +78,7 @@ public:
 
 	ComponentHandle ECS_API CreateComponentByName(const std::string& name);
 	void ECS_API DestroyComponent(const ComponentHandle& handle);
+	ECS_API void* GetComponent(const ComponentHandle& handle) const;
 
 	template <typename ComponentType>
 	ComponentType* GetComponent(const ComponentHandle& handle)
@@ -117,8 +118,8 @@ public:
 		return m_entitiesCollection.GetComponent<ComponentType>(entityId, siblingHandle);
 	}
 
-	void ECS_API SetComponentEntityId(const ComponentHandle& handle, const uint32_t id);
-	uint32_t ECS_API GetComponentEntityId(const ComponentHandle& handle) const;
+	void ECS_API SetComponentEntityId(const ComponentHandle& handle, const EntityId id);
+	EntityId ECS_API GetComponentEntityId(const ComponentHandle& handle) const;
 
 	ECS_API EntitiesCollection& GetEntitiesCollection();
 
@@ -127,13 +128,16 @@ public:
 	* @param typeIndex - type index of component
 	* @return Id of component type
 	*/
-	uint8_t ECS_API GetComponentTypeIdByIndex(const std::type_index& typeIndex) const;
-	std::type_index ECS_API GetComponentTypeIndexByTypeId(const uint8_t typeId) const;
+	ComponentTypeId ECS_API GetComponentTypeIdByIndex(const std::type_index& typeIndex) const;
+	std::type_index ECS_API GetComponentTypeIndexByTypeId(const ComponentTypeId typeId) const;
 
 	void ECS_API SetComponentEnabled(const ComponentHandle& handle, const bool enabled);
 	void ECS_API RefreshComponentActivation(const ComponentHandle& handle, const bool ownerEnabled, const bool ownerActivated);
 
 	ComponentHandle ECS_API CloneComponent(const ComponentHandle& handle);
+
+	ECS_API const std::string& GetComponentNameByTypeId(const ComponentTypeId typeId) const;
+	ECS_API const std::string& GetComponentNameByTypeId(const std::type_index& typeIndex) const;
 
 private:
 	/**
@@ -146,14 +150,14 @@ private:
 	* @param typeId - id of component type
 	* @return Component collection, associated with provided type id
 	*/
-	ECS_API IComponentCollection* GetCollection(const uint8_t typeId) const;
+	ECS_API IComponentCollection* GetCollection(const ComponentTypeId typeId) const;
 
 	/**
 	* @brief Requests component instance creation given the type id of requested component
 	* @param typeId - id of requested component type
 	* @return Handle to created component instance
 	*/
-	ComponentHandle ECS_API CreateComponentInternal(const uint8_t typeId);
+	ComponentHandle ECS_API CreateComponentInternal(const ComponentTypeId typeId);
 
 	void ECS_API RegisterComponentTypeInternal(const std::string& name, const std::type_index& typeIndex, std::unique_ptr<IComponentCollection>&& collection);
 
@@ -161,8 +165,8 @@ private:
 	std::vector<std::unique_ptr<IComponentCollection>> m_componentStorages;
 	std::vector<std::type_index> m_componentTypeIndexes;
 	std::unordered_map<std::type_index, SystemPtr> m_systems;
-	std::unordered_map<std::string, uint8_t> m_componentNameToIdMapping;
-	std::unordered_map<std::type_index, uint8_t> m_typeIndexToComponentTypeIdMapping;
+	std::unordered_map<std::string, ComponentTypeId> m_componentNameToIdMapping;
+	std::unordered_map<std::type_index, ComponentTypeId> m_typeIndexToComponentTypeIdMapping;
 	EntitiesCollection m_entitiesCollection;
 	bool m_initialized = false;
 };

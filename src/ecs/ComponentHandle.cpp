@@ -9,7 +9,12 @@ ecs::Manager* gManager = nullptr;
 namespace ecs
 {
 
-ComponentHandle::ComponentHandle(const uint8_t typeId, HandleIndex* handleIndexPtr)
+ComponentHandle::ComponentHandle()
+	: m_typeId(ComponentHandleInternal::GetInvalidTypeId())
+	, m_handleIndexPtr(nullptr)
+{}
+
+ComponentHandle::ComponentHandle(const ComponentTypeId typeId, HandleIndex* handleIndexPtr)
 	: m_typeId(typeId)
 	, m_handleIndexPtr(handleIndexPtr)
 {}
@@ -34,7 +39,7 @@ HandleIndex ComponentHandle::GetOffset() const
 	return *m_handleIndexPtr;
 }
 
-uint32_t ComponentHandle::GetEntityId() const
+EntityId ComponentHandle::GetEntityId() const
 {
 	return gManager->GetComponentEntityId(*this);
 }
@@ -49,7 +54,7 @@ bool ComponentHandle::IsOfType(const std::type_index& typeIndex) const
 	return gManager->GetComponentTypeIdByIndex(typeIndex) == m_typeId;
 }
 
-std::type_index ECS_API ComponentHandle::GetStdTypeIndex() const
+std::type_index ComponentHandle::GetStdTypeIndex() const
 {
 	return gManager->GetComponentTypeIndexByTypeId(m_typeId);
 }

@@ -1,8 +1,11 @@
 #include "Manager.hpp"
 #include "ComponentCollectionImpl.hpp"
+#include <algorithm>
 
 namespace ecs
 {
+
+const std::string k_invalidComponentName = "[UNDEFINED]";
 
 Manager::Manager()
 	: m_entitiesCollection(*this)
@@ -76,7 +79,7 @@ ComponentHandle Manager::CreateComponentByName(const std::string& name)
 	return ComponentHandle(ComponentHandleInternal::GetInvalidTypeId(), nullptr);
 }
 
-ComponentHandle Manager::CreateComponentInternal(const uint8_t typeId)
+ComponentHandle Manager::CreateComponentInternal(const ComponentTypeId typeId)
 {
 	HandleIndex* handleIndex = GetCollection(typeId)->Create();
 	return ComponentHandle(typeId, handleIndex);
@@ -93,24 +96,24 @@ uint8_t Manager::GetComponentTypeIdByIndex(const std::type_index& typeIndex) con
 	return ComponentHandleInternal::GetInvalidTypeId();
 }
 
-std::type_index Manager::GetComponentTypeIndexByTypeId(const uint8_t typeId) const
+std::type_index Manager::GetComponentTypeIndexByTypeId(const ComponentTypeId typeId) const
 {
 	return m_componentTypeIndexes[typeId];
 }
 
-IComponentCollection* Manager::GetCollection(const uint8_t typeId) const
+IComponentCollection* Manager::GetCollection(const ComponentTypeId typeId) const
 {
 	assert(typeId < m_componentStorages.size());
 	return m_componentStorages[typeId].get();
 }
 
-void Manager::SetComponentEntityId(const ComponentHandle& handle, const uint32_t id)
+void Manager::SetComponentEntityId(const ComponentHandle& handle, const EntityId id)
 {
 	auto collection = GetCollection(handle.GetTypeIndex());
 	collection->SetItemEntityId(handle.GetOffset(), id);
 }
 
-uint32_t Manager::GetComponentEntityId(const ComponentHandle& handle) const
+EntityId Manager::GetComponentEntityId(const ComponentHandle& handle) const
 {
 	auto collection = GetCollection(handle.GetTypeIndex());
 	return collection->GetItemEntityId(handle.GetOffset());
@@ -146,11 +149,43 @@ void Manager::RefreshComponentActivation(const ComponentHandle& handle, const bo
 	collection->RefreshComponentActivation(handle.GetOffset(), ownerEnabled, ownerActivated);
 }
 
+const std::string& Manager::GetComponentNameByTypeId(const ComponentTypeId typeId) const
+{
+	auto predicate = [typeId](const std::pair<std::string, ComponentTypeId>& data)
+	{
+		return typeId == data.second;
+	};
+	auto it = std::find_if(m_componentNameToIdMapping.begin(), m_componentNameToIdMapping.end(), predicate);
+
+	if (it != m_componentNameToIdMapping.end())
+	{
+		return it->first;
+	}
+
+	return k_invalidComponentName;
+}
+
+const std::string& Manager::GetComponentNameByTypeId(const std::type_index& typeIndex) const
+{
+	auto it = m_typeIndexToComponentTypeIdMapping.find(typeIndex);
+	if (it != m_typeIndexToComponentTypeIdMapping.end())
+	{
+		return GetComponentNameByTypeId(it->second);
+	}
+	
+	return k_invalidComponentName;
+}
+
 ComponentHandle Manager::CloneComponent(const ComponentHandle& handle)
 {
 	auto collection = GetCollection(handle.GetTypeIndex());
 	auto handleIndex = collection->CloneComponent(handle.GetOffset());
 	return ComponentHandle(handle.GetTypeIndex(), handleIndex);
+}
+
+void* Manager::GetComponent(const ComponentHandle& handle) const
+{
+	return m_componentStorages[handle.GetTypeIndex()]->Get(handle.GetOffset());
 }
 
 } // namespace ecs
