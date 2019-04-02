@@ -141,8 +141,6 @@ void EntitiesCollection::RemoveComponent(Entity& entity, const ComponentHandle& 
 		entity.componentsMask ^= typeMask;
 
 		m_ecsManager.SetComponentEntityId(handle, Entity::GetInvalidId());
-		const auto& entityData = m_entities[entity.id];
-		m_ecsManager.RefreshComponentActivation(handle, entityData->isEnabled, entityData->isActivated);
 	}
 }
 
