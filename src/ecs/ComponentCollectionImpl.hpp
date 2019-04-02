@@ -197,8 +197,15 @@ public:
 	void RefreshComponentActivation(const std::size_t index) override
 	{
 		auto& componentData = GetItemByHandleIndex(index);
-		auto entityData = m_managerConnection.GetEntityData(componentData.entityId);
-		RefreshComponentActivation(index, entityData.isEnabled, entityData.isActivated);
+		if (componentData.entityId != Entity::GetInvalidId())
+		{
+			auto entityData = m_managerConnection.GetEntityData(componentData.entityId);
+			RefreshComponentActivation(index, entityData.isEnabled, entityData.isActivated);
+		}
+		else
+		{
+			RefreshComponentActivation(index, false, false);
+		}
 	}
 
 	void RefreshComponentActivation(const std::size_t index, const bool ownerEnabled, const bool ownerActivated) override
