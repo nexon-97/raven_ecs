@@ -24,12 +24,17 @@ bool ComponentHandle::operator==(const ComponentHandle& other) const
 	return m_typeId == other.m_typeId && m_handleIndexPtr == other.m_handleIndexPtr;
 }
 
+bool ComponentHandle::operator!=(const ComponentHandle& other) const
+{
+	return !(*this == other);
+}
+
 bool ComponentHandle::IsValid() const
 {
 	return (m_typeId != ComponentHandleInternal::GetInvalidTypeId());
 }
 
-uint8_t ComponentHandle::GetTypeIndex() const
+ComponentTypeId ComponentHandle::GetTypeIndex() const
 {
 	return m_typeId;
 }

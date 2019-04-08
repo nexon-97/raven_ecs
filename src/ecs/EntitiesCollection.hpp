@@ -76,7 +76,7 @@ public:
 	ECS_API Entity* GetParent(const Entity& entity) const;
 	ECS_API Entity* GetParent(const ComponentHandle& handle) const;
 	ECS_API Entity* GetParent(const EntityId entityId) const;
-	void ECS_API ClearChildren(Entity& entity);
+	void ECS_API ClearChildren(Entity& entity, bool destroyChildren = false);
 
 	void ECS_API SetEntityEnabled(Entity& entity, const bool enabled);
 	void ECS_API ActivateEntity(Entity& entity, const bool activate);

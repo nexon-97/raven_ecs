@@ -378,15 +378,19 @@ Entity* EntitiesCollection::GetParent(const EntityId entityId) const
 	return GetParent(m_entities[entityId]->entity);
 }
 
-void EntitiesCollection::ClearChildren(Entity& entity)
+void EntitiesCollection::ClearChildren(Entity& entity, bool destroyChildren)
 {
 	for (auto& child : GetChildrenData(entity))
 	{
-		//child.parentId = Entity::GetInvalidId();
 		child.orderInParent = Entity::GetInvalidHierarchyDepth();
 
 		RefreshHierarchyDepth(child.id, Entity::GetInvalidId(), false);
 		RefreshActivation(child);
+
+		if (destroyChildren)
+		{
+			DestroyEntity(child.id);
+		}
 	}
 
 	auto entityData = m_entities[entity.id];

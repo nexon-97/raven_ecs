@@ -33,6 +33,7 @@ public:
 	explicit ECS_API ComponentHandle(const ComponentTypeId typeId, HandleIndex* handleIndexPtr);
 
 	bool ECS_API operator==(const ComponentHandle& other) const;
+	bool ECS_API operator!=(const ComponentHandle& other) const;
 
 	bool ECS_API IsValid() const;
 	ComponentTypeId ECS_API GetTypeIndex() const;
