@@ -129,6 +129,7 @@ public:
 	* @return Id of component type
 	*/
 	ComponentTypeId ECS_API GetComponentTypeIdByIndex(const std::type_index& typeIndex) const;
+	ComponentTypeId ECS_API GetComponentTypeIdByName(const std::string& name) const;
 	std::type_index ECS_API GetComponentTypeIndexByTypeId(const ComponentTypeId typeId) const;
 
 	void ECS_API SetComponentEnabled(const ComponentHandle& handle, const bool enabled);

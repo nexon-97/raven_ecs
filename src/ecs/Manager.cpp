@@ -85,10 +85,21 @@ ComponentHandle Manager::CreateComponentInternal(const ComponentTypeId typeId)
 	return ComponentHandle(typeId, handleIndex);
 }
 
-uint8_t Manager::GetComponentTypeIdByIndex(const std::type_index& typeIndex) const
+ComponentTypeId Manager::GetComponentTypeIdByIndex(const std::type_index& typeIndex) const
 {
 	auto it = m_typeIndexToComponentTypeIdMapping.find(typeIndex);
 	if (it != m_typeIndexToComponentTypeIdMapping.end())
+	{
+		return it->second;
+	}
+
+	return ComponentHandleInternal::GetInvalidTypeId();
+}
+
+ComponentTypeId Manager::GetComponentTypeIdByName(const std::string& name) const
+{
+	auto it = m_componentNameToIdMapping.find(name);
+	if (it != m_componentNameToIdMapping.end())
 	{
 		return it->second;
 	}
