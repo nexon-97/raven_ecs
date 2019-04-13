@@ -20,6 +20,11 @@ void Manager::RegisterSystemInternal(const std::type_index& typeIndex, SystemPtr
 	m_systems.emplace(typeIndex, std::move(system));
 }
 
+void Manager::AddFreeSystem(System* system)
+{
+	m_freeSystems.push_back(system);
+}
+
 void Manager::Init()
 {
 	assert(!m_initialized);
@@ -27,6 +32,11 @@ void Manager::Init()
 	for (const auto& system : m_systems)
 	{
 		system.second->Init();
+	}
+
+	for (auto system : m_freeSystems)
+	{
+		system->Init();
 	}
 
 	m_initialized = true;
@@ -41,7 +51,13 @@ void Manager::Destroy()
 		system.second->Destroy();
 	}
 
+	for (auto system : m_freeSystems)
+	{
+		system->Destroy();
+	}
+
 	m_systems.clear();
+	m_freeSystems.clear();
 	m_componentStorages.clear();
 	m_componentTypeIndexes.clear();
 	m_componentNameToIdMapping.clear();
@@ -57,6 +73,11 @@ void Manager::Update()
 	for (const auto& system : m_systems)
 	{
 		system.second->Update();
+	}
+
+	for (auto system : m_freeSystems)
+	{
+		system->Update();
 	}
 }
 

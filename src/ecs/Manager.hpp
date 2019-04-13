@@ -44,6 +44,8 @@ public:
 		RegisterComponentTypeInternal(name, typeid(ComponentType), std::move(collection));
 	}
 
+	void ECS_API AddFreeSystem(System* system);
+
 	template <class SystemType>
 	SystemType* GetSystem() const
 	{
@@ -166,6 +168,7 @@ private:
 	std::vector<std::unique_ptr<IComponentCollection>> m_componentStorages;
 	std::vector<std::type_index> m_componentTypeIndexes;
 	std::unordered_map<std::type_index, SystemPtr> m_systems;
+	std::vector<System*> m_freeSystems;
 	std::unordered_map<std::string, ComponentTypeId> m_componentNameToIdMapping;
 	std::unordered_map<std::type_index, ComponentTypeId> m_typeIndexToComponentTypeIdMapping;
 	EntitiesCollection m_entitiesCollection;
