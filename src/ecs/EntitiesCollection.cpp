@@ -135,12 +135,43 @@ void EntitiesCollection::AddComponent(Entity& entity, const ComponentHandle& han
 
 void EntitiesCollection::RemoveComponent(Entity& entity, const ComponentHandle& handle)
 {
-	if (HasComponent(entity, handle.GetTypeIndex()))
-	{
-		const int typeMask = 1 << handle.GetTypeIndex();
-		entity.componentsMask ^= typeMask;
+	auto componentType = handle.GetTypeIndex();
 
-		m_ecsManager.SetComponentEntityId(handle, Entity::GetInvalidId());
+	if (HasComponent(entity, componentType))
+	{
+		std::size_t offset = entity.componentsDataOffset;
+		std::size_t prevOffset = Entity::GetInvalidId();
+		while (offset != Entity::GetInvalidId())
+		{
+			auto componentNode = m_entityComponentsMapping[offset];
+
+			if (componentNode->handle.GetTypeIndex() == componentType)
+			{
+				// Component type found, remove it
+				const int typeMask = 1 << handle.GetTypeIndex();
+				entity.componentsMask ^= typeMask;
+
+				m_ecsManager.SetComponentEntityId(handle, Entity::GetInvalidId());
+
+				// Link the list
+				if (prevOffset == Entity::GetInvalidId())
+				{
+					if (componentNode->nextItemPtr != Entity::GetInvalidId())
+					{
+						entity.componentsDataOffset = componentNode->nextItemPtr;
+					}
+				}
+				else
+				{
+					m_entityComponentsMapping[prevOffset]->nextItemPtr = componentNode->nextItemPtr;
+				}
+
+				return;
+			}
+
+			prevOffset = offset;
+			offset = componentNode->nextItemPtr;
+		}
 	}
 }
 
@@ -325,7 +356,6 @@ void EntitiesCollection::RemoveChild(Entity& entity, Entity& child)
 		hierarchyData->childId = Entity::GetInvalidId();
 		hierarchyData->nextItemPtr = Entity::GetInvalidId();
 
-		//child.parentId = Entity::GetInvalidId();
 		child.orderInParent = Entity::GetInvalidHierarchyDepth();
 		--m_entities[entity.id]->childrenCount;
 
