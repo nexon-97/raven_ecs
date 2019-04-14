@@ -2,6 +2,7 @@
 #include "ecs/ECSApiDef.hpp"
 #include <cstdint>
 #include <limits>
+#include <bitset>
 
 namespace ecs
 {
@@ -10,13 +11,14 @@ class EntitiesCollection;
 struct ComponentHandle;
 using EntityId = uint32_t;
 using HierarchyDepth = uint16_t;
+const std::size_t MaxComponentTypesCount = 128U;
 
 struct Entity
 {
 	EntityId id;
 	EntityId parentId;
+	std::bitset<MaxComponentTypesCount> componentsMask;
 	uint32_t hierarchyDataOffset;
-	uint32_t componentsMask;
 	uint32_t componentsDataOffset;
 	HierarchyDepth hierarchyDepth;
 	uint16_t orderInParent;
@@ -28,24 +30,10 @@ struct Entity
 		: id(Entity::GetInvalidId())
 		, parentId(Entity::GetInvalidId())
 		, hierarchyDataOffset(0U)
-		, componentsMask(0U)
 		, componentsDataOffset(0U)
 		, hierarchyDepth(GetInvalidHierarchyDepth())
 		, orderInParent(GetInvalidHierarchyDepth())
 	{}
-
-	//void ECS_API AddComponent(const ComponentHandle& handle);
-	//void ECS_API RemoveComponent(const ComponentHandle& handle);
-	//bool ECS_API HasComponent(const uint8_t componentType);
-	//ECS_API void* GetComponent(const uint8_t componentType);
-	//ECS_API Entity* GetParent();
-
-	//template <typename ComponentType>
-	//ComponentType* GetComponent() const
-	//{
-	//	uint8_t componentTypeId = s_collection->GetComponentTypeIdByTypeIndex(typeid(ComponentType));
-	//	return static_cast<ComponentType*>(GetComponent(componentTypeId));
-	//}
 };
 
 } // namespace ecs

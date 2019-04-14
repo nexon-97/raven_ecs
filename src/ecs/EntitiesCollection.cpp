@@ -86,8 +86,7 @@ void EntitiesCollection::DestroyEntity(const EntityId id)
 
 void EntitiesCollection::AddComponent(Entity& entity, const ComponentHandle& handle)
 {
-	const int typeMask = 1 << handle.GetTypeIndex();
-	entity.componentsMask |= typeMask;
+	entity.componentsMask.set(handle.GetTypeIndex());
 	m_ecsManager.SetComponentEntityId(handle, entity.id);
 
 	// Make entry in components mapping
@@ -148,9 +147,7 @@ void EntitiesCollection::RemoveComponent(Entity& entity, const ComponentHandle& 
 			if (componentNode->handle.GetTypeIndex() == componentType)
 			{
 				// Component type found, remove it
-				const int typeMask = 1 << handle.GetTypeIndex();
-				entity.componentsMask ^= typeMask;
-
+				entity.componentsMask.reset(componentType);
 				m_ecsManager.SetComponentEntityId(handle, Entity::GetInvalidId());
 
 				// Link the list
@@ -177,10 +174,7 @@ void EntitiesCollection::RemoveComponent(Entity& entity, const ComponentHandle& 
 
 bool EntitiesCollection::HasComponent(const Entity& entity, const uint8_t componentType) const
 {
-	const int typeMask = 1 << componentType;
-	bool hasComponent = entity.componentsMask & typeMask;
-
-	return hasComponent;
+	return entity.componentsMask.test(componentType);
 }
 
 void* EntitiesCollection::GetComponent(const Entity& entity, const uint8_t componentType) const
@@ -218,10 +212,7 @@ void* EntitiesCollection::GetComponent(const EntityId entityId, const uint8_t co
 
 void* EntitiesCollection::GetComponent(const Entity& entity, const uint8_t componentType, ComponentHandle& handle) const
 {
-	const int typeMask = 1 << componentType;
-	bool hasComponent = entity.componentsMask & typeMask;
-
-	if (hasComponent)
+	if (HasComponent(entity, componentType))
 	{
 		auto componentNode = m_entityComponentsMapping[entity.componentsDataOffset];
 		bool reachedEndOfList = false;
