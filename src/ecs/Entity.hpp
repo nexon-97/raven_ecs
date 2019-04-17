@@ -34,6 +34,10 @@ struct Entity
 		, hierarchyDepth(GetInvalidHierarchyDepth())
 		, orderInParent(GetInvalidHierarchyDepth())
 	{}
+
+	// Disable entities copying
+	Entity(const Entity&) = delete;
+	Entity& operator=(const Entity&) = delete;
 };
 
 } // namespace ecs
