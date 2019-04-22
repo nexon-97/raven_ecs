@@ -399,6 +399,34 @@ Entity* EntitiesCollection::GetParent(const EntityId entityId) const
 	return GetParent(m_entities[entityId]->entity);
 }
 
+EntityId EntitiesCollection::GetChildByIdx(Entity& entity, const std::size_t idx) const
+{
+	auto entityData = m_entities[entity.id];
+	if (idx >= entityData->childrenCount)
+		return Entity::GetInvalidId();
+
+	// Find the child in the list
+	std::size_t currentIdx = 0U;
+	std::size_t offset = entity.hierarchyDataOffset;
+	std::size_t prevOffset = Entity::GetInvalidId();
+
+	while (offset != Entity::GetInvalidId())
+	{
+		auto hierarchyData = m_entityHierarchyData[offset];
+
+		if (currentIdx == idx)
+		{
+			return hierarchyData->childId;
+		}
+
+		prevOffset = offset;
+		offset = hierarchyData->nextItemPtr;
+		++currentIdx;
+	}
+
+	return Entity::GetInvalidId();
+}
+
 void EntitiesCollection::ClearChildren(Entity& entity, bool destroyChildren)
 {
 	for (auto& child : GetChildrenData(entity))
