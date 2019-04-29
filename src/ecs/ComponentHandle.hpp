@@ -49,7 +49,7 @@ public:
 
 private:
 	static void ECS_API SetManagerInstance(ecs::Manager* manager);
-	bool ECS_API IsOfType(const std::type_index& typeIndex) const;
+	bool ECS_API IsOfTypeImpl(const std::type_index& typeIndex) const;
 
 private:
 	ComponentTypeId m_typeId;

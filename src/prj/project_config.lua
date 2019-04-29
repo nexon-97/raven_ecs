@@ -11,7 +11,9 @@ project "ecs"
 
 	targetdir(EngineRootLocation.."/bin")
 	
-	configureWindowsSDK()
+	if prj_config["os"] == "windows" then
+		configureWindowsSDK()
+	end
 	
 	defines { "ECS_EXPORTS" }
 

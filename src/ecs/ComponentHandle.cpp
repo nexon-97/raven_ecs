@@ -54,7 +54,7 @@ void ComponentHandle::SetManagerInstance(ecs::Manager* manager)
 	gManager = manager;
 }
 
-bool ComponentHandle::IsOfType(const std::type_index& typeIndex) const
+bool ComponentHandle::IsOfTypeImpl(const std::type_index& typeIndex) const
 {
 	return gManager->GetComponentTypeIdByIndex(typeIndex) == m_typeId;
 }

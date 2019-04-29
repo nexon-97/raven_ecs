@@ -8,8 +8,6 @@
 #include <list>
 #include <sstream>
 
-#include <Windows.h>
-
 namespace ecs
 {
 
