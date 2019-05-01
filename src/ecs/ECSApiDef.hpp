@@ -12,7 +12,7 @@
 #endif
 
 #ifdef ECS_EXPORTS
-    #define ECS_API HELPER_DLL_IMPORT
-#else
     #define ECS_API HELPER_DLL_EXPORT
+#else
+    #define ECS_API HELPER_DLL_IMPORT
 #endif
