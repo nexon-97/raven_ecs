@@ -100,6 +100,11 @@ ComponentHandle Manager::CreateComponentByName(const std::string& name)
 	return ComponentHandle(ComponentHandleInternal::GetInvalidTypeId(), nullptr);
 }
 
+ComponentHandle Manager::CreateComponentByTypeId(const ComponentTypeId typeId)
+{
+	return CreateComponentInternal(typeId);
+}
+
 ComponentHandle Manager::CreateComponentInternal(const ComponentTypeId typeId)
 {
 	HandleIndex* handleIndex = GetCollection(typeId)->Create();

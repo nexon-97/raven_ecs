@@ -79,6 +79,7 @@ public:
 	}
 
 	ComponentHandle ECS_API CreateComponentByName(const std::string& name);
+	ComponentHandle ECS_API CreateComponentByTypeId(const ComponentTypeId typeId);
 	void ECS_API DestroyComponent(const ComponentHandle& handle);
 	ECS_API void* GetComponent(const ComponentHandle& handle) const;
 
