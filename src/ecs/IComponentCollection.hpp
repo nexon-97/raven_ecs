@@ -16,6 +16,9 @@ public:
 	virtual void Destroy(const std::size_t index) = 0;
 	// Retreives pointer to collection item by index
 	virtual void* Get(const std::size_t index) = 0;
+	// Methods to insert component data from external memory source
+	virtual void CopyData(const std::size_t index, const void* dataSource) = 0;
+	virtual void MoveData(const std::size_t index, void* dataSource) = 0;
 	// Associates entity id with the component at index
 	virtual void SetItemEntityId(const std::size_t index, const uint32_t entityId) = 0;
 	virtual uint32_t GetItemEntityId(const std::size_t index) const = 0;

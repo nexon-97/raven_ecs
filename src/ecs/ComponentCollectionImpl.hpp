@@ -160,6 +160,19 @@ public:
 		return &GetItemByHandleIndex(index).component;
 	}
 
+	void CopyData(const std::size_t index, const void* dataSource) override
+	{
+		const ComponentType& dataRef = *reinterpret_cast<const ComponentType*>(dataSource);
+		GetItemByHandleIndex(index).component = dataRef;
+	}
+
+	void MoveData(const std::size_t index, void* dataSource) override
+	{
+		ComponentType& targetRef = GetItemByHandleIndex(index).component;
+		auto sourcePtr = reinterpret_cast<ComponentType*>(dataSource);
+		targetRef = std::move(*sourcePtr);
+	}
+
 	ComponentData& GetComponentData(const std::size_t index)
 	{
 		return GetItemByHandleIndex(index);

@@ -82,6 +82,7 @@ public:
 	ComponentHandle ECS_API CreateComponentByTypeId(const ComponentTypeId typeId);
 	void ECS_API DestroyComponent(const ComponentHandle& handle);
 	ECS_API void* GetComponent(const ComponentHandle& handle) const;
+	void ECS_API MoveComponentData(const ComponentHandle& handle, void* dataPtr);
 
 	template <typename ComponentType>
 	ComponentType* GetComponent(const ComponentHandle& handle)

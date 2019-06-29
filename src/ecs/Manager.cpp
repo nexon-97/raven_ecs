@@ -225,4 +225,10 @@ void* Manager::GetComponent(const ComponentHandle& handle) const
 	return m_componentStorages[handle.GetTypeIndex()]->Get(handle.GetOffset());
 }
 
+void Manager::MoveComponentData(const ComponentHandle& handle, void* dataPtr)
+{
+	IComponentCollection* collection = GetCollection(handle.GetTypeIndex());
+	collection->MoveData(handle.GetOffset(), dataPtr);
+}
+
 } // namespace ecs
