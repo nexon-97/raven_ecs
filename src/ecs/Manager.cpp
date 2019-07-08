@@ -14,71 +14,167 @@ Manager::Manager()
 	detail::ComponentCollectionManagerConnection::SetManagerInstance(this);
 }
 
-void Manager::RegisterSystemInternal(const std::type_index& typeIndex, SystemPtr&& system)
+System* Manager::GetSystemByTypeIndex(const std::type_index& typeIndex) const
 {
-	assert(!m_initialized);
-	m_systems.emplace(typeIndex, std::move(system));
+	auto it = m_systemsTypeIdMapping.find(typeIndex);
+	if (it != m_systemsTypeIdMapping.end())
+	{
+		return it->second;
+	}
+
+	return nullptr;
 }
 
-void Manager::AddFreeSystem(System* system)
+void Manager::AddSystemToStorage(SystemPtr&& system)
 {
-	m_freeSystems.push_back(system);
+	m_systemsStorage.push_back(std::move(system));
+	AddSystem(m_systemsStorage.back().get());
+}
+
+void Manager::AddSystem(System* system)
+{
+	m_systemsTypeIdMapping.emplace(typeid(*system), system);
+	m_newSystems.emplace_back(system, m_isUpdatingSystems);
+
+	if (!m_isUpdatingSystems)
+	{
+		AddSystemToOrderedSystemsList(system);
+	}
+}
+
+void Manager::RemoveSystem(System* system)
+{
+	if (m_isUpdatingSystems)
+	{
+		m_removedSystems.push_back(system);
+	}
+	else
+	{
+		DoRemoveSystem(system);
+	}
+}
+
+void Manager::DoRemoveSystem(System* system)
+{
+	system->Destroy();
+
+	{
+		auto it = m_systemsTypeIdMapping.find(typeid(*system));
+		if (it != m_systemsTypeIdMapping.end())
+		{
+			m_systemsTypeIdMapping.erase(it);
+		}
+	}
+	
+	{
+		auto it = std::find(m_orderedSystems.begin(), m_orderedSystems.end(),system);
+		if (it != m_orderedSystems.end())
+		{
+			m_orderedSystems.erase(it);
+		}
+	}
+
+	{
+		auto predicate = [system](const SystemPtr& systemPtr)
+		{
+			return systemPtr.get() == system;
+		};
+
+		auto it = std::find_if(m_systemsStorage.begin(), m_systemsStorage.end(), predicate);
+		if (it != m_systemsStorage.end())
+		{
+			m_systemsStorage.erase(it);
+		}
+	}
 }
 
 void Manager::Init()
 {
-	assert(!m_initialized);
-
-	for (const auto& system : m_systems)
-	{
-		system.second->Init();
-	}
-
-	for (auto system : m_freeSystems)
-	{
-		system->Init();
-	}
-
-	m_initialized = true;
+	
 }
 
 void Manager::Destroy()
 {
-	assert(m_initialized);
-
-	for (const auto& system : m_systems)
-	{
-		system.second->Destroy();
-	}
-
-	for (auto system : m_freeSystems)
+	for (ecs::System* system : m_orderedSystems)
 	{
 		system->Destroy();
 	}
 
-	m_systems.clear();
-	m_freeSystems.clear();
+	m_systemsTypeIdMapping.clear();
+	m_systemsStorage.clear();
 	m_componentStorages.clear();
 	m_componentTypeIndexes.clear();
 	m_componentNameToIdMapping.clear();
 	m_typeIndexToComponentTypeIdMapping.clear();
+}
 
-	m_initialized = false;
+void Manager::AddSystemToOrderedSystemsList(System* system)
+{
+	assert(!m_isUpdatingSystems);
+
+	auto predicate = [](System* lhs, System* rhs)
+	{
+		return *lhs < *rhs;
+	};
+	auto insertIterator = std::upper_bound(m_orderedSystems.begin(), m_orderedSystems.end(), system, predicate);
+
+	m_orderedSystems.insert(insertIterator, system);
 }
 
 void Manager::Update()
 {
-	assert(m_initialized);
-
-	for (const auto& system : m_systems)
+	if (!m_newSystems.empty())
 	{
-		system.second->Update();
+		for (auto& systemData : m_newSystems)
+		{
+			ecs::System* system = systemData.first;
+			const bool mustBeAddedToOrderedSystemsList = systemData.second;
+
+			if (mustBeAddedToOrderedSystemsList)
+			{
+				AddSystemToOrderedSystemsList(system);
+			}
+
+			system->Init();
+		}
+
+		m_newSystems.clear();
 	}
 
-	for (auto system : m_freeSystems)
+	if (m_systemPrioritiesChanged)
+	{
+		SortOrderedSystemsList();
+	}
+
+	UpdateSystems();
+
+	// Remove system that are waiting for removal
+	if (!m_removedSystems.empty())
+	{
+		for (ecs::System* system : m_removedSystems)
+		{
+			DoRemoveSystem(system);
+		}
+
+		m_removedSystems.clear();
+	}
+}
+
+void Manager::UpdateSystems()
+{
+	m_isUpdatingSystems = true;
+
+	for (ecs::System* system : m_orderedSystems)
 	{
 		system->Update();
 	}
+
+	m_isUpdatingSystems = false;
+}
+
+void Manager::SortOrderedSystemsList()
+{
+	std::stable_sort(m_orderedSystems.begin(), m_orderedSystems.end());
 }
 
 void Manager::DestroyComponent(const ComponentHandle& handle)
@@ -163,8 +259,6 @@ EntitiesCollection& Manager::GetEntitiesCollection()
 
 void Manager::RegisterComponentTypeInternal(const std::string& name, const std::type_index& typeIndex, std::unique_ptr<IComponentCollection>&& collection)
 {
-	assert(!m_initialized);
-
 	// Register type storage
 	uint8_t typeId = static_cast<uint8_t>(m_componentStorages.size());
 	collection->SetTypeId(typeId);
@@ -229,6 +323,11 @@ void Manager::MoveComponentData(const ComponentHandle& handle, void* dataPtr)
 {
 	IComponentCollection* collection = GetCollection(handle.GetTypeIndex());
 	collection->MoveData(handle.GetOffset(), dataPtr);
+}
+
+void Manager::NotifySystemPriorityChanged()
+{
+	m_systemPrioritiesChanged = true;
 }
 
 } // namespace ecs

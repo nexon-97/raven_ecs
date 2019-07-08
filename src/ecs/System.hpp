@@ -1,4 +1,5 @@
 #pragma once
+#include "ECSApiDef.hpp"
 
 namespace ecs
 {
@@ -10,17 +11,22 @@ class System
 {
 public:
 	System() = delete;
-	explicit System(Manager& manager)
-		: m_ecsManager(manager)
-	{}
+	explicit ECS_API System(Manager& manager);
 	virtual ~System() = default;
 
-	virtual void Init() {};
-	virtual void Destroy() {};
+	void ECS_API SetPriority(const int priority);
+	int ECS_API GetPriority() const;
+
+	virtual void ECS_API Init();
+	virtual void ECS_API Destroy();
+
 	virtual void Update() = 0;
+
+	bool ECS_API operator<(const System&) const;
 
 protected:
 	Manager& m_ecsManager;
+	int m_priority = 100;
 };
 
 } // namespace ecs

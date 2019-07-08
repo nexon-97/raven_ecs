@@ -4,6 +4,7 @@
 #include <string>
 #include <unordered_map>
 #include <typeindex>
+#include <vector>
 
 #include "ComponentCollectionImpl.hpp"
 #include "System.hpp"
@@ -26,16 +27,19 @@ public:
 	void ECS_API Update();
 
 	/**
-	* @brief Register system type, provided as template parameter SystemType, in ECS.
-	* Type should be a derivative of ecs::System class.
+	* @brief Creates system of SystemType, and stores it inside manager. Then, safely adds the system to the systems list.
+	* Type must be a derivative of ecs::System class.
 	*/
 	template <class SystemType>
-	void RegisterSystem()
+	void AddSystem()
 	{
 		static_assert(std::is_base_of<System, SystemType>::value, "System type must be derived from ecs::System!");
-
-		RegisterSystemInternal(typeid(SystemType), std::make_unique<SystemType>(*this));
+		AddSystemToStorage(std::make_unique<SystemType>(*this));
 	}
+
+	void ECS_API AddSystem(System* system);
+	void ECS_API RemoveSystem(System* system);
+	ECS_API System* GetSystemByTypeIndex(const std::type_index& typeIndex) const;
 
 	template <typename ComponentType>
 	void RegisterComponentType(const std::string& name)
@@ -44,20 +48,13 @@ public:
 		RegisterComponentTypeInternal(name, typeid(ComponentType), std::move(collection));
 	}
 
-	void ECS_API AddFreeSystem(System* system);
-
 	template <class SystemType>
 	SystemType* GetSystem() const
 	{
 		static_assert(std::is_base_of<System, SystemType>::value, "System type must be derived from ecs::System!");
 
-		auto it = m_systems.find(typeid(SystemType));
-		if (it != m_systems.end())
-		{
-			return static_cast<SystemType*>(it->second.get());
-		}
-
-		return nullptr;
+		System* system = GetSystemByTypeIndex(typeid(SystemType));
+		return static_cast<SystemType*>(system);
 	}
 
 	template <typename ComponentType>
@@ -144,11 +141,13 @@ public:
 	ECS_API const std::string& GetComponentNameByTypeId(const ComponentTypeId typeId) const;
 	ECS_API const std::string& GetComponentNameByTypeId(const std::type_index& typeIndex) const;
 
+	void ECS_API NotifySystemPriorityChanged();
+
 private:
 	/**
 	* @brief Registers system inside internal systems collection
 	*/
-	void ECS_API RegisterSystemInternal(const std::type_index& typeIndex, SystemPtr&& system);
+	void ECS_API AddSystemToStorage(SystemPtr&& system);
 
 	/**
 	* @brief Returns component collection for components with particular id
@@ -166,15 +165,30 @@ private:
 
 	void ECS_API RegisterComponentTypeInternal(const std::string& name, const std::type_index& typeIndex, std::unique_ptr<IComponentCollection>&& collection);
 
+	void UpdateSystems();
+	void SortOrderedSystemsList();
+	void AddSystemToOrderedSystemsList(System* system);
+	void DoRemoveSystem(System* system);
+
 private:
 	std::vector<std::unique_ptr<IComponentCollection>> m_componentStorages;
 	std::vector<std::type_index> m_componentTypeIndexes;
-	std::unordered_map<std::type_index, SystemPtr> m_systems;
-	std::vector<System*> m_freeSystems;
 	std::unordered_map<std::string, ComponentTypeId> m_componentNameToIdMapping;
 	std::unordered_map<std::type_index, ComponentTypeId> m_typeIndexToComponentTypeIdMapping;
-	EntitiesCollection m_entitiesCollection;
-	bool m_initialized = false;
+
+	std::vector<SystemPtr> m_systemsStorage; // Systems that are created just inside ecs manager, and owned by the external code
+	std::unordered_map<std::type_index, System*> m_systemsTypeIdMapping; // Mapping of type id to the systems
+	std::vector<System*> m_orderedSystems; // Ordered systems pointers list, for strict execution order
+
+	// Pairs of new systems, that have not been initialized yet, and will be initialized at next update,
+	// and the bool indicator, which tells the system must be deferredly added to the m_orderedSystems
+	std::vector<std::pair<System*, bool>> m_newSystems; 
+	std::vector<System*> m_removedSystems; // Removed systems, that have not been destroyed and removed yet
+	
+	EntitiesCollection m_entitiesCollection; // Class, that manages entities and their functionality
+
+	bool m_systemPrioritiesChanged = true; // Flag, indicating that systems need to be sorted prior next update
+	bool m_isUpdatingSystems = false; // Flag, indicating that manager is currently updating exisiting systems
 };
 
 } // namespace ecs
