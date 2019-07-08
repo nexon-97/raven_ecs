@@ -6,7 +6,8 @@ namespace ecs
 
 class Manager;
 
-// Dummy class, which should be implemented
+// System is a class, that has lifecycle callbacks Init, Destroy and Update,
+// and has integer priority, which is used to determine system's order inside systems collection
 class System
 {
 public:

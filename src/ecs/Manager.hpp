@@ -26,6 +26,9 @@ public:
 	void ECS_API Destroy();
 	void ECS_API Update();
 
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Section for systems management
+
 	/**
 	* @brief Creates system of SystemType, and stores it inside manager. Then, safely adds the system to the systems list.
 	* Type must be a derivative of ecs::System class.
@@ -45,13 +48,6 @@ public:
 	void ECS_API RemoveSystem(System* system);
 	ECS_API System* GetSystemByTypeIndex(const std::type_index& typeIndex) const;
 
-	template <typename ComponentType>
-	void RegisterComponentType(const std::string& name)
-	{
-		auto collection = std::make_unique<ComponentCollectionImpl<ComponentType>>();
-		RegisterComponentTypeInternal(name, typeid(ComponentType), std::move(collection));
-	}
-
 	template <class SystemType>
 	SystemType* GetSystem() const
 	{
@@ -59,6 +55,17 @@ public:
 
 		System* system = GetSystemByTypeIndex(typeid(SystemType));
 		return static_cast<SystemType*>(system);
+	}
+
+	void ECS_API NotifySystemPriorityChanged();
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	template <typename ComponentType>
+	void RegisterComponentType(const std::string& name)
+	{
+		auto collection = std::make_unique<ComponentCollectionImpl<ComponentType>>();
+		RegisterComponentTypeInternal(name, typeid(ComponentType), std::move(collection));
 	}
 
 	template <typename ComponentType>
@@ -145,13 +152,17 @@ public:
 	ECS_API const std::string& GetComponentNameByTypeId(const ComponentTypeId typeId) const;
 	ECS_API const std::string& GetComponentNameByTypeId(const std::type_index& typeIndex) const;
 
-	void ECS_API NotifySystemPriorityChanged();
-
 private:
 	/**
 	* @brief Registers system inside internal systems collection
 	*/
 	void ECS_API AddSystemToStorage(SystemPtr&& system);
+
+	// Private methods for systems internal management
+	void UpdateSystems();
+	void SortOrderedSystemsList();
+	void AddSystemToOrderedSystemsList(System* system);
+	void DoRemoveSystem(System* system);
 
 	/**
 	* @brief Returns component collection for components with particular id
@@ -168,11 +179,6 @@ private:
 	ComponentHandle ECS_API CreateComponentInternal(const ComponentTypeId typeId);
 
 	void ECS_API RegisterComponentTypeInternal(const std::string& name, const std::type_index& typeIndex, std::unique_ptr<IComponentCollection>&& collection);
-
-	void UpdateSystems();
-	void SortOrderedSystemsList();
-	void AddSystemToOrderedSystemsList(System* system);
-	void DoRemoveSystem(System* system);
 
 private:
 	std::vector<std::unique_ptr<IComponentCollection>> m_componentStorages;
