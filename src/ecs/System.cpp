@@ -4,8 +4,9 @@
 namespace ecs
 {
 
-System::System(Manager& manager)
+System::System(Manager& manager, const int priority)
 	: m_ecsManager(manager)
+	, m_priority(priority)
 {}
 
 void System::Init()

@@ -11,7 +11,7 @@ class System
 {
 public:
 	System() = delete;
-	explicit ECS_API System(Manager& manager);
+	explicit ECS_API System(Manager& manager, const int priority = 100);
 	virtual ~System() = default;
 
 	void ECS_API SetPriority(const int priority);
@@ -26,6 +26,8 @@ public:
 
 protected:
 	Manager& m_ecsManager;
+
+private:
 	int m_priority = 100;
 };
 

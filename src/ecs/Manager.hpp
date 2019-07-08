@@ -31,10 +31,14 @@ public:
 	* Type must be a derivative of ecs::System class.
 	*/
 	template <class SystemType>
-	void AddSystem()
+	void AddSystem(const int priority = 100)
 	{
 		static_assert(std::is_base_of<System, SystemType>::value, "System type must be derived from ecs::System!");
-		AddSystemToStorage(std::make_unique<SystemType>(*this));
+
+		auto system = std::make_unique<SystemType>(*this);
+		system->SetPriority(priority);
+
+		AddSystemToStorage(std::move(system));
 	}
 
 	void ECS_API AddSystem(System* system);
