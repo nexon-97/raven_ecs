@@ -41,7 +41,7 @@ template <typename ComponentType>
 class ComponentCollectionImpl
 	: public IComponentCollection
 {
-	static constexpr const std::size_t k_chunkSize = 1024U;
+	static constexpr const std::size_t k_chunkSize = 32U;
 	struct ComponentData
 	{
 		ComponentType component;
