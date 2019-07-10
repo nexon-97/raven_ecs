@@ -13,8 +13,10 @@ namespace detail
 
 ComponentCollectionManagerConnection::EntityData ComponentCollectionManagerConnection::GetEntityData(const std::size_t id) const
 {
-	auto& entitiesCollection = gManager->GetEntitiesCollection();
-	return EntityData(entitiesCollection.IsEntityEnabled(id), entitiesCollection.IsEntityActivated(id));
+	//auto& entitiesCollection = gManager->GetEntitiesCollection();
+	//return EntityData(entitiesCollection.IsEntityEnabled(id), entitiesCollection.IsEntityActivated(id));
+
+	return EntityData(false, false);
 }
 
 void ComponentCollectionManagerConnection::SetManagerInstance(ecs::Manager* manager)

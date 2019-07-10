@@ -1,6 +1,5 @@
 #pragma once
 #include "ecs/ECSApiDef.hpp"
-#include "ecs/Entity.hpp"
 #include <cstdint>
 #include <typeindex>
 #include <limits>
@@ -11,24 +10,25 @@ namespace ecs
 {
 
 class Manager;
+using ComponentTypeId = uint8_t;
+using EntityId = uint32_t;
 
 struct ComponentHandleInternal
 {
-	static const uint8_t ECS_API GetInvalidTypeId()
+	static const ComponentTypeId ECS_API GetInvalidTypeId()
 	{
-		static const uint8_t k_invalidTypeId = std::numeric_limits<uint8_t>::max();
+		static const ComponentTypeId k_invalidTypeId = std::numeric_limits<ComponentTypeId>::max();
 		return k_invalidTypeId;
 	}
 };
-
-using HandleIndex = uint16_t;
-using ComponentTypeId = uint8_t;
 
 struct ComponentHandle
 {
 	friend class Manager;
 
 public:
+	using HandleIndex = uint16_t;
+
 	ECS_API ComponentHandle();
 	explicit ECS_API ComponentHandle(const ComponentTypeId typeId, HandleIndex* handleIndexPtr);
 

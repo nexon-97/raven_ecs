@@ -14,7 +14,7 @@ public:
 	explicit EntityHierarchyManager(Manager* manager);
 
 	// Compares two entities in hierarchy (make sure they are in the same hierarchy tree, otherwise it will throw an assertion failure)
-	bool CompareEntitiesInHierarchy(const Entity& lhs, const Entity& rhs) const;
+	bool CompareEntitiesInHierarchy(const EntityData& lhs, const EntityData& rhs) const;
 
 	// Method to count child entities in some entity (including the root entity)
 	std::size_t GetEntitiesCountInBranch(const EntityId rootEntityId) const;

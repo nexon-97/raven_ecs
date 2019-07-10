@@ -55,11 +55,8 @@ class ComponentCollectionImpl
 			, isActivated(false)
 		{}
 	};
-	using StorageType = ComponentData[k_chunkSize];
-	using HandlesStorage = uint32_t[k_chunkSize];
-	using HandleIndexesStorage = HandleIndex[k_chunkSize];
+	
 	using CollectionType = ComponentCollectionImpl<ComponentType>;
-	using PositionId = std::pair<std::size_t, std::size_t>;
 
 public:
 	ComponentCollectionImpl()
@@ -123,14 +120,14 @@ public:
 		std::size_t index;
 	};
 
-	HandleIndex* Create() override
+	ComponentHandle::HandleIndex* Create() override
 	{
 		auto newComponentData = m_componentsData.CreateItem();
 		auto newHandleData = m_handles.CreateItem();
 		auto newHandleIndexData = m_handleIndexes.CreateItem();
 
 		*newHandleData.second = static_cast<uint32_t>(newComponentData.first);
-		*newHandleIndexData.second = static_cast<HandleIndex>(newHandleData.first);
+		*newHandleIndexData.second = static_cast<ComponentHandle::HandleIndex>(newHandleData.first);
 		newComponentData.second->isEnabled = true;
 		newComponentData.second->isActivated = false;
 
@@ -254,7 +251,7 @@ public:
 		m_typeId = typeId;
 	}
 
-	HandleIndex* CloneComponent(const std::size_t index) override
+	ComponentHandle::HandleIndex* CloneComponent(const std::size_t index) override
 	{
 		auto handleIndex = Create();
 
@@ -362,7 +359,7 @@ private:
 private:
 	detail::MemoryPool<ComponentData> m_componentsData;
 	detail::MemoryPool<uint32_t> m_handles;
-	detail::MemoryPool<HandleIndex> m_handleIndexes;
+	detail::MemoryPool<ComponentHandle::HandleIndex> m_handleIndexes;
 	// Collection is always sorted in a way, that there are activated items first (that means they are enabled too,
 	// then go deactivated items, and enabled and disabled items are mixed)
 	std::size_t m_activatedCount = 0U; 

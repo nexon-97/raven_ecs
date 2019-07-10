@@ -7,29 +7,30 @@ namespace ecs
 EntitiesCollection::EntitiesCollection(ecs::Manager& ecsManager)
 	: m_ecsManager(ecsManager)
 	, m_hierarchyManager(&ecsManager)
-	, m_entities(1024U)
+	, m_entitiesData(1024U)
 	, m_entityComponentsMapping(1024U)
 	, m_entityHierarchyData(1024U)
+	, m_handles(1024U)
+{}
+
+Entity EntitiesCollection::GetEntityById(const EntityId id)
 {
-	//Entity::s_collection = this;
+	return Entity(m_entitiesData[id]);
 }
 
-Entity& EntitiesCollection::GetEntity(const EntityId id)
+EntityHandle EntitiesCollection::CreateEntity()
 {
-	return m_entities[id]->entity;
-}
-
-Entity& EntitiesCollection::CreateEntity()
-{
-	auto entityCreationResult = m_entities.CreateItem();
+	auto entityCreationResult = m_entitiesData.CreateItem();
+	EntityHandle::HandleIndex* handleIndex = m_handles.CreateItem().second;
 	EntityId newEntityId = static_cast<EntityId>(entityCreationResult.first);
 
-	auto& entityData = *entityCreationResult.second;
-	entityData.entity.id = newEntityId;
-	entityData.entity.parentId = Entity::GetInvalidId();
-	entityData.entity.orderInParent = Entity::GetInvalidHierarchyDepth();
+	EntityData& entityData = *entityCreationResult.second;
+	entityData.id = newEntityId;
+	*handleIndex = entityData.id; // Write entity id to handle value
+	entityData.parentId = Entity::GetInvalidId();
+	entityData.orderInParent = Entity::GetInvalidHierarchyDepth();
 	// Invalid hierarchy depth means that entity is not a part of any hierarchy currently
-	entityData.entity.hierarchyDepth = Entity::GetInvalidHierarchyDepth();
+	entityData.hierarchyDepth = Entity::GetInvalidHierarchyDepth();
 
 	{
 		auto componentMappingCreationResult = m_entityComponentsMapping.CreateItem();
@@ -37,7 +38,7 @@ Entity& EntitiesCollection::CreateEntity()
 		mappingItem->handle = ComponentHandle(ComponentHandleInternal::GetInvalidTypeId(), nullptr);
 		mappingItem->nextItemPtr = Entity::GetInvalidId();
 
-		entityData.entity.componentsDataOffset = static_cast<uint32_t>(componentMappingCreationResult.first);
+		entityData.componentsDataOffset = static_cast<uint32_t>(componentMappingCreationResult.first);
 	}
 
 	{
@@ -46,19 +47,18 @@ Entity& EntitiesCollection::CreateEntity()
 		hierarchyData->childId = Entity::GetInvalidId();
 		hierarchyData->nextItemPtr = Entity::GetInvalidId();
 
-		entityData.entity.hierarchyDataOffset = static_cast<uint32_t>(hierarchyDataCreationResult.first);
+		entityData.hierarchyDataOffset = static_cast<uint32_t>(hierarchyDataCreationResult.first);
 	}
 
-	return entityData.entity;
+	return EntityHandle(handleIndex);
 }
 
 void EntitiesCollection::DestroyEntity(const EntityId id)
 {
-	auto& entityData = *m_entities[id];
-	auto& entity = entityData.entity;
+	EntityData& entityData = *m_entitiesData[id];
 
 	// Disable all owned components
-	auto componentNode = m_entityComponentsMapping[entity.componentsDataOffset];
+	auto componentNode = m_entityComponentsMapping[entityData.componentsDataOffset];
 	bool reachedEndOfList = false;
 
 	while (!reachedEndOfList)
@@ -77,21 +77,24 @@ void EntitiesCollection::DestroyEntity(const EntityId id)
 	}
 
 	// Erase list items
-	componentNode = m_entityComponentsMapping[entity.componentsDataOffset];
+	componentNode = m_entityComponentsMapping[entityData.componentsDataOffset];
 	componentNode->handle = ComponentHandle(ComponentHandleInternal::GetInvalidTypeId(), nullptr);
 	componentNode->nextItemPtr = Entity::GetInvalidId();
 
 	// TODO: Performs logic consistency checks. Entity should be properly logically unloaded before actually destroying it...
 }
 
-void EntitiesCollection::AddComponent(Entity& entity, const ComponentHandle& handle)
+void EntitiesCollection::AddComponent(EntityData& entityData, const ComponentHandle& handle)
 {
-	entity.componentsMask.set(handle.GetTypeIndex());
-	m_ecsManager.SetComponentEntityId(handle, entity.id);
+	if (!handle.IsValid())
+		return;
+
+	entityData.componentsMask.set(handle.GetTypeIndex());
+	m_ecsManager.SetComponentEntityId(handle, entityData.id);
 
 	// Make entry in components mapping
 	bool placeForInsertionFound = false;
-	std::size_t offset = entity.componentsDataOffset;
+	std::size_t offset = entityData.componentsDataOffset;
 	while (!placeForInsertionFound)
 	{
 		const auto& mappingEntry = m_entityComponentsMapping[offset];
@@ -128,17 +131,19 @@ void EntitiesCollection::AddComponent(Entity& entity, const ComponentHandle& han
 		currentEntry->nextItemPtr = static_cast<uint32_t>(newEntryId);
 	}
 
-	const auto& entityData = m_entities[entity.id];
-	m_ecsManager.RefreshComponentActivation(handle, entityData->isEnabled, entityData->isActivated);
+	m_ecsManager.RefreshComponentActivation(handle, entityData.isEnabled, entityData.isActivated);
 }
 
-void EntitiesCollection::RemoveComponent(Entity& entity, const ComponentHandle& handle)
+void EntitiesCollection::RemoveComponent(EntityData& entityData, const ComponentHandle& handle)
 {
+	if (!handle.IsValid())
+		return;
+
 	auto componentType = handle.GetTypeIndex();
 
-	if (HasComponent(entity, componentType))
+	if (HasComponent(entityData, componentType))
 	{
-		std::size_t offset = entity.componentsDataOffset;
+		std::size_t offset = entityData.componentsDataOffset;
 		std::size_t prevOffset = Entity::GetInvalidId();
 		while (offset != Entity::GetInvalidId())
 		{
@@ -147,7 +152,7 @@ void EntitiesCollection::RemoveComponent(Entity& entity, const ComponentHandle& 
 			if (componentNode->handle.GetTypeIndex() == componentType)
 			{
 				// Component type found, remove it
-				entity.componentsMask.reset(componentType);
+				entityData.componentsMask.reset(componentType);
 				m_ecsManager.SetComponentEntityId(handle, Entity::GetInvalidId());
 
 				// Link the list
@@ -155,7 +160,7 @@ void EntitiesCollection::RemoveComponent(Entity& entity, const ComponentHandle& 
 				{
 					if (componentNode->nextItemPtr != Entity::GetInvalidId())
 					{
-						entity.componentsDataOffset = componentNode->nextItemPtr;
+						entityData.componentsDataOffset = componentNode->nextItemPtr;
 					}
 				}
 				else
@@ -172,16 +177,16 @@ void EntitiesCollection::RemoveComponent(Entity& entity, const ComponentHandle& 
 	}
 }
 
-bool EntitiesCollection::HasComponent(const Entity& entity, const uint8_t componentType) const
+bool EntitiesCollection::HasComponent(const EntityData& entityData, const ComponentTypeId componentType) const
 {
-	return entity.componentsMask.test(componentType);
+	return entityData.componentsMask.test(componentType);
 }
 
-void* EntitiesCollection::GetComponent(const Entity& entity, const uint8_t componentType) const
+ComponentHandle EntitiesCollection::GetComponentHandle(const EntityData& entityData, const ComponentTypeId componentType) const
 {
-	if (HasComponent(entity, componentType))
+	if (HasComponent(entityData, componentType))
 	{
-		auto componentNode = m_entityComponentsMapping[entity.componentsDataOffset];
+		auto componentNode = m_entityComponentsMapping[entityData.componentsDataOffset];
 		bool reachedEndOfList = false;
 
 		while (!reachedEndOfList)
@@ -189,7 +194,7 @@ void* EntitiesCollection::GetComponent(const Entity& entity, const uint8_t compo
 			if (componentNode->handle.GetTypeIndex() == componentType)
 			{
 				// Component type found, return it
-				return m_ecsManager.GetComponent<void>(componentNode->handle);
+				return componentNode->handle;
 			}
 
 			reachedEndOfList = (componentNode->nextItemPtr == Entity::GetInvalidId());
@@ -201,263 +206,173 @@ void* EntitiesCollection::GetComponent(const Entity& entity, const uint8_t compo
 		}
 	}
 
-	return nullptr;
+	return ComponentHandle();
 }
 
-void* EntitiesCollection::GetComponent(const EntityId entityId, const uint8_t componentType) const
-{
-	const auto& entity = m_entities[entityId]->entity;
-	return GetComponent(entity, componentType);
-}
-
-void* EntitiesCollection::GetComponent(const Entity& entity, const uint8_t componentType, ComponentHandle& handle) const
-{
-	if (HasComponent(entity, componentType))
-	{
-		auto componentNode = m_entityComponentsMapping[entity.componentsDataOffset];
-		bool reachedEndOfList = false;
-
-		while (!reachedEndOfList)
-		{
-			if (componentNode->handle.GetTypeIndex() == componentType)
-			{
-				// Component type found, return it
-				handle = componentNode->handle;
-				return m_ecsManager.GetComponent<void>(handle);
-			}
-
-			reachedEndOfList = (componentNode->nextItemPtr == Entity::GetInvalidId());
-
-			if (!reachedEndOfList)
-			{
-				componentNode = m_entityComponentsMapping[componentNode->nextItemPtr];
-			}
-		}
-	}
-
-	handle = ComponentHandle(ComponentHandleInternal::GetInvalidTypeId(), nullptr);
-	return nullptr;
-}
-
-void* EntitiesCollection::GetComponent(const EntityId entityId, const uint8_t componentType, ComponentHandle& handle) const
-{
-	const auto& entity = m_entities[entityId]->entity;
-	return GetComponent(entity, componentType, handle);
-}
-
-uint8_t EntitiesCollection::GetComponentTypeIdByTypeIndex(const std::type_index& typeIndex) const
+ComponentTypeId EntitiesCollection::GetComponentTypeIdByTypeIndex(const std::type_index& typeIndex) const
 {
 	return m_ecsManager.GetComponentTypeIdByIndex(typeIndex);
 }
 
 void EntitiesCollection::AddChild(Entity& entity, Entity& child)
 {
-	// Make entry in children mapping
-	bool placeForInsertionFound = false;
-	std::size_t offset = entity.hierarchyDataOffset;
-	while (!placeForInsertionFound)
-	{
-		auto hierarchyData = m_entityHierarchyData[offset];
-		if (hierarchyData->nextItemPtr == Entity::GetInvalidId())
-		{
-			// This is the end of the list, can be used as insertion point
-			placeForInsertionFound = true;
-		}
-		else
-		{
-			// Jump to next item in the list
-			offset = hierarchyData->nextItemPtr;
-		}
-	}
+	//// Make entry in children mapping
+	//bool placeForInsertionFound = false;
+	//std::size_t offset = entity.hierarchyDataOffset;
+	//while (!placeForInsertionFound)
+	//{
+	//	auto hierarchyData = m_entityHierarchyData[offset];
+	//	if (hierarchyData->nextItemPtr == Entity::GetInvalidId())
+	//	{
+	//		// This is the end of the list, can be used as insertion point
+	//		placeForInsertionFound = true;
+	//	}
+	//	else
+	//	{
+	//		// Jump to next item in the list
+	//		offset = hierarchyData->nextItemPtr;
+	//	}
+	//}
 
-	auto hierarchyDataId = offset;
-	auto newEntryId = hierarchyDataId;
+	//auto hierarchyDataId = offset;
+	//auto newEntryId = hierarchyDataId;
 
-	if (m_entityHierarchyData[hierarchyDataId]->childId != Entity::GetInvalidId())
-	{
-		auto creationResult = m_entityHierarchyData.CreateItem();
-		newEntryId = creationResult.first;
-	}
+	//if (m_entityHierarchyData[hierarchyDataId]->childId != Entity::GetInvalidId())
+	//{
+	//	auto creationResult = m_entityHierarchyData.CreateItem();
+	//	newEntryId = creationResult.first;
+	//}
 
-	// Insert component id here
-	auto currentEntry = m_entityHierarchyData[hierarchyDataId];
-	auto newEntry = m_entityHierarchyData[newEntryId];
-	newEntry->childId = child.id;
-	newEntry->nextItemPtr = Entity::GetInvalidId();
+	//// Insert component id here
+	//auto currentEntry = m_entityHierarchyData[hierarchyDataId];
+	//auto newEntry = m_entityHierarchyData[newEntryId];
+	//newEntry->childId = child.id;
+	//newEntry->nextItemPtr = Entity::GetInvalidId();
 
-	if (currentEntry != newEntry)
-	{
-		// Link new entry to the list
-		currentEntry->nextItemPtr = static_cast<uint32_t>(newEntryId);
-	}
+	//if (currentEntry != newEntry)
+	//{
+	//	// Link new entry to the list
+	//	currentEntry->nextItemPtr = static_cast<uint32_t>(newEntryId);
+	//}
 
-	auto parentData = m_entities[entity.id];
-	//child.parentId = entity.id;
-	child.orderInParent = parentData->childrenCount;
-	++parentData->childrenCount;
+	//auto parentData = m_entities[entity.id];
+	////child.parentId = entity.id;
+	//child.orderInParent = parentData->childrenCount;
+	//++parentData->childrenCount;
 
-	RefreshHierarchyDepth(child.id, entity.id, false);
-	RefreshActivation(child);
+	//RefreshHierarchyDepth(child.id, entity.id, false);
+	//RefreshActivation(child);
 }
 
 void EntitiesCollection::RemoveChild(Entity& entity, Entity& child)
 {
-	assert(child.id != Entity::GetInvalidId());
+	//assert(child.id != Entity::GetInvalidId());
 
-	// Find the child in the list
-	bool itemFound = false;
-	std::size_t offset = entity.hierarchyDataOffset;
-	std::size_t prevOffset = Entity::GetInvalidId();
-	while (!itemFound)
-	{
-		auto hierarchyData = m_entityHierarchyData[offset];
+	//// Find the child in the list
+	//bool itemFound = false;
+	//std::size_t offset = entity.hierarchyDataOffset;
+	//std::size_t prevOffset = Entity::GetInvalidId();
+	//while (!itemFound)
+	//{
+	//	auto hierarchyData = m_entityHierarchyData[offset];
 
-		if (hierarchyData->childId == child.id)
-		{
-			itemFound = true;
-		}
-		else if (hierarchyData->nextItemPtr == Entity::GetInvalidId())
-		{
-			break;
-		}
-		else
-		{
-			prevOffset = offset;
-			offset = hierarchyData->nextItemPtr;
-		}
-	}
+	//	if (hierarchyData->childId == child.id)
+	//	{
+	//		itemFound = true;
+	//	}
+	//	else if (hierarchyData->nextItemPtr == Entity::GetInvalidId())
+	//	{
+	//		break;
+	//	}
+	//	else
+	//	{
+	//		prevOffset = offset;
+	//		offset = hierarchyData->nextItemPtr;
+	//	}
+	//}
 
-	if (itemFound)
-	{
-		// Item found, remove it from the list preserving connectivity
-		auto hierarchyData = m_entityHierarchyData[offset];
+	//if (itemFound)
+	//{
+	//	// Item found, remove it from the list preserving connectivity
+	//	auto hierarchyData = m_entityHierarchyData[offset];
 
-		if (prevOffset == Entity::GetInvalidId())
-		{
-			if (hierarchyData->nextItemPtr != Entity::GetInvalidId())
-			{
-				entity.hierarchyDataOffset = hierarchyData->nextItemPtr;
-			}
-		}
-		else
-		{
-			m_entityHierarchyData[prevOffset]->nextItemPtr = hierarchyData->nextItemPtr;
-		}
+	//	if (prevOffset == Entity::GetInvalidId())
+	//	{
+	//		if (hierarchyData->nextItemPtr != Entity::GetInvalidId())
+	//		{
+	//			entity.hierarchyDataOffset = hierarchyData->nextItemPtr;
+	//		}
+	//	}
+	//	else
+	//	{
+	//		m_entityHierarchyData[prevOffset]->nextItemPtr = hierarchyData->nextItemPtr;
+	//	}
 
-		hierarchyData->childId = Entity::GetInvalidId();
-		hierarchyData->nextItemPtr = Entity::GetInvalidId();
+	//	hierarchyData->childId = Entity::GetInvalidId();
+	//	hierarchyData->nextItemPtr = Entity::GetInvalidId();
 
-		child.orderInParent = Entity::GetInvalidHierarchyDepth();
-		--m_entities[entity.id]->childrenCount;
+	//	child.orderInParent = Entity::GetInvalidHierarchyDepth();
+	//	--m_entities[entity.id]->childrenCount;
 
-		RefreshHierarchyDepth(child.id, Entity::GetInvalidId(), false);
-		RefreshActivation(child);
-	}
-}
-
-uint16_t EntitiesCollection::GetChildrenCount(const Entity& entity) const
-{
-	return GetChildrenCount(entity.id);
-}
-
-uint16_t EntitiesCollection::GetChildrenCount(EntityId entityId) const
-{
-	return m_entities[entityId]->childrenCount;
-}
-
-Entity* EntitiesCollection::GetParent(const Entity& entity) const
-{
-	if (entity.parentId != Entity::GetInvalidId())
-	{
-		return &m_entities[entity.parentId]->entity;
-	}
-	else
-	{
-		return nullptr;
-	}
-}
-
-Entity* EntitiesCollection::GetParent(const ComponentHandle& handle) const
-{
-	auto entityId = handle.GetEntityId();
-	auto entityData = m_entities[entityId];
-	auto parentId = entityData->entity.parentId;
-
-	if (parentId != Entity::GetInvalidId())
-	{
-		return &m_entities[parentId]->entity;
-	}
-	else
-	{
-		return nullptr;
-	}
-}
-
-Entity* EntitiesCollection::GetParent(const EntityId entityId) const
-{
-	assert(entityId != Entity::GetInvalidId());
-	return GetParent(m_entities[entityId]->entity);
+	//	RefreshHierarchyDepth(child.id, Entity::GetInvalidId(), false);
+	//	RefreshActivation(child);
+	//}
 }
 
 EntityId EntitiesCollection::GetChildByIdx(Entity& entity, const std::size_t idx) const
 {
-	auto entityData = m_entities[entity.id];
-	if (idx >= entityData->childrenCount)
-		return Entity::GetInvalidId();
+	//auto entityData = m_entities[entity.id];
+	//if (idx >= entityData->childrenCount)
+	//	return Entity::GetInvalidId();
 
-	// Find the child in the list
-	std::size_t currentIdx = 0U;
-	std::size_t offset = entity.hierarchyDataOffset;
-	std::size_t prevOffset = Entity::GetInvalidId();
+	//// Find the child in the list
+	//std::size_t currentIdx = 0U;
+	//std::size_t offset = entity.hierarchyDataOffset;
+	//std::size_t prevOffset = Entity::GetInvalidId();
 
-	while (offset != Entity::GetInvalidId())
-	{
-		auto hierarchyData = m_entityHierarchyData[offset];
+	//while (offset != Entity::GetInvalidId())
+	//{
+	//	auto hierarchyData = m_entityHierarchyData[offset];
 
-		if (currentIdx == idx)
-		{
-			return hierarchyData->childId;
-		}
+	//	if (currentIdx == idx)
+	//	{
+	//		return hierarchyData->childId;
+	//	}
 
-		prevOffset = offset;
-		offset = hierarchyData->nextItemPtr;
-		++currentIdx;
-	}
+	//	prevOffset = offset;
+	//	offset = hierarchyData->nextItemPtr;
+	//	++currentIdx;
+	//}
 
 	return Entity::GetInvalidId();
 }
 
 void EntitiesCollection::ClearChildren(Entity& entity, bool destroyChildren)
 {
-	for (auto& child : GetChildrenData(entity))
-	{
-		child.orderInParent = Entity::GetInvalidHierarchyDepth();
+	//for (auto& child : GetChildrenData(entity))
+	//{
+	//	child.orderInParent = Entity::GetInvalidHierarchyDepth();
 
-		RefreshHierarchyDepth(child.id, Entity::GetInvalidId(), false);
-		RefreshActivation(child);
+	//	RefreshHierarchyDepth(child.id, Entity::GetInvalidId(), false);
+	//	RefreshActivation(child);
 
-		if (destroyChildren)
-		{
-			DestroyEntity(child.id);
-		}
-	}
+	//	if (destroyChildren)
+	//	{
+	//		DestroyEntity(child.id);
+	//	}
+	//}
 
-	auto entityData = m_entities[entity.id];
-	entityData->childrenCount = 0;
+	//auto entityData = m_entities[entity.id];
+	//entityData->childrenCount = 0;
 
-	auto entityHierarchyEntry = m_entityHierarchyData[entity.hierarchyDataOffset];
-	entityHierarchyEntry->childId = Entity::GetInvalidId();
-	entityHierarchyEntry->nextItemPtr = Entity::GetInvalidId();
+	//auto entityHierarchyEntry = m_entityHierarchyData[entity.hierarchyDataOffset];
+	//entityHierarchyEntry->childId = Entity::GetInvalidId();
+	//entityHierarchyEntry->nextItemPtr = Entity::GetInvalidId();
 }
 
-EntitiesCollection::ChildrenData EntitiesCollection::GetChildrenData(const Entity& entity)
+EntitiesCollection::ChildrenData EntitiesCollection::GetChildrenData(EntityData& entityData)
 {
-	return GetChildrenData(entity.id);
-}
-
-EntitiesCollection::ChildrenData EntitiesCollection::GetChildrenData(const EntityId entityId)
-{
-	auto offsetBegin = m_entities[entityId]->entity.hierarchyDataOffset;
+	auto offsetBegin = entityData.hierarchyDataOffset;
 
 	std::size_t offsetEnd = offsetBegin;
 	bool endFound = false;
@@ -482,128 +397,98 @@ EntitiesCollection::ChildrenData EntitiesCollection::GetChildrenData(const Entit
 	return EntitiesCollection::ChildrenData(this, m_entityHierarchyData, offsetBegin, offsetEnd);
 }
 
-EntitiesCollection::ComponentsData EntitiesCollection::GetComponentsData(const Entity& entity)
+EntitiesCollection::ComponentsData EntitiesCollection::GetComponentsData(EntityData& entityData)
 {
-	auto offsetBegin = m_entities[entity.id]->entity.componentsDataOffset;
+	auto offsetBegin = entityData.componentsDataOffset;
 	return EntitiesCollection::ComponentsData(m_entityComponentsMapping, offsetBegin);
 }
 
 EntitiesCollection::EntitiesStorageType& EntitiesCollection::GetEntitiesData()
 {
-	return m_entities;
+	return m_entitiesData;
 }
 
-void EntitiesCollection::SetEntityEnabled(Entity& entity, const bool enabled)
+void EntitiesCollection::OnEntityEnabled(const EntityId entityId, const bool enabled)
 {
-	auto entityData = m_entities[entity.id];
+	RefreshActivation(*m_entitiesData[entityId]);
+}
 
-	if (entityData->isEnabled != enabled)
+void EntitiesCollection::ActivateEntity(EntityData& entityData, const bool activate)
+{
+	if (activate != entityData.isActivated)
 	{
-		entityData->isEnabled = enabled;
-		RefreshActivation(entity);
+		RefreshActivation(entityData, activate);
 	}
 }
 
-void EntitiesCollection::ActivateEntity(Entity& entity, const bool activate)
+void EntitiesCollection::RefreshActivation(EntityData& entityData, bool forceActivate)
 {
-	auto entityData = m_entities[entity.id];
-
-	if (activate != entityData->isActivated)
-	{
-		RefreshActivation(entity, activate);
-	}
-}
-
-void EntitiesCollection::ActivateEntity(const std::size_t entityId, const bool activate)
-{
-	auto entityData = m_entities[entityId];
-
-	if (activate != entityData->isActivated)
-	{
-		RefreshActivation(entityData->entity, activate);
-	}
-}
-
-bool EntitiesCollection::IsEntityEnabled(const std::size_t entityId) const
-{
-	return m_entities[entityId]->isEnabled;
-}
-
-bool EntitiesCollection::IsEntityActivated(const std::size_t entityId) const
-{
-	return m_entities[entityId]->isActivated;
-}
-
-void EntitiesCollection::RefreshActivation(Entity& entity, bool forceActivate)
-{
-	auto entityData = m_entities[entity.id];
 	bool shouldBeAddedToWorld = forceActivate;
 
 	if (!shouldBeAddedToWorld)
 	{
-		auto parentData = (entity.parentId != Entity::GetInvalidId()) ? m_entities[entity.parentId] : nullptr;
-		shouldBeAddedToWorld = entityData->isEnabled && (nullptr != parentData && parentData->isActivated);
+		ecs::EntityData* parentData = (entityData.parentId != Entity::GetInvalidId()) ? m_entitiesData[entityData.parentId] : nullptr;
+		shouldBeAddedToWorld = entityData.isEnabled && (nullptr != parentData && parentData->isActivated);
 	}
 	
-	if (shouldBeAddedToWorld != entityData->isActivated)
+	if (shouldBeAddedToWorld != entityData.isActivated)
 	{
-		entityData->isActivated = shouldBeAddedToWorld;	
+		entityData.isActivated = shouldBeAddedToWorld;	
 
 		if (forceActivate)
 		{
-			RefreshHierarchyDepth(entity.id, entity.parentId, true);
+			RefreshHierarchyDepth(entityData, entityData.parentId, true);
 		}
 
-		RefreshComponentsActivation(entity);
-		RefreshChildrenActivation(entity);
+		RefreshComponentsActivation(entityData);
+		RefreshChildrenActivation(entityData);
 	}
 }
 
-void EntitiesCollection::RefreshComponentsActivation(Entity& entity)
+void EntitiesCollection::RefreshComponentsActivation(EntityData& entityData)
 {
-	const auto& entityData = m_entities[entity.id];
-	for (auto& componentHandle : GetComponentsData(entity))
+	for (ComponentHandle& componentHandle : GetComponentsData(entityData))
 	{
-		m_ecsManager.RefreshComponentActivation(componentHandle, entityData->isEnabled, entityData->isActivated);
+		m_ecsManager.RefreshComponentActivation(componentHandle, entityData.isEnabled, entityData.isActivated);
 	}
 }
 
-void EntitiesCollection::RefreshChildrenActivation(Entity& entity)
+void EntitiesCollection::RefreshChildrenActivation(EntityData& entityData)
 {
-	for (auto& childData : GetChildrenData(entity))
+	for (auto& childData : GetChildrenData(entityData))
 	{
-		RefreshActivation(childData);
+		//RefreshActivation(childData);
 	}
 }
 
-Entity& EntitiesCollection::CloneEntity(const Entity& entity)
+Entity EntitiesCollection::CloneEntity(const Entity& entity)
 {
-	auto& clone = CreateEntity();
+	EntityHandle clone = CreateEntity();
 
-	// Clone components
-	for (auto& componentHandle : GetComponentsData(entity))
-	{
-		auto componentCloneHandle = m_ecsManager.CloneComponent(componentHandle);
-		AddComponent(clone, componentCloneHandle);
-	}
+	//// Clone components
+	//for (auto& componentHandle : GetComponentsData(entity))
+	//{
+	//	auto componentCloneHandle = m_ecsManager.CloneComponent(componentHandle);
+	//	AddComponent(clone, componentCloneHandle);
+	//}
 
-	// Clone children
-	for (auto& child : GetChildrenData(entity))
-	{
-		auto& childClone = CloneEntity(child);
-		AddChild(clone, childClone);
-	}
+	//// Clone children
+	//for (auto& child : GetChildrenData(entity))
+	//{
+	//	auto& childClone = CloneEntity(child);
+	//	AddChild(clone, childClone);
+	//}
 
 	return clone;
 }
 
-void EntitiesCollection::RefreshHierarchyDepth(const EntityId entityId, const EntityId newParentId, bool constructNewHierarchyTree)
+void EntitiesCollection::RefreshHierarchyDepth(EntityData& entityData, const EntityId newParentId, bool constructNewHierarchyTree)
 {
 	static const HierarchyDepth k_invalidDepth = Entity::GetInvalidHierarchyDepth();
-	auto& entity = m_entities[entityId]->entity;
-	auto parent = (newParentId != Entity::GetInvalidId()) ? &GetEntity(newParentId) : nullptr;
 
-	EntityId currentDepth = entity.hierarchyDepth;
+	EntityData* parent = (newParentId != Entity::GetInvalidId()) ? m_entitiesData[newParentId] : nullptr;
+
+	EntityId currentDepth = entityData.hierarchyDepth;
 	EntityId newDepth;
 	
 	if (nullptr != parent)
@@ -624,38 +509,39 @@ void EntitiesCollection::RefreshHierarchyDepth(const EntityId entityId, const En
 	{
 		if (newDepth == Entity::GetInvalidHierarchyDepth())
 		{
-			m_hierarchyManager.RemoveEntity(entityId);
-			entity.hierarchyDepth = newDepth;
-			entity.parentId = newParentId;
+			m_hierarchyManager.RemoveEntity(entityData.id);
+			entityData.hierarchyDepth = newDepth;
+			entityData.parentId = newParentId;
 		}
 		else if (currentDepth == Entity::GetInvalidHierarchyDepth())
 		{
-			entity.hierarchyDepth = newDepth;
-			entity.parentId = newParentId;
-			m_hierarchyManager.AddEntity(entityId);
+			entityData.hierarchyDepth = newDepth;
+			entityData.parentId = newParentId;
+			m_hierarchyManager.AddEntity(entityData.id);
 		}
 		else
 		{
-			m_hierarchyManager.RemoveEntity(entityId);
-			entity.hierarchyDepth = newDepth;
-			entity.parentId = newParentId;
-			m_hierarchyManager.AddEntity(entityId);
+			m_hierarchyManager.RemoveEntity(entityData.id);
+			entityData.hierarchyDepth = newDepth;
+			entityData.parentId = newParentId;
+			m_hierarchyManager.AddEntity(entityData.id);
 		}
 	}
 
 	if (newDepth != currentDepth)
 	{
 		// Refresh children hierarchy depths
-		for (auto& child : GetChildrenData(entityId))
+		for (auto& child : GetChildrenData(entityData))
 		{
-			RefreshHierarchyDepth(child.id, entityId, false);
+			//RefreshHierarchyDepth(child.id, entityData.id, false);
 		}
 	}
 }
 
 bool EntitiesCollection::CompareEntitiesInHierarchy(const Entity& lhs, const Entity& rhs) const
 {
-	return m_hierarchyManager.CompareEntitiesInHierarchy(lhs, rhs);
+	//return m_hierarchyManager.CompareEntitiesInHierarchy(lhs, rhs);
+	return lhs.GetId() < rhs.GetId();
 }
 
 std::size_t EntitiesCollection::GetEntitiesCountInBranch(const EntityId& rootEntityId) const
@@ -671,6 +557,16 @@ std::size_t EntitiesCollection::GetActiveEntitiesCountInBranch(const EntityId& r
 int EntitiesCollection::GetEntityHierarchyOffsetRelativeToEntity(const EntityId& entityId, const EntityId& pivotId) const
 {
 	return m_hierarchyManager.GetHierarchyOrderDiff(entityId, pivotId);
+}
+
+void EntitiesCollection::OnEntityDataDestroy(const EntityId entityId)
+{
+
+}
+
+EntityData* EntitiesCollection::GetEntityData(const EntityId id)
+{
+	return m_entitiesData[id];
 }
 
 } // namespace ecs

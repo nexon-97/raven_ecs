@@ -11,6 +11,7 @@ Manager::Manager()
 	: m_entitiesCollection(*this)
 {
 	ComponentHandle::SetManagerInstance(this);
+	EntityData::SetManagerInstance(this);
 	detail::ComponentCollectionManagerConnection::SetManagerInstance(this);
 }
 
@@ -203,7 +204,7 @@ ComponentHandle Manager::CreateComponentByTypeId(const ComponentTypeId typeId)
 
 ComponentHandle Manager::CreateComponentInternal(const ComponentTypeId typeId)
 {
-	HandleIndex* handleIndex = GetCollection(typeId)->Create();
+	ComponentHandle::HandleIndex* handleIndex = GetCollection(typeId)->Create();
 	return ComponentHandle(typeId, handleIndex);
 }
 
@@ -260,7 +261,7 @@ EntitiesCollection& Manager::GetEntitiesCollection()
 void Manager::RegisterComponentTypeInternal(const std::string& name, const std::type_index& typeIndex, std::unique_ptr<IComponentCollection>&& collection)
 {
 	// Register type storage
-	uint8_t typeId = static_cast<uint8_t>(m_componentStorages.size());
+	ComponentTypeId typeId = static_cast<ComponentTypeId>(m_componentStorages.size());
 	collection->SetTypeId(typeId);
 	m_componentStorages.emplace_back(std::move(collection));
 	m_componentNameToIdMapping.emplace(name, typeId);

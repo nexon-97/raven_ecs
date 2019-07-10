@@ -39,7 +39,7 @@ ComponentTypeId ComponentHandle::GetTypeIndex() const
 	return m_typeId;
 }
 
-HandleIndex ComponentHandle::GetOffset() const
+ComponentHandle::HandleIndex ComponentHandle::GetOffset() const
 {
 	return *m_handleIndexPtr;
 }
