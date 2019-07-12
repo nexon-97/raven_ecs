@@ -1,5 +1,5 @@
-#include "ComponentHandle.hpp"
-#include "Manager.hpp"
+#include "ecs/component/ComponentHandle.hpp"
+#include "ecs/Manager.hpp"
 
 namespace
 {
@@ -34,7 +34,7 @@ bool ComponentHandle::IsValid() const
 	return (m_typeId != ComponentHandleInternal::GetInvalidTypeId());
 }
 
-ComponentTypeId ComponentHandle::GetTypeIndex() const
+ComponentTypeId ComponentHandle::GetTypeId() const
 {
 	return m_typeId;
 }

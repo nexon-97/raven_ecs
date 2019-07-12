@@ -1,35 +1,47 @@
 #pragma once
 #include "ecs/ECSApiDef.hpp"
-#include "ecs/ComponentHandle.hpp"
-#include "storage/MemoryPool.hpp"
-#include <cstdint>
-#include <limits>
-#include <bitset>
-#include <cassert>
+#include "ecs/entity/EntityData.hpp"
+#include "ecs/entity/EntityComponentsCollection.hpp"
 
 namespace ecs
 {
 
+struct EntityData;
 class EntitiesCollection;
-struct ComponentHandle;
-using EntityId = uint32_t;
-using HierarchyDepth = uint16_t;
-const std::size_t MaxComponentTypesCount = 128U;
 class Manager;
 
+/*
+* @brief Entity is a wrapper around entity data, that gives the interface for manipuling the data using ecs infrastructure.
+* Entity is a kind of reference couting wrapper, each entity adds to the alive references count.
+* Entity can contain no entity data, it is a valid situation, but this object cannot be used to access the data, and the
+* object can be tested using simple operator bool or IsValid() method.
+*
+* Entity has interface to manipulate entity components
+* Entity has interface to manipulate its allowed properties
+* User can copy and move entity instances
+* User has no access to underlying entity data
+*/
 struct Entity
 {
-	friend class detail::MemoryPool<Entity>;
-
 	static const EntityId ECS_API GetInvalidId();
 	static const HierarchyDepth ECS_API GetInvalidHierarchyDepth();
 
-	~Entity() = default;
+	ECS_API Entity();
+	ECS_API ~Entity();
+
+	bool ECS_API IsValid() const;
+	ECS_API operator bool() const;
+
+	void ECS_API Reset();
+
+	Entity ECS_API Clone();
 
 	void ECS_API AddComponent(const ComponentHandle& handle);
 	void ECS_API RemoveComponent(const ComponentHandle& handle);
 	bool ECS_API HasComponent(const ComponentTypeId componentType) const;
 	ComponentHandle ECS_API GetComponentHandle(const ComponentTypeId componentType) const;
+
+	EntityComponentsCollection ECS_API GetComponents() const;
 
 	EntityId ECS_API GetId() const;
 	std::size_t ECS_API GetChildrenCount() const;
@@ -68,15 +80,12 @@ struct Entity
 	}
 
 	// Copy is available
-	Entity(const Entity&) = delete;
-	Entity& operator=(const Entity&) = delete;
+	Entity(const Entity&) noexcept;
+	Entity& operator=(const Entity&) noexcept;
 
 	// Move is available
 	ECS_API Entity(Entity&&) noexcept;
 	ECS_API Entity& operator=(Entity&&) noexcept;
-
-	void ECS_API AddRef();
-	void ECS_API RemoveRef();
 
 	static void SetManagerInstance(Manager* manager);
 
@@ -85,23 +94,17 @@ private:
 
 	// Must be constructed only by EntitiesCollection class
 	friend class EntitiesCollection;
-	Entity();
+	Entity(EntityData* data);
+
+	void AddRef();
+	void RemoveRef();
+
+	EntityData* GetData() const;
 
 	static Manager* s_ecsManager;
 	static Manager* GetManagerInstance();
 
-	EntityId id;
-	EntityId parentId;
-	std::bitset<MaxComponentTypesCount> componentsMask;
-	uint32_t hierarchyDataOffset;
-	uint32_t componentsDataOffset;
-	HierarchyDepth hierarchyDepth;
-	uint16_t orderInParent;
-	uint16_t refCount;
-	uint16_t childrenCount;
-	bool isEnabled : 1;		// Indicates if the entity is enabled (though can be not registered in world)
-	bool isActivated : 1;	// Indicates if the entity is currently activated (is actually registered in world)
-	bool isIteratingComponents : 1; // Indicates if the user is currently iterating components of an entity
+	EntityData* m_data = nullptr;
 };
 
 } // namespace ecs

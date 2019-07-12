@@ -6,9 +6,9 @@
 #include <typeindex>
 #include <vector>
 
-#include "ComponentCollectionImpl.hpp"
-#include "System.hpp"
-#include "EntitiesCollection.hpp"
+#include "ecs/component/ComponentCollectionImpl.hpp"
+#include "ecs/System.hpp"
+#include "ecs/entity/EntitiesCollection.hpp"
 
 namespace ecs
 {
@@ -95,7 +95,7 @@ public:
 	template <typename ComponentType>
 	ComponentType* GetComponent(const ComponentHandle& handle)
 	{
-		auto collection = GetCollection(handle.GetTypeIndex());
+		auto collection = GetCollection(handle.GetTypeId());
 		if (nullptr != collection)
 		{
 			return static_cast<ComponentType*>(collection->Get(handle.GetOffset()));

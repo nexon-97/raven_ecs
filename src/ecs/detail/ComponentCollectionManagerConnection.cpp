@@ -1,4 +1,4 @@
-#include "ecs/ComponentCollectionImpl.hpp"
+#include "ecs/component/ComponentCollectionImpl.hpp"
 #include "ecs/Manager.hpp"
 
 namespace

@@ -1,5 +1,5 @@
 #include "Manager.hpp"
-#include "ComponentCollectionImpl.hpp"
+#include "ecs/component/ComponentCollectionImpl.hpp"
 #include <algorithm>
 
 namespace ecs
@@ -182,7 +182,7 @@ void Manager::DestroyComponent(const ComponentHandle& handle)
 {
 	assert(handle.IsValid());
 
-	auto collection = GetCollection(handle.GetTypeIndex());
+	auto collection = GetCollection(handle.GetTypeId());
 	collection->Destroy(handle.GetOffset());
 }
 
@@ -243,13 +243,13 @@ IComponentCollection* Manager::GetCollection(const ComponentTypeId typeId) const
 
 void Manager::SetComponentEntityId(const ComponentHandle& handle, const EntityId id)
 {
-	auto collection = GetCollection(handle.GetTypeIndex());
+	auto collection = GetCollection(handle.GetTypeId());
 	collection->SetItemEntityId(handle.GetOffset(), id);
 }
 
 EntityId Manager::GetComponentEntityId(const ComponentHandle& handle) const
 {
-	auto collection = GetCollection(handle.GetTypeIndex());
+	auto collection = GetCollection(handle.GetTypeId());
 	return collection->GetItemEntityId(handle.GetOffset());
 }
 
@@ -271,13 +271,13 @@ void Manager::RegisterComponentTypeInternal(const std::string& name, const std::
 
 void Manager::SetComponentEnabled(const ComponentHandle& handle, const bool enabled)
 {
-	auto collection = GetCollection(handle.GetTypeIndex());
+	auto collection = GetCollection(handle.GetTypeId());
 	collection->SetItemEnabled(handle.GetOffset(), enabled);
 }
 
 void Manager::RefreshComponentActivation(const ComponentHandle& handle, const bool ownerEnabled, const bool ownerActivated)
 {
-	auto collection = GetCollection(handle.GetTypeIndex());
+	auto collection = GetCollection(handle.GetTypeId());
 	collection->RefreshComponentActivation(handle.GetOffset(), ownerEnabled, ownerActivated);
 }
 
@@ -310,19 +310,19 @@ const std::string& Manager::GetComponentNameByTypeId(const std::type_index& type
 
 ComponentHandle Manager::CloneComponent(const ComponentHandle& handle)
 {
-	auto collection = GetCollection(handle.GetTypeIndex());
+	auto collection = GetCollection(handle.GetTypeId());
 	auto handleIndex = collection->CloneComponent(handle.GetOffset());
-	return ComponentHandle(handle.GetTypeIndex(), handleIndex);
+	return ComponentHandle(handle.GetTypeId(), handleIndex);
 }
 
 void* Manager::GetComponent(const ComponentHandle& handle) const
 {
-	return m_componentStorages[handle.GetTypeIndex()]->Get(handle.GetOffset());
+	return m_componentStorages[handle.GetTypeId()]->Get(handle.GetOffset());
 }
 
 void Manager::MoveComponentData(const ComponentHandle& handle, void* dataPtr)
 {
-	IComponentCollection* collection = GetCollection(handle.GetTypeIndex());
+	IComponentCollection* collection = GetCollection(handle.GetTypeId());
 	collection->MoveData(handle.GetOffset(), dataPtr);
 }
 

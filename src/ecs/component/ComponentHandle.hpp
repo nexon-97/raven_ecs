@@ -36,7 +36,7 @@ public:
 	bool ECS_API operator!=(const ComponentHandle& other) const;
 
 	bool ECS_API IsValid() const;
-	ComponentTypeId ECS_API GetTypeIndex() const;
+	ComponentTypeId ECS_API GetTypeId() const;
 	std::type_index ECS_API GetStdTypeIndex() const; // Weird method name, rename
 	HandleIndex ECS_API GetOffset() const;
 	EntityId ECS_API GetEntityId() const;

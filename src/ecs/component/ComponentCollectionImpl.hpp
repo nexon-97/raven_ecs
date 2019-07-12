@@ -1,7 +1,7 @@
 #pragma once
 #include "IComponentCollection.hpp"
 #include "ComponentHandle.hpp"
-#include "storage/MemoryPool.hpp"
+#include "ecs/storage/MemoryPool.hpp"
 
 #include <set>
 #include <cassert>
