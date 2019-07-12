@@ -19,8 +19,8 @@ struct EntitiesComparator
 {
 	bool operator()(const EntityId lhsId, const EntityId rhsId) const
 	{
-		auto& lhs = g_entitiesCollection->GetEntityById(lhsId);
-		auto& rhs = g_entitiesCollection->GetEntityById(rhsId);
+		//auto& lhs = g_entitiesCollection->GetEntityHandleById(lhsId);
+		//auto& rhs = g_entitiesCollection->GetEntityHandleById(rhsId);
 
 		return lhsId < rhsId;
 		//return g_hierarchyManager->CompareEntitiesInHierarchy(lhs, rhs);
@@ -37,7 +37,7 @@ EntityHierarchyManager::EntityHierarchyManager(Manager* manager)
 	g_entitiesCollection = &g_ecsManager->GetEntitiesCollection();
 }
 
-bool EntityHierarchyManager::CompareEntitiesInHierarchy(const EntityData& lhs, const EntityData& rhs) const
+bool EntityHierarchyManager::CompareEntitiesInHierarchy(const Entity& lhs, const Entity& rhs) const
 {
 	//if (&lhs == &rhs)
 	//	return false;

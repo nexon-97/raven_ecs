@@ -15,15 +15,16 @@ struct ComponentHandle;
 using EntityId = uint32_t;
 using HierarchyDepth = uint16_t;
 const std::size_t MaxComponentTypesCount = 128U;
-struct EntityData;
 class Manager;
 
 struct Entity
 {
+	friend class detail::MemoryPool<Entity>;
+
 	static const EntityId ECS_API GetInvalidId();
 	static const HierarchyDepth ECS_API GetInvalidHierarchyDepth();
 
-	~Entity();
+	~Entity() = default;
 
 	void ECS_API AddComponent(const ComponentHandle& handle);
 	void ECS_API RemoveComponent(const ComponentHandle& handle);
@@ -35,18 +36,19 @@ struct Entity
 	EntityId ECS_API GetParentId() const;
 	void ECS_API SetEnabled(const bool enable);
 	bool ECS_API IsEnabled() const;
+	HierarchyDepth ECS_API GetHierarchyDepth() const;
 
 	template <typename ComponentType>
 	bool HasComponent() const
 	{
-		ComponentTypeId componentTypeId = EntityData::GetManagerInstance()->GetComponentTypeIdByIndex(typeid(ComponentType));
+		ComponentTypeId componentTypeId = s_ecsManager->GetComponentTypeIdByIndex(typeid(ComponentType));
 		return HasComponent(componentTypeId);
 	}
 
 	template <typename ComponentType>
 	ComponentType* GetComponent() const
 	{
-		ComponentTypeId componentTypeId = EntityData::GetManagerInstance()->GetComponentTypeIdByIndex(typeid(ComponentType));
+		ComponentTypeId componentTypeId = s_ecsManager->GetComponentTypeIdByIndex(typeid(ComponentType));
 		ComponentHandle handle = GetComponentHandle(componentTypeId);
 		if (handle.IsValid())
 		{
@@ -61,7 +63,7 @@ struct Entity
 	template <typename ComponentType>
 	ComponentHandle GetComponentHandle() const
 	{
-		ComponentTypeId componentTypeId = EntityData::GetManagerInstance()->GetComponentTypeIdByIndex(typeid(ComponentType));
+		ComponentTypeId componentTypeId = s_ecsManager->GetComponentTypeIdByIndex(typeid(ComponentType));
 		return GetComponentHandle(componentTypeId);
 	}
 
@@ -73,20 +75,20 @@ struct Entity
 	ECS_API Entity(Entity&&) noexcept;
 	ECS_API Entity& operator=(Entity&&) noexcept;
 
-private:
-	EntityData* data;
+	void ECS_API AddRef();
+	void ECS_API RemoveRef();
 
+	static void SetManagerInstance(Manager* manager);
+
+private:
 	ECS_API void* DoGetComponentPtr(const ComponentHandle handle) const;
 
 	// Must be constructed only by EntitiesCollection class
 	friend class EntitiesCollection;
-	explicit Entity(EntityData* data);
-};
+	Entity();
 
-struct EntityData
-{
-	friend class EntitiesCollection;
-	friend class detail::MemoryPool<EntityData>;
+	static Manager* s_ecsManager;
+	static Manager* GetManagerInstance();
 
 	EntityId id;
 	EntityId parentId;
@@ -100,25 +102,6 @@ struct EntityData
 	bool isEnabled : 1;		// Indicates if the entity is enabled (though can be not registered in world)
 	bool isActivated : 1;	// Indicates if the entity is currently activated (is actually registered in world)
 	bool isIteratingComponents : 1; // Indicates if the user is currently iterating components of an entity
-
-	// Disable entities data copying
-	EntityData(const EntityData&) = delete;
-	EntityData& operator=(const EntityData&) = delete;
-
-	void AddRef();
-	void RemoveRef();
-
-	static Manager* GetManagerInstance();
-	static void SetManagerInstance(Manager* manager);
-
-private:
-	EntityData();
-
-	// Move is available by EntitiesCollection
-	EntityData(EntityData&&) noexcept;
-	EntityData& operator=(EntityData&&) noexcept;
-
-	static Manager* s_ecsManager;
 };
 
 } // namespace ecs

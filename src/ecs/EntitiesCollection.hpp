@@ -26,17 +26,18 @@ public:
 	EntitiesCollection(const EntitiesCollection&) = delete;
 	EntitiesCollection& operator=(const EntitiesCollection&) = delete;
 
-	ECS_API Entity GetEntityById(const EntityId id);
-	ECS_API EntityHandle CreateEntity();
+	ECS_API Entity* GetEntity(const EntityHandle& handle);
+	EntityHandle ECS_API GetEntityHandleById(const EntityId id);
+	EntityHandle ECS_API CreateEntity();
 
 	void ECS_API AddChild(Entity& entity, Entity& child);
 	void ECS_API RemoveChild(Entity& entity, Entity& child);
 	void ECS_API ClearChildren(Entity& entity, bool destroyChildren = false);
 	EntityId ECS_API GetChildByIdx(Entity& entity, const std::size_t idx) const;
 
-	void ECS_API ActivateEntity(EntityData& entityData, const bool activate);
+	void ECS_API ActivateEntity(Entity& entity, const bool activate);
 
-	Entity ECS_API CloneEntity(const Entity& entity);
+	EntityHandle ECS_API CloneEntity(const EntityHandle& handle);
 
 	// Entity hierarchy manager interface copy
 	bool ECS_API CompareEntitiesInHierarchy(const Entity& lhs, const Entity& rhs) const;
@@ -70,7 +71,8 @@ public:
 
 			reference operator*()
 			{
-				return data.collection->GetEntityById(data.hierarchyData[offset]->childId);
+				EntityHandle handle = data.collection->GetEntityHandleById(data.hierarchyData[offset]->childId);
+				return *data.collection->GetEntity(handle);
 			}
 
 			pointer operator->()
@@ -128,7 +130,7 @@ public:
 		std::size_t offsetEnd;
 	};
 
-	ChildrenData ECS_API GetChildrenData(EntityData& entityData);
+	ChildrenData ECS_API GetChildrenData(Entity& entity);
 
 public:
 	struct EntityComponentMapEntry
@@ -215,34 +217,32 @@ public:
 		std::size_t offsetBegin;
 	};
 
-	ComponentsData ECS_API GetComponentsData(EntityData& entityData);
+	ComponentsData ECS_API GetComponentsData(Entity& entity);
 
 protected:
-	using EntitiesStorageType = detail::MemoryPool<EntityData>;
+	using EntitiesStorageType = detail::MemoryPool<Entity>;
 	ECS_API EntitiesStorageType& GetEntitiesData();
 
 private:
-	friend struct EntityData;
+	friend struct Entity;
 
 	uint8_t ECS_API GetComponentTypeIdByTypeIndex(const std::type_index& typeIndex) const;
 
-	void RefreshActivation(EntityData& entityData, bool forceActivate = false);
-	void RefreshComponentsActivation(EntityData& entityData);
-	void RefreshChildrenActivation(EntityData& entityData);
+	void RefreshActivation(Entity& entityData, bool forceActivate = false);
+	void RefreshComponentsActivation(Entity& entityData);
+	void RefreshChildrenActivation(Entity& entityData);
 
-	void RefreshHierarchyDepth(EntityData& entityData, const EntityId newParentId, bool constructNewHierarchyTree);
+	void RefreshHierarchyDepth(Entity& entityData, const EntityId newParentId, bool constructNewHierarchyTree);
 
 	void OnEntityDataDestroy(const EntityId entityId);
 	void DestroyEntity(const EntityId entityId);
 
 	void OnEntityEnabled(const EntityId entityId, const bool enabled);
 
-	void ECS_API AddComponent(EntityData& entityData, const ComponentHandle& handle);
-	void ECS_API RemoveComponent(EntityData& entityData, const ComponentHandle& handle);
-	bool ECS_API HasComponent(const EntityData& entityData, const ComponentTypeId componentType) const;
-	ComponentHandle ECS_API GetComponentHandle(const EntityData& entityData, const ComponentTypeId componentType) const;
-
-	EntityData* GetEntityData(const EntityId id);
+	void ECS_API AddComponent(Entity& entityData, const ComponentHandle& handle);
+	void ECS_API RemoveComponent(Entity& entityData, const ComponentHandle& handle);
+	bool ECS_API HasComponent(const Entity& entityData, const ComponentTypeId componentType) const;
+	ComponentHandle ECS_API GetComponentHandle(const Entity& entityData, const ComponentTypeId componentType) const;
 
 private:
 	EntitiesStorageType m_entitiesData;

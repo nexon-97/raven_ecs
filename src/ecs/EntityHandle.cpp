@@ -17,7 +17,7 @@ EntityHandle::~EntityHandle() noexcept
 {
 	if (IsValid())
 	{
-		EntityData* entityData = gManager->GetEntitiesCollection().GetEntityData(GetIndex());
+		Entity* entityData = gManager->GetEntitiesCollection().GetEntity(*this);
 		entityData->RemoveRef();
 	}
 }
@@ -27,7 +27,7 @@ EntityHandle::EntityHandle(HandleIndex* handleIndexPtr) noexcept
 {
 	if (IsValid())
 	{
-		EntityData* entityData = gManager->GetEntitiesCollection().GetEntityData(GetIndex());
+		Entity* entityData = gManager->GetEntitiesCollection().GetEntity(*this);
 		entityData->AddRef();
 	}
 }
@@ -37,7 +37,7 @@ EntityHandle::EntityHandle(const EntityHandle& other) noexcept
 {
 	if (IsValid())
 	{
-		EntityData* entityData = gManager->GetEntitiesCollection().GetEntityData(GetIndex());
+		Entity* entityData = gManager->GetEntitiesCollection().GetEntity(*this);
 		entityData->AddRef();
 	}
 }

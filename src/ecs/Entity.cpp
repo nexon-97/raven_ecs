@@ -8,119 +8,11 @@ namespace ecs
 
 const EntityId k_invalidId = std::numeric_limits<EntityId>::max();
 const HierarchyDepth k_invalidHierarchyDepth = std::numeric_limits<HierarchyDepth>::max();
-Manager* EntityData::s_ecsManager = nullptr;
+Manager* Entity::s_ecsManager = nullptr;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-Entity::Entity(EntityData* data)
-	: data(data)
-{
-	assert(nullptr != data);
-	data->AddRef();
-}
-
-Entity::~Entity()
-{
-	data->RemoveRef();
-}
-
-Entity::Entity(Entity&& other) noexcept
-	: data(other.data)
-{
-	other.data = nullptr;
-
-	assert(nullptr != data);
-}
-
-Entity& Entity::operator=(Entity&& other) noexcept
-{
-	data = other.data;
-	other.data = nullptr;
-
-	assert(nullptr != data);
-
-	return *this;
-}
-
-void Entity::AddComponent(const ComponentHandle& handle)
-{
-	if (handle.IsValid())
-	{
-		auto& entitiesCollection = EntityData::GetManagerInstance()->GetEntitiesCollection();
-		entitiesCollection.AddComponent(*data, handle);
-	}
-}
-
-void Entity::RemoveComponent(const ComponentHandle& handle)
-{
-	if (handle.IsValid())
-	{
-		auto& entitiesCollection = EntityData::GetManagerInstance()->GetEntitiesCollection();
-		entitiesCollection.RemoveComponent(*data, handle);
-	}
-}
-
-bool Entity::HasComponent(const ComponentTypeId componentType) const
-{
-	auto& entitiesCollection = EntityData::GetManagerInstance()->GetEntitiesCollection();
-	return entitiesCollection.HasComponent(*data, componentType);
-}
-
-ComponentHandle Entity::GetComponentHandle(const ComponentTypeId componentType) const
-{
-	auto& entitiesCollection = EntityData::GetManagerInstance()->GetEntitiesCollection();
-	return entitiesCollection.GetComponentHandle(*data, componentType);
-}
-
-void* Entity::DoGetComponentPtr(const ComponentHandle handle) const
-{
-	return EntityData::GetManagerInstance()->GetComponent(handle);
-}
-
-EntityId Entity::GetId() const
-{
-	return data->id;
-}
-
-std::size_t Entity::GetChildrenCount() const
-{
-	return data->childrenCount;
-}
-
-EntityId Entity::GetParentId() const
-{
-	return data->parentId;
-}
-
-bool Entity::IsEnabled() const
-{
-	return data->isEnabled;
-}
-
-void Entity::SetEnabled(const bool enable)
-{
-	if (enable != data->isEnabled)
-	{
-		data->isEnabled = enable;
-
-		// Notify entity enable state changed
-		EntityData::GetManagerInstance()->GetEntitiesCollection().OnEntityEnabled(data->id, data->isEnabled);
-	}
-}
-
-const EntityId Entity::GetInvalidId()
-{
-	return k_invalidId;
-}
-
-const HierarchyDepth Entity::GetInvalidHierarchyDepth()
-{
-	return k_invalidHierarchyDepth;
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-
-EntityData::EntityData()
+Entity::Entity()
 	: id(Entity::GetInvalidId())
 	, parentId(Entity::GetInvalidId())
 	, hierarchyDataOffset(0U)
@@ -133,7 +25,7 @@ EntityData::EntityData()
 	, isActivated(false)
 {}
 
-EntityData::EntityData(EntityData&& other) noexcept
+Entity::Entity(Entity&& other) noexcept
 	: id(other.id)
 	, parentId(other.parentId)
 	, hierarchyDataOffset(other.hierarchyDataOffset)
@@ -157,7 +49,7 @@ EntityData::EntityData(EntityData&& other) noexcept
 	other.isActivated = false;
 }
 
-EntityData& EntityData::operator=(EntityData&& other) noexcept
+Entity& Entity::operator=(Entity&& other) noexcept
 {
 	id = other.id;
 	parentId = other.parentId;
@@ -184,12 +76,93 @@ EntityData& EntityData::operator=(EntityData&& other) noexcept
 	return *this;
 }
 
-void EntityData::AddRef()
+void Entity::AddComponent(const ComponentHandle& handle)
+{
+	if (handle.IsValid())
+	{
+		auto& entitiesCollection = s_ecsManager->GetEntitiesCollection();
+		entitiesCollection.AddComponent(*this, handle);
+	}
+}
+
+void Entity::RemoveComponent(const ComponentHandle& handle)
+{
+	if (handle.IsValid())
+	{
+		auto& entitiesCollection = s_ecsManager->GetEntitiesCollection();
+		entitiesCollection.RemoveComponent(*this, handle);
+	}
+}
+
+bool Entity::HasComponent(const ComponentTypeId componentType) const
+{
+	auto& entitiesCollection = s_ecsManager->GetEntitiesCollection();
+	return entitiesCollection.HasComponent(*this, componentType);
+}
+
+ComponentHandle Entity::GetComponentHandle(const ComponentTypeId componentType) const
+{
+	auto& entitiesCollection = s_ecsManager->GetEntitiesCollection();
+	return entitiesCollection.GetComponentHandle(*this, componentType);
+}
+
+void* Entity::DoGetComponentPtr(const ComponentHandle handle) const
+{
+	return s_ecsManager->GetComponent(handle);
+}
+
+EntityId Entity::GetId() const
+{
+	return id;
+}
+
+std::size_t Entity::GetChildrenCount() const
+{
+	return childrenCount;
+}
+
+EntityId Entity::GetParentId() const
+{
+	return parentId;
+}
+
+bool Entity::IsEnabled() const
+{
+	return isEnabled;
+}
+
+HierarchyDepth Entity::GetHierarchyDepth() const
+{
+	return hierarchyDepth;
+}
+
+void Entity::SetEnabled(const bool enable)
+{
+	if (enable != isEnabled)
+	{
+		isEnabled = enable;
+
+		// Notify entity enable state changed
+		s_ecsManager->GetEntitiesCollection().OnEntityEnabled(id, isEnabled);
+	}
+}
+
+const EntityId Entity::GetInvalidId()
+{
+	return k_invalidId;
+}
+
+const HierarchyDepth Entity::GetInvalidHierarchyDepth()
+{
+	return k_invalidHierarchyDepth;
+}
+
+void Entity::AddRef()
 {
 	++refCount;
 }
 
-void EntityData::RemoveRef()
+void Entity::RemoveRef()
 {
 	if (refCount > 0U)
 	{
@@ -202,12 +175,12 @@ void EntityData::RemoveRef()
 	}
 }
 
-void EntityData::SetManagerInstance(Manager* manager)
+void Entity::SetManagerInstance(Manager* manager)
 {
 	s_ecsManager = manager;
 }
 
-Manager* EntityData::GetManagerInstance()
+Manager* Entity::GetManagerInstance()
 {
 	return s_ecsManager;
 }

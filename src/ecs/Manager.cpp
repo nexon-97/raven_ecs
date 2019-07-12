@@ -11,7 +11,7 @@ Manager::Manager()
 	: m_entitiesCollection(*this)
 {
 	ComponentHandle::SetManagerInstance(this);
-	EntityData::SetManagerInstance(this);
+	Entity::SetManagerInstance(this);
 	detail::ComponentCollectionManagerConnection::SetManagerInstance(this);
 }
 
