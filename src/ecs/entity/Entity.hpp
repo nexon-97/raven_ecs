@@ -2,6 +2,7 @@
 #include "ecs/ECSApiDef.hpp"
 #include "ecs/entity/EntityData.hpp"
 #include "ecs/entity/EntityComponentsCollection.hpp"
+#include "ecs/entity/EntityChildrenCollection.hpp"
 
 namespace ecs
 {
@@ -40,8 +41,13 @@ struct Entity
 	void ECS_API RemoveComponent(const ComponentHandle& handle);
 	bool ECS_API HasComponent(const ComponentTypeId componentType) const;
 	ComponentHandle ECS_API GetComponentHandle(const ComponentTypeId componentType) const;
-
 	EntityComponentsCollection ECS_API GetComponents() const;
+
+	void ECS_API AddChild(Entity& child);
+	void ECS_API RemoveChild(Entity& child);
+	void ECS_API ClearChildren();
+	Entity ECS_API GetChildByIdx(const std::size_t idx) const;
+	EntityChildrenCollection ECS_API GetChildren() const;
 
 	EntityId ECS_API GetId() const;
 	std::size_t ECS_API GetChildrenCount() const;
