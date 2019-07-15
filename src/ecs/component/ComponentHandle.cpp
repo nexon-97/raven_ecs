@@ -54,6 +54,11 @@ void ComponentHandle::SetManagerInstance(ecs::Manager* manager)
 	gManager = manager;
 }
 
+ecs::Manager* ComponentHandle::GetManagerInstance()
+{
+	return gManager;
+}
+
 bool ComponentHandle::IsOfTypeImpl(const std::type_index& typeIndex) const
 {
 	return gManager->GetComponentTypeIdByIndex(typeIndex) == m_typeId;
@@ -62,6 +67,11 @@ bool ComponentHandle::IsOfTypeImpl(const std::type_index& typeIndex) const
 std::type_index ComponentHandle::GetStdTypeIndex() const
 {
 	return gManager->GetComponentTypeIndexByTypeId(m_typeId);
+}
+
+void* ComponentHandle::GetValue() const
+{
+	return gManager->GetComponent(*this);
 }
 
 } // namespace ecs

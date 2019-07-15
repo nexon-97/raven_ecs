@@ -47,11 +47,15 @@ public:
 		return IsOfTypeImpl(typeid(T));
 	}
 
-private:
+	ECS_API void* GetValue() const;
+
+protected:
 	static void ECS_API SetManagerInstance(ecs::Manager* manager);
+	static ECS_API ecs::Manager* GetManagerInstance();
+
 	bool ECS_API IsOfTypeImpl(const std::type_index& typeIndex) const;
 
-private:
+protected:
 	ComponentTypeId m_typeId;
 	HandleIndex* m_handleIndexPtr = nullptr;
 };
