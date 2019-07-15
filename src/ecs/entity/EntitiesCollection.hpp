@@ -37,6 +37,7 @@ public:
 	EntityId ECS_API GetChildByIdx(Entity& entity, const std::size_t idx) const;
 
 	void ECS_API ActivateEntity(Entity& entity, const bool activate);
+	bool ECS_API IsEntityActivated(Entity& entity) const;
 
 	// Entity hierarchy manager interface copy
 	bool ECS_API CompareEntitiesInHierarchy(const Entity& lhs, const Entity& rhs) const;

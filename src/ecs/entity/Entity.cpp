@@ -2,12 +2,16 @@
 #include "ecs/entity/EntitiesCollection.hpp"
 #include "ecs/Manager.hpp"
 
+namespace
+{
+ecs::Manager* s_ecsManager = nullptr;
+}
+
 namespace ecs
 {
 
 const EntityId k_invalidId = std::numeric_limits<EntityId>::max();
 const HierarchyDepth k_invalidHierarchyDepth = std::numeric_limits<HierarchyDepth>::max();
-Manager* Entity::s_ecsManager = nullptr;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -187,6 +191,16 @@ EntityComponentsCollection Entity::GetComponents() const
 {
 	auto& storage = s_ecsManager->GetEntitiesCollection().GetComponentsMapStorage();
 	return EntityComponentsCollection(storage, m_data->componentsDataOffset);
+}
+
+bool Entity::operator==(const Entity& other) const
+{
+	return GetId() == other.GetId();
+}
+
+bool Entity::operator!=(const Entity& other) const
+{
+	return !(*this == other);
 }
 
 const EntityId Entity::GetInvalidId()

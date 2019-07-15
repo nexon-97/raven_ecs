@@ -304,6 +304,12 @@ void EntitiesCollection::ActivateEntity(Entity& entity, const bool activate)
 	}
 }
 
+bool EntitiesCollection::IsEntityActivated(Entity& entity) const
+{
+	EntityData* entityData = entity.GetData();
+	return entityData->isActivated;
+}
+
 void EntitiesCollection::RefreshActivation(EntityData& entityData, bool forceActivate)
 {
 	bool shouldBeAddedToWorld = forceActivate;

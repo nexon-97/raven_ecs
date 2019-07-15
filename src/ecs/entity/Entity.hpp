@@ -53,14 +53,14 @@ struct Entity
 	template <typename ComponentType>
 	bool HasComponent() const
 	{
-		ComponentTypeId componentTypeId = s_ecsManager->GetComponentTypeIdByIndex(typeid(ComponentType));
+		ComponentTypeId componentTypeId = GetManagerInstance()->GetComponentTypeIdByIndex(typeid(ComponentType));
 		return HasComponent(componentTypeId);
 	}
 
 	template <typename ComponentType>
 	ComponentType* GetComponent() const
 	{
-		ComponentTypeId componentTypeId = s_ecsManager->GetComponentTypeIdByIndex(typeid(ComponentType));
+		ComponentTypeId componentTypeId = GetManagerInstance()->GetComponentTypeIdByIndex(typeid(ComponentType));
 		ComponentHandle handle = GetComponentHandle(componentTypeId);
 		if (handle.IsValid())
 		{
@@ -75,17 +75,20 @@ struct Entity
 	template <typename ComponentType>
 	ComponentHandle GetComponentHandle() const
 	{
-		ComponentTypeId componentTypeId = s_ecsManager->GetComponentTypeIdByIndex(typeid(ComponentType));
+		ComponentTypeId componentTypeId = GetManagerInstance()->GetComponentTypeIdByIndex(typeid(ComponentType));
 		return GetComponentHandle(componentTypeId);
 	}
 
 	// Copy is available
-	Entity(const Entity&) noexcept;
-	Entity& operator=(const Entity&) noexcept;
+	ECS_API Entity(const Entity&) noexcept;
+	ECS_API Entity& operator=(const Entity&) noexcept;
 
 	// Move is available
 	ECS_API Entity(Entity&&) noexcept;
 	ECS_API Entity& operator=(Entity&&) noexcept;
+
+	bool ECS_API operator==(const Entity& other) const;
+	bool ECS_API operator!=(const Entity& other) const;
 
 	static void SetManagerInstance(Manager* manager);
 
@@ -101,8 +104,7 @@ private:
 
 	EntityData* GetData() const;
 
-	static Manager* s_ecsManager;
-	static Manager* GetManagerInstance();
+	static ECS_API Manager* GetManagerInstance();
 
 	EntityData* m_data = nullptr;
 };
