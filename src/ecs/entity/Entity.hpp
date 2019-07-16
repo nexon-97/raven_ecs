@@ -48,10 +48,10 @@ struct Entity
 	void ECS_API ClearChildren();
 	Entity ECS_API GetChildByIdx(const std::size_t idx) const;
 	EntityChildrenCollection ECS_API GetChildren() const;
+	std::size_t ECS_API GetChildrenCount() const;
+	Entity ECS_API GetParent() const;
 
 	EntityId ECS_API GetId() const;
-	std::size_t ECS_API GetChildrenCount() const;
-	EntityId ECS_API GetParentId() const;
 	void ECS_API SetEnabled(const bool enable);
 	bool ECS_API IsEnabled() const;
 	HierarchyDepth ECS_API GetHierarchyDepth() const;

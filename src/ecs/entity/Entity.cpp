@@ -99,6 +99,7 @@ void Entity::AddComponent(const ComponentHandle& handle)
 	auto& mappingEntry = s_ecsManager->GetEntitiesCollection().CreateComponentMappingEntry(*m_data);
 
 	mappingEntry.handle = handle;
+	m_data->componentsMask.set(handle.GetTypeId());
 	s_ecsManager->SetComponentEntityId(handle, m_data->id);
 
 	s_ecsManager->RefreshComponentActivation(handle, m_data->isEnabled, m_data->isActivated);
@@ -143,7 +144,12 @@ void* Entity::DoGetComponentPtr(const ComponentHandle handle) const
 
 EntityId Entity::GetId() const
 {
-	return m_data->id;
+	if (nullptr != m_data)
+	{
+		return m_data->id;
+	}
+	
+	return Entity::GetInvalidId();
 }
 
 std::size_t Entity::GetChildrenCount() const
@@ -151,9 +157,14 @@ std::size_t Entity::GetChildrenCount() const
 	return m_data->childrenCount;
 }
 
-EntityId Entity::GetParentId() const
+Entity Entity::GetParent() const
 {
-	return m_data->parentId;
+	if (Entity::GetInvalidId() != m_data->parentId)
+	{
+		return GetManagerInstance()->GetEntitiesCollection().GetEntityById(m_data->parentId);
+	}
+
+	return Entity();
 }
 
 bool Entity::IsEnabled() const

@@ -49,7 +49,6 @@ public:
 	Entity ECS_API operator[](const std::size_t index);
 
 	bool ECS_API empty() const;
-	void ECS_API clear();
 
 	static void SetManagerInstance(Manager* manager);
 

@@ -39,7 +39,12 @@ Entity EntityChildrenCollection::iterator::operator*()
 
 EntityChildrenCollection::iterator EntityChildrenCollection::begin() const
 {
-	return iterator(m_hierarchyData, m_offsetBegin);
+	if (m_hierarchyData[m_offsetBegin]->childId != Entity::GetInvalidId())
+	{
+		return iterator(m_hierarchyData, m_offsetBegin);
+	}
+
+	return end();
 }
 
 EntityChildrenCollection::iterator EntityChildrenCollection::end() const
@@ -50,11 +55,6 @@ EntityChildrenCollection::iterator EntityChildrenCollection::end() const
 bool EntityChildrenCollection::empty() const
 {
 	return begin() == end();
-}
-
-void EntityChildrenCollection::clear()
-{
-	
 }
 
 Entity EntityChildrenCollection::operator[](const std::size_t index)
