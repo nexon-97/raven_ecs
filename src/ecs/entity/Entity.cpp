@@ -216,7 +216,7 @@ void Entity::AddChild(Entity& child)
 	++m_data->childrenCount;
 
 	entitiesCollection.RefreshHierarchyDepth(*child.GetData(), m_data->id, false);
-	entitiesCollection.RefreshActivation(*m_data);
+	entitiesCollection.RefreshActivation(*child.GetData());
 }
 
 void Entity::RemoveChild(Entity& child)
