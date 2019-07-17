@@ -13,7 +13,6 @@ Manager::Manager()
 	ComponentHandle::SetManagerInstance(this);
 	Entity::SetManagerInstance(this);
 	detail::ComponentCollectionManagerConnection::SetManagerInstance(this);
-	EntityChildrenCollection::SetManagerInstance(this);
 }
 
 System* Manager::GetSystemByTypeIndex(const std::type_index& typeIndex) const

@@ -1,9 +1,8 @@
 #pragma once
+#include "ecs/ECSApiDef.hpp"
 #include "ecs/entity/EntityData.hpp"
 #include "ecs/entity/Entity.hpp"
 #include "ecs/component/ComponentHandle.hpp"
-//#include "ecs/entity/EntityHierarchyManager.hpp"
-#include "ecs/ECSApiDef.hpp"
 #include "ecs/storage/MemoryPool.hpp"
 
 #include <unordered_map>
@@ -33,12 +32,6 @@ public:
 	void ECS_API ActivateEntity(Entity& entity, const bool activate);
 	bool ECS_API IsEntityActivated(Entity& entity) const;
 
-	// Entity hierarchy manager interface copy
-	bool ECS_API CompareEntitiesInHierarchy(const Entity& lhs, const Entity& rhs) const;
-	std::size_t ECS_API GetEntitiesCountInBranch(const EntityId& rootEntityId) const;
-	std::size_t ECS_API GetActiveEntitiesCountInBranch(const EntityId& rootEntityId) const;
-	int ECS_API GetEntityHierarchyOffsetRelativeToEntity(const EntityId& entityId, const EntityId& pivotId) const;
-
 private:
 	using EntitiesStorageType = detail::MemoryPool<EntityData>;
 	ECS_API EntitiesStorageType& GetEntitiesData();
@@ -46,8 +39,6 @@ private:
 	void RefreshActivation(EntityData& entityData, bool forceActivate = false);
 	void RefreshComponentsActivation(EntityData& entityData);
 	void RefreshChildrenActivation(EntityData& entityData);
-
-	void RefreshHierarchyDepth(EntityData& entityData, const EntityId newParentId, bool constructNewHierarchyTree);
 
 	void OnEntityDataDestroy(const EntityId entityId);
 	void DestroyEntity(const EntityId entityId);
@@ -62,16 +53,10 @@ private:
 	void RemoveComponentMappingEntry(EntityData& entityData, const ComponentTypeId componentType);
 	ComponentsMapStorageType& GetComponentsMapStorage();
 
-	EntityHierarchyData& CreateEntityHierarchyDataEntry(EntityData& entityData);
-	void RemoveEntityHierarchyDataEntry(EntityData& entityData, Entity& child);
-	EntityHierarchyDataStorageType& GetEntityHierarchyData();
-
 private:
 	EntitiesStorageType m_entitiesData;
 	EntityIdsMap m_entityIdsMap;
 	ComponentsMapStorageType m_entityComponentsMapping;
-	EntityHierarchyDataStorageType m_entityHierarchyData;
-	//EntityHierarchyManager m_hierarchyManager;
 	std::size_t m_activeEntitiesCount = 0U;
 	EntityId m_nextEntityId = 0U;
 	Manager& m_manager;

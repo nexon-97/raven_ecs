@@ -1,19 +1,13 @@
 #pragma once
-#include <cstdint>
-#include <bitset>
+#include "ecs/TypeAliases.hpp"
+
+#include <list>
 
 namespace ecs
 {
-namespace detail
-{
-template <class T> class MemoryPool;
-}
 
-using EntityId = uint32_t;
-using HierarchyDepth = uint16_t;
-const std::size_t MaxComponentTypesCount = 128U;
-using ComponentMaskType = std::bitset<MaxComponentTypesCount>;
-using EntityHandleIndex = uint32_t;
+struct Entity;
+using EntityChildrenContainer = std::list<Entity>;
 
 /*
 * @brief EntityData is a data container, which fully describes entity, its state, components and reference counting.
@@ -24,13 +18,11 @@ struct EntityData
 	EntityId id;
 	EntityId parentId;
 	ComponentMaskType componentsMask;
-	uint32_t hierarchyDataOffset;
 	uint32_t componentsDataOffset;
-	HierarchyDepth hierarchyDepth;
 	uint16_t orderInParent;
 	uint16_t refCount;
-	uint16_t childrenCount;
 	EntityHandleIndex storageLocation;
+	EntityChildrenContainer children;
 	bool isEnabled : 1;		// Indicates if the entity is enabled (though can be not registered in world)
 	bool isActivated : 1;	// Indicates if the entity is currently activated (is actually registered in world)
 	bool isIteratingComponents : 1; // Indicates if the user is currently iterating components of an entity

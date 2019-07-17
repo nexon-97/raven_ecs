@@ -1,5 +1,6 @@
 #pragma once
 #include "ecs/ECSApiDef.hpp"
+#include "ecs/TypeAliases.hpp"
 #include <cstdint>
 #include <typeindex>
 #include <limits>
@@ -10,8 +11,6 @@ namespace ecs
 {
 
 class Manager;
-using ComponentTypeId = uint8_t;
-using EntityId = uint32_t;
 
 struct ComponentHandleInternal
 {

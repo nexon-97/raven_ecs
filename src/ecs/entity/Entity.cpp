@@ -5,13 +5,14 @@
 namespace
 {
 ecs::Manager* s_ecsManager = nullptr;
+const uint32_t k_invalidStorageLocation = uint32_t(-1);
+const uint16_t k_invalidOrderInParent = uint16_t(-1);
 }
 
 namespace ecs
 {
 
 const EntityId k_invalidId = std::numeric_limits<EntityId>::max();
-const HierarchyDepth k_invalidHierarchyDepth = std::numeric_limits<HierarchyDepth>::max();
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -154,7 +155,7 @@ EntityId Entity::GetId() const
 
 std::size_t Entity::GetChildrenCount() const
 {
-	return m_data->childrenCount;
+	return m_data->children.size();
 }
 
 Entity Entity::GetParent() const
@@ -167,14 +168,14 @@ Entity Entity::GetParent() const
 	return Entity();
 }
 
+uint16_t Entity::GetOrderInParent() const
+{
+	return m_data->orderInParent;
+}
+
 bool Entity::IsEnabled() const
 {
 	return m_data->isEnabled;
-}
-
-HierarchyDepth Entity::GetHierarchyDepth() const
-{
-	return m_data->hierarchyDepth;
 }
 
 void Entity::SetEnabled(const bool enable)
@@ -208,52 +209,70 @@ void Entity::AddChild(Entity& child)
 {
 	auto& entitiesCollection = s_ecsManager->GetEntitiesCollection();
 
-	EntityHierarchyData& childEntry = entitiesCollection.CreateEntityHierarchyDataEntry(*m_data);
-	childEntry.childId = child.GetId();
+	EntityData* childData = child.GetData();
+	childData->parentId = m_data->id;
+	childData->orderInParent = static_cast<uint16_t>(m_data->children.size());
 
-	child.GetData()->parentId = m_data->id;
-	child.GetData()->orderInParent = m_data->childrenCount;
-	++m_data->childrenCount;
+	m_data->children.push_back(child);
 
-	entitiesCollection.RefreshHierarchyDepth(*child.GetData(), m_data->id, false);
-	entitiesCollection.RefreshActivation(*child.GetData());
+	entitiesCollection.RefreshActivation(*childData);
 }
 
 void Entity::RemoveChild(Entity& child)
 {
-	s_ecsManager->GetEntitiesCollection().RemoveEntityHierarchyDataEntry(*m_data, child);
+	auto it = std::find(m_data->children.begin(), m_data->children.end(), child);
+	if (it != m_data->children.end())
+	{
+		EntityData* childData = child.GetData();
+		childData->parentId = Entity::GetInvalidId();
+		childData->orderInParent = k_invalidOrderInParent;
+
+		auto& entitiesCollection = s_ecsManager->GetEntitiesCollection();
+		entitiesCollection.RefreshActivation(*childData);
+	}
 }
 
 void Entity::ClearChildren()
 {
 	auto& entitiesCollection = s_ecsManager->GetEntitiesCollection();
 
-	for (ecs::Entity& child : GetChildren())
+	for (auto it = m_data->children.begin(); it != m_data->children.end();)
 	{
-		EntityData& childData = *child.GetData();
-		childData.orderInParent = Entity::GetInvalidHierarchyDepth();
+		ecs::Entity child = *it;
 
-		entitiesCollection.RefreshHierarchyDepth(childData, Entity::GetInvalidId(), false);
-		entitiesCollection.RefreshActivation(childData);
+		EntityData* childData = child.GetData();
+		childData->parentId = Entity::GetInvalidId();
+		childData->orderInParent = k_invalidOrderInParent;
+
+		entitiesCollection.RefreshActivation(*childData);
+
+		it = m_data->children.erase(it);
 	}
-
-	m_data->childrenCount = 0;
-
-	EntityHierarchyDataStorageType& data = s_ecsManager->GetEntitiesCollection().GetEntityHierarchyData();
-	EntityHierarchyData* hierarchyDataEntry = data[m_data->hierarchyDataOffset];
-	*hierarchyDataEntry = EntityHierarchyData();
 }
 
 Entity Entity::GetChildByIdx(const std::size_t idx) const
 {
-	EntityChildrenCollection collection = GetChildren();
-	return collection[idx];
+	//EntityChildrenCollection collection = GetChildren();
+	//return collection[idx];
+
+	std::size_t i = 0;
+	for (const auto& entity : m_data->children)
+	{
+		if (i == idx)
+			return entity;
+
+		++i;
+	}
+
+	return Entity();
 }
 
-EntityChildrenCollection Entity::GetChildren() const
+EntityChildrenContainer& Entity::GetChildren() const
 {
-	EntityHierarchyDataStorageType& data = s_ecsManager->GetEntitiesCollection().GetEntityHierarchyData();
-	return EntityChildrenCollection(data, m_data->hierarchyDataOffset);
+	return m_data->children;
+
+	//EntityHierarchyDataStorageType& data = s_ecsManager->GetEntitiesCollection().GetEntityHierarchyData();
+	//return EntityChildrenCollection(*m_data, data, m_data->hierarchyDataOffset);
 }
 
 bool Entity::operator==(const Entity& other) const
@@ -269,11 +288,6 @@ bool Entity::operator!=(const Entity& other) const
 const EntityId Entity::GetInvalidId()
 {
 	return k_invalidId;
-}
-
-const HierarchyDepth Entity::GetInvalidHierarchyDepth()
-{
-	return k_invalidHierarchyDepth;
 }
 
 void Entity::AddRef()

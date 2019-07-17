@@ -2,7 +2,6 @@
 #include "ecs/ECSApiDef.hpp"
 #include "ecs/entity/EntityData.hpp"
 #include "ecs/entity/EntityComponentsCollection.hpp"
-#include "ecs/entity/EntityChildrenCollection.hpp"
 
 namespace ecs
 {
@@ -25,7 +24,6 @@ class Manager;
 struct Entity
 {
 	static const EntityId ECS_API GetInvalidId();
-	static const HierarchyDepth ECS_API GetInvalidHierarchyDepth();
 
 	ECS_API Entity();
 	ECS_API ~Entity();
@@ -47,14 +45,14 @@ struct Entity
 	void ECS_API RemoveChild(Entity& child);
 	void ECS_API ClearChildren();
 	Entity ECS_API GetChildByIdx(const std::size_t idx) const;
-	EntityChildrenCollection ECS_API GetChildren() const;
+	ECS_API EntityChildrenContainer& GetChildren() const;
 	std::size_t ECS_API GetChildrenCount() const;
 	Entity ECS_API GetParent() const;
+	uint16_t ECS_API GetOrderInParent() const;
 
 	EntityId ECS_API GetId() const;
 	void ECS_API SetEnabled(const bool enable);
 	bool ECS_API IsEnabled() const;
-	HierarchyDepth ECS_API GetHierarchyDepth() const;
 
 	template <typename ComponentType>
 	bool HasComponent() const
@@ -103,6 +101,8 @@ private:
 
 	// Must be constructed only by EntitiesCollection class
 	friend class EntitiesCollection;
+	friend class EntityChildrenCollection;
+
 	Entity(EntityData* data);
 
 	void AddRef();
