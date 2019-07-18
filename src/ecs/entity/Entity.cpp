@@ -193,7 +193,23 @@ Entity Entity::Clone()
 {
 	if (IsValid())
 	{
-		return s_ecsManager->GetEntitiesCollection().CloneEntity(*this);
+		Entity clone = s_ecsManager->GetEntitiesCollection().CreateEntity();
+
+		// Clone components
+		for (const ecs::ComponentHandle& componentHandle : GetComponents())
+		{
+			ecs::ComponentHandle componentCloneHandle = s_ecsManager->CloneComponent(componentHandle);
+			clone.AddComponent(componentCloneHandle);
+		}
+
+		// Clone children
+		for (ecs::Entity& child : GetChildren())
+		{
+			ecs::Entity childClone = child.Clone();
+			clone.AddChild(childClone);
+		}
+
+		return clone;
 	}
 	
 	return Entity();
@@ -252,9 +268,6 @@ void Entity::ClearChildren()
 
 Entity Entity::GetChildByIdx(const std::size_t idx) const
 {
-	//EntityChildrenCollection collection = GetChildren();
-	//return collection[idx];
-
 	std::size_t i = 0;
 	for (const auto& entity : m_data->children)
 	{
@@ -270,9 +283,6 @@ Entity Entity::GetChildByIdx(const std::size_t idx) const
 EntityChildrenContainer& Entity::GetChildren() const
 {
 	return m_data->children;
-
-	//EntityHierarchyDataStorageType& data = s_ecsManager->GetEntitiesCollection().GetEntityHierarchyData();
-	//return EntityChildrenCollection(*m_data, data, m_data->hierarchyDataOffset);
 }
 
 bool Entity::operator==(const Entity& other) const

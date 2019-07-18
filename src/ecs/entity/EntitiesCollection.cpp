@@ -1,6 +1,8 @@
 #include "ecs/entity/EntitiesCollection.hpp"
 #include "ecs/Manager.hpp"
 
+#include <iostream>
+
 namespace
 {
 const uint16_t k_invalidOrderInParent = uint16_t(-1);
@@ -21,7 +23,8 @@ Entity EntitiesCollection::GetEntityById(const EntityId id)
 	if (it != m_entityIdsMap.end())
 	{
 		uint32_t location = it->second;
-		return Entity(m_entitiesData[location]);
+		EntityData* entityData = GetEntityData(id);
+		return Entity(entityData);
 	}
 
 	return Entity();
@@ -29,14 +32,12 @@ Entity EntitiesCollection::GetEntityById(const EntityId id)
 
 Entity EntitiesCollection::CreateEntity()
 {
-	auto entityCreationResult = m_entitiesData.CreateItem();
+	EntityData* entityData = AllocateEntityData();
 	const EntityId newEntityId = m_nextEntityId;
-	const std::size_t storageLocation = entityCreationResult.first;
 	++m_nextEntityId;
 
-	EntityData* entityData = entityCreationResult.second;
+	//EntityData* entityData = entityCreationResult.second;
 	entityData->id = newEntityId;
-	entityData->storageLocation = static_cast<EntityHandleIndex>(storageLocation);
 	entityData->parentId = Entity::GetInvalidId();
 	entityData->orderInParent = k_invalidOrderInParent;
 
@@ -61,45 +62,40 @@ void EntitiesCollection::MoveEntityData(EntityData& entityData, const uint32_t n
 	*newLocationDataPtr = std::move(entityData);
 }
 
-void EntitiesCollection::DestroyEntity(const EntityId id)
-{
-	EntityData& entityData = *m_entitiesData[id];
-
-	// Disable all owned components
-	auto componentNode = m_entityComponentsMapping[entityData.componentsDataOffset];
-	bool reachedEndOfList = false;
-
-	while (!reachedEndOfList)
-	{
-		if (componentNode->handle.IsValid())
-		{
-			m_manager.DestroyComponent(componentNode->handle);
-		}
-
-		reachedEndOfList = (componentNode->nextItemPtr == Entity::GetInvalidId());
-
-		if (!reachedEndOfList)
-		{
-			componentNode = m_entityComponentsMapping[componentNode->nextItemPtr];
-		}
-	}
-
-	// Erase list items
-	componentNode = m_entityComponentsMapping[entityData.componentsDataOffset];
-	componentNode->handle = ComponentHandle(ComponentHandleInternal::GetInvalidTypeId(), nullptr);
-	componentNode->nextItemPtr = Entity::GetInvalidId();
-
-	// TODO: Performs logic consistency checks. Entity should be properly logically unloaded before actually destroying it...
-}
-
-EntitiesCollection::EntitiesStorageType& EntitiesCollection::GetEntitiesData()
-{
-	return m_entitiesData;
-}
+//void EntitiesCollection::DestroyEntity(const EntityId id)
+//{
+//	EntityData& entityData = *m_entitiesData[id];
+//
+//	// Disable all owned components
+//	auto componentNode = m_entityComponentsMapping[entityData.componentsDataOffset];
+//	bool reachedEndOfList = false;
+//
+//	while (!reachedEndOfList)
+//	{
+//		if (componentNode->handle.IsValid())
+//		{
+//			m_manager.DestroyComponent(componentNode->handle);
+//		}
+//
+//		reachedEndOfList = (componentNode->nextItemPtr == Entity::GetInvalidId());
+//
+//		if (!reachedEndOfList)
+//		{
+//			componentNode = m_entityComponentsMapping[componentNode->nextItemPtr];
+//		}
+//	}
+//
+//	// Erase list items
+//	componentNode = m_entityComponentsMapping[entityData.componentsDataOffset];
+//	componentNode->handle = ComponentHandle(ComponentHandleInternal::GetInvalidTypeId(), nullptr);
+//	componentNode->nextItemPtr = Entity::GetInvalidId();
+//
+//	// TODO: Performs logic consistency checks. Entity should be properly logically unloaded before actually destroying it...
+//}
 
 void EntitiesCollection::OnEntityEnabled(const EntityId entityId, const bool enabled)
 {
-	RefreshActivation(*m_entitiesData[entityId]);
+	RefreshActivation(*GetEntityData(entityId));
 }
 
 void EntitiesCollection::ActivateEntity(Entity& entity, const bool activate)
@@ -123,7 +119,7 @@ void EntitiesCollection::RefreshActivation(EntityData& entityData, bool forceAct
 
 	if (!shouldBeAddedToWorld)
 	{
-		ecs::EntityData* parentData = (entityData.parentId != Entity::GetInvalidId()) ? m_entitiesData[entityData.parentId] : nullptr;
+		ecs::EntityData* parentData = (entityData.parentId != Entity::GetInvalidId()) ? GetEntityData(entityData.parentId) : nullptr;
 		shouldBeAddedToWorld = entityData.isEnabled && (nullptr != parentData && parentData->isActivated);
 	}
 	
@@ -154,30 +150,38 @@ void EntitiesCollection::RefreshChildrenActivation(EntityData& entityData)
 	}
 }
 
-Entity EntitiesCollection::CloneEntity(const Entity& entity)
-{
-	Entity clone = CreateEntity();
-
-	// Clone components
-	for (const ecs::ComponentHandle& componentHandle : entity.GetComponents())
-	{
-		ecs::ComponentHandle componentCloneHandle = m_manager.CloneComponent(componentHandle);
-		clone.AddComponent(componentCloneHandle);
-	}
-
-	// Clone children
-	for (ecs::Entity& child : entity.GetChildren())
-	{
-		ecs::Entity childClone = child.Clone();
-		clone.AddChild(childClone);
-	}
-
-	return clone;
-}
-
 void EntitiesCollection::OnEntityDataDestroy(const EntityId entityId)
 {
+	std::cout << "Entity " << entityId << " has been destroyed!" << std::endl;
 
+	// Find entity data location
+	auto it = m_entityIdsMap.find(entityId);
+	assert(it != m_entityIdsMap.end());
+
+	uint32_t location = it->second;
+	EntityData* entityData = m_entitiesData[location];
+
+	// Destroy all owned components
+	auto componentsCollection = EntityComponentsCollection(m_entityComponentsMapping, entityData->componentsDataOffset);
+	std::vector<EntityComponentsCollection::iterator> collectionIterators;
+	for (auto it = componentsCollection.begin(); it != componentsCollection.end(); ++it)
+	{
+		collectionIterators.push_back(it);
+	}
+
+	for (EntityComponentsCollection::iterator& it : collectionIterators)
+	{
+		m_manager.SetComponentEntityId(*it, Entity::GetInvalidId());
+		m_manager.DestroyComponent(*it);
+		*m_entityComponentsMapping[it.offset] = EntityComponentMapEntry();
+	}
+
+	// Replace the entity data with newly created one
+	m_storageHoles.push_back(location);
+	*entityData = EntityData();
+
+	// Remove from entity id -> storage location mapping
+	m_entityIdsMap.erase(it);
 }
 
 EntityComponentMapEntry& EntitiesCollection::CreateComponentMappingEntry(EntityData& entityData)
@@ -285,6 +289,42 @@ void EntitiesCollection::RemoveComponentMappingEntry(EntityData& entityData, con
 ComponentsMapStorageType& EntitiesCollection::GetComponentsMapStorage()
 {
 	return m_entityComponentsMapping;
+}
+
+EntityData* EntitiesCollection::AllocateEntityData()
+{
+	if (m_storageHoles.empty())
+	{
+		auto entityCreationResult = m_entitiesData.CreateItem();
+		entityCreationResult.second->storageLocation = static_cast<EntityHandleIndex>(entityCreationResult.first);
+
+		std::cout << "Entity data allocated at [" << entityCreationResult.first << "]" << std::endl;
+
+		return entityCreationResult.second;
+	}
+	else
+	{
+		uint32_t location = m_storageHoles.front();
+		m_storageHoles.pop_front();
+
+		EntityData* data = m_entitiesData[location];
+		data->storageLocation = location;
+
+		std::cout << "Entity data allocated at [" << location << "]" << std::endl;
+		
+		return data;
+	}
+}
+
+EntityData* EntitiesCollection::GetEntityData(const EntityId id)
+{
+	auto it = m_entityIdsMap.find(id);
+	if (it != m_entityIdsMap.end())
+	{
+		return m_entitiesData[it->second];
+	}
+
+	return nullptr;
 }
 
 } // namespace ecs

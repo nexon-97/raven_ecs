@@ -108,12 +108,18 @@ public:
 		auto destroyPoolLocation = GetPoolLocation(index);
 		auto lastPoolLocation = GetPoolLocation(m_usedSpace - 1);
 
-		// Swap destroyed element and the last one to remove holes
-		std::swap(m_chunks[destroyPoolLocation.first][destroyPoolLocation.second], m_chunks[lastPoolLocation.first][lastPoolLocation.second]);
+		// Call object destructor
+		T& destroyedItem = m_chunks[destroyPoolLocation.first][destroyPoolLocation.second];
+		destroyedItem.~T();
+
+		// If destroyed element is not the last, move last item to destroyed element location
+		if (destroyPoolLocation.first != lastPoolLocation.first || destroyPoolLocation.second != lastPoolLocation.second)
+		{
+			T& lastItem = m_chunks[lastPoolLocation.first][lastPoolLocation.second];
+			destroyedItem = std::move(lastItem);
+		}
 
 		--m_usedSpace;
-
-		m_chunks[lastPoolLocation.first][lastPoolLocation.second].~T();
 
 		return { iterator(this, index), end() };
 	}

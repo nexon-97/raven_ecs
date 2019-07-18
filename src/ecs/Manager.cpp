@@ -180,10 +180,11 @@ void Manager::SortOrderedSystemsList()
 
 void Manager::DestroyComponent(const ComponentHandle& handle)
 {
-	assert(handle.IsValid());
-
-	auto collection = GetCollection(handle.GetTypeId());
-	collection->Destroy(handle.GetOffset());
+	if (handle.IsValid())
+	{
+		auto collection = GetCollection(handle.GetTypeId());
+		collection->Destroy(handle.GetOffset());
+	}
 }
 
 ComponentHandle Manager::CreateComponentByName(const std::string& name)
