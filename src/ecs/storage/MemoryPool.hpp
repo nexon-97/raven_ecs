@@ -162,6 +162,17 @@ public:
 		return DestroyItem(it.index);
 	}
 
+	void pop_back()
+	{
+		if (m_usedSpace > 0)
+		{
+			--m_usedSpace;
+
+			auto location = GetPoolLocation(m_usedSpace);
+			m_chunks[location.first][location.second].~T();
+		}
+	}
+
 	T* operator[](const std::size_t index) const
 	{
 		return GetItem(index);
@@ -169,6 +180,9 @@ public:
 
 	void Swap(const std::size_t leftIndex, const std::size_t rightIndex)
 	{
+		if (leftIndex == rightIndex)
+			return;
+
 		auto leftPoolLocation = GetPoolLocation(leftIndex);
 		auto rightPoolLocation = GetPoolLocation(rightIndex);
 

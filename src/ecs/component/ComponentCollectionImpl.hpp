@@ -140,13 +140,34 @@ public:
 
 	void Destroy(const std::size_t index) override
 	{
+		return; // Disable components destroy...
+
 		uint32_t storageLocation = *m_handles[index];
+		uint32_t lastIndex = static_cast<uint32_t>(m_componentsData.GetItemsCount() - 1U);
 
-		m_handles.DestroyItem(index);
+		// Destroy data (move last element to m_componentsData[storageLocation])
 		m_componentsData.DestroyItem(storageLocation);
-		*m_handles[*m_handleIndexes[storageLocation]] = storageLocation;
-		m_handleIndexes.DestroyItem(storageLocation);
 
+		// Find handle position, which was used to point to m_componentsData[lastIndex]
+		//uint32_t movedDataHandleIndex = *m_handleIndexes[lastIndex];
+		//assert(*m_handles[movedDataHandleIndex] == lastIndex); // Check that handle points to last index
+
+		// Swap correct handle and current removed handle by indexes
+		SwapHandles(index, lastIndex);
+		uint32_t replacedLocation = *m_handles[index];
+		m_componentsData.Swap(storageLocation, replacedLocation);
+		//m_componentsData.DestroyItem(replacedLocation);
+		//m_componentsData.pop_back();
+		//m_handles.DestroyItem(index);
+		//m_handles.Swap(movedDataHandleIndex, index);
+		m_handles.pop_back();
+		
+		//*m_handleIndexes[storageLocation] = static_cast<uint16_t>(index);
+		m_handleIndexes.pop_back();
+		//*m_handleIndexes[storageLocation] = static_cast<uint16_t>(index);
+
+		assert(Validate());
+		
 		//std::size_t locationL = destroyResult.first.index;
 		//std::size_t locationR = destroyResult.second.index;
 
@@ -298,24 +319,32 @@ public:
 
 	bool Validate() override
 	{
-		auto count = m_componentsData.GetItemsCount();
+		std::size_t dataCount = m_componentsData.GetItemsCount();
+		std::size_t handlesCount = m_handles.GetItemsCount();
+		std::size_t indexesCount = m_handleIndexes.GetItemsCount();
 
-		for (std::size_t i = 0U; i < count; ++i)
+		bool storageSizesMatch = ((dataCount == handlesCount) && (handlesCount == indexesCount));
+		if (storageSizesMatch)
 		{
-			uint32_t storageLocation = *m_handles[i];
+			for (std::size_t i = 0U; i < dataCount; ++i)
+			{
+				uint32_t storageLocation = *m_handles[i];
 
-			// Check that component at location [storageLocation] is at correct position relative to activation border
-			bool activationBorderCheck = m_componentsData[storageLocation]->isActivated == (i < m_activatedCount);
+				// Check that component at location [storageLocation] is at correct position relative to activation border
+				bool activationBorderCheck = m_componentsData[storageLocation]->isActivated == (i < m_activatedCount);
 
-			// Check, that handle index at [i] points to handle, that points to storage location at [i]
-			ComponentHandle::HandleIndex indexLocation = *m_handleIndexes[i];
-			bool indexedHandleStorageLocationMatch = *m_handles[indexLocation] == i;
+				// Check, that handle index at [i] points to handle, that points to storage location at [i]
+				ComponentHandle::HandleIndex indexLocation = *m_handleIndexes[i];
+				bool indexedHandleStorageLocationMatch = *m_handles[indexLocation] == i;
 
-			if (!activationBorderCheck || !indexedHandleStorageLocationMatch)
-				return false;
+				if (!activationBorderCheck || !indexedHandleStorageLocationMatch)
+					return false;
+			}
+
+			return true;
 		}
 
-		return true;
+		return false;
 	}
 
 private:
