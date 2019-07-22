@@ -116,6 +116,8 @@ void Entity::RemoveComponent(const ComponentHandle& handle)
 	{
 		s_ecsManager->GetEntitiesCollection().RemoveComponentMappingEntry(*m_data, handle.GetTypeId());
 		s_ecsManager->SetComponentEntityId(handle, Entity::GetInvalidId());
+
+		m_data->componentsMask.reset(componentType);
 	}
 }
 
