@@ -116,20 +116,6 @@ public:
 		return nullptr;
 	}
 
-	//template <typename ComponentType>
-	//ComponentType* GetSibling(const ComponentHandle& handle)
-	//{
-	//	auto entityId = handle.GetEntityId();
-	//	return m_entitiesCollection.GetComponent<ComponentType>(entityId);
-	//}
-
-	//template <typename ComponentType>
-	//ComponentType* GetSiblingWithHandle(const ComponentHandle& handle, ComponentHandle& siblingHandle)
-	//{
-	//	auto entityId = handle.GetEntityId();
-	//	return m_entitiesCollection.GetComponent<ComponentType>(entityId, siblingHandle);
-	//}
-
 	void ECS_API SetComponentEntityId(const ComponentHandle& handle, const EntityId id);
 	EntityId ECS_API GetComponentEntityId(const ComponentHandle& handle) const;
 

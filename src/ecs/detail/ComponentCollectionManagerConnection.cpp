@@ -11,12 +11,12 @@ namespace ecs
 namespace detail
 {
 
-ComponentCollectionManagerConnection::EntityData ComponentCollectionManagerConnection::GetEntityData(const std::size_t id) const
+ComponentCollectionManagerConnection::EntityActivationData ComponentCollectionManagerConnection::GetEntityActivationData(const EntityId id) const
 {
-	//auto& entitiesCollection = gManager->GetEntitiesCollection();
-	//return EntityData(entitiesCollection.IsEntityEnabled(id), entitiesCollection.IsEntityActivated(id));
+	auto& entitiesCollection = gManager->GetEntitiesCollection();
+	Entity entity = entitiesCollection.GetEntityById(id);
 
-	return EntityData(false, false);
+	return EntityActivationData(entity.IsEnabled(), entitiesCollection.IsEntityActivated(entity));
 }
 
 void ComponentCollectionManagerConnection::SetManagerInstance(ecs::Manager* manager)

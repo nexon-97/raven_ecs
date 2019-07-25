@@ -30,12 +30,13 @@ struct EntityData
 	EntityData(const EntityData&) = delete;
 	EntityData& operator=(const EntityData&) = delete;
 
+	~EntityData() = default;
+
 private:
 	friend class EntitiesCollection;
 	friend class detail::MemoryPool<EntityData>;
 
 	EntityData();
-	~EntityData();
 
 	EntityData(EntityData&&) noexcept;
 	EntityData& operator=(EntityData&&) noexcept;

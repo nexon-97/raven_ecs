@@ -17,6 +17,12 @@ EntitiesCollection::EntitiesCollection(ecs::Manager& ecsManager)
 	, m_entityComponentsMapping(1024U)
 {}
 
+void EntitiesCollection::Clear()
+{
+	m_entitiesData.Clear();
+	m_entityComponentsMapping.Clear();
+}
+
 Entity EntitiesCollection::GetEntityById(const EntityId id)
 {
 	auto it = m_entityIdsMap.find(id);

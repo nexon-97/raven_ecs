@@ -26,6 +26,8 @@ public:
 	}
 	~MemoryPool()
 	{
+		Clear();
+
 		if (nullptr != m_chunks)
 		{
 			free(m_chunks);
@@ -139,6 +141,14 @@ public:
 
 	void Clear()
 	{
+		// Call alive objects destructors
+		for (std::size_t i = 0U; i < m_usedSpace; ++i)
+		{
+			auto location = GetPoolLocation(i);
+			T& objectRef = m_chunks[location.first][location.second];
+			objectRef.~T();
+		}
+
 		m_usedSpace = 0U;
 	}
 

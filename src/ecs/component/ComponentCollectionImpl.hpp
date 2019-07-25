@@ -20,18 +20,18 @@ namespace detail
 class ComponentCollectionManagerConnection
 {
 public:
-	struct EntityData
+	struct EntityActivationData
 	{
 		bool isEnabled;
 		bool isActivated;
 
-		explicit ECS_API EntityData(const bool isEnabled, const bool isActivated)
+		explicit ECS_API EntityActivationData(const bool isEnabled, const bool isActivated)
 			: isEnabled(isEnabled)
 			, isActivated(isActivated)
 		{}
 	};
 
-	EntityData ECS_API GetEntityData(const std::size_t id) const;
+	EntityActivationData ECS_API GetEntityActivationData(const EntityId id) const;
 	static void ECS_API SetManagerInstance(ecs::Manager* manager);
 };
 
@@ -41,11 +41,10 @@ template <typename ComponentType>
 class ComponentCollectionImpl
 	: public IComponentCollection
 {
-	static constexpr const std::size_t k_chunkSize = 32U;
 	struct ComponentData
 	{
 		ComponentType component;
-		uint32_t entityId = Entity::GetInvalidId();
+		EntityId entityId;
 		bool isEnabled : 1;
 		bool isActivated : 1;
 
@@ -59,13 +58,21 @@ class ComponentCollectionImpl
 	using CollectionType = ComponentCollectionImpl<ComponentType>;
 
 public:
+	static constexpr const std::size_t k_chunkSize = 32U;
 	ComponentCollectionImpl()
-		: m_componentsData(1024U)
-		, m_handles(1024U)
-		, m_handleIndexes(1024U)
+		: m_componentsData(k_chunkSize)
+		, m_handles(k_chunkSize)
+		, m_handleIndexes(k_chunkSize)
 		, m_typeId(ComponentHandleInternal::GetInvalidTypeId())
 	{}
 	~ComponentCollectionImpl() = default;
+
+	void Clear() final
+	{
+		m_componentsData.Clear();
+		m_handles.Clear();
+		m_handleIndexes.Clear();
+	}
 
 	// Disable collection copy
 	ComponentCollectionImpl(const ComponentCollectionImpl&) = delete;
@@ -167,31 +174,6 @@ public:
 		//*m_handleIndexes[storageLocation] = static_cast<uint16_t>(index);
 
 		assert(Validate());
-		
-		//std::size_t locationL = destroyResult.first.index;
-		//std::size_t locationR = destroyResult.second.index;
-
-		// Swap handle pointers
-		//m_handleIndexes.Swap(locationL, locationR);
-		//m_handles.Swap(handleL, handleR);
-
-		//SwapHandles(locationL, locationR);
-
-		// Last valid component data is moved to destroyed location, so need to swap handles
-		//std::size_t currentIndex = destroyResult.first.index;
-		//std::size_t lastIndex = destroyResult.second.index;
-		
-		//SwapHandles(dataIndexL, dataIndexR);
-		//m_handles.DestroyItem(dataIndexR);
-
-		/*m_componentsData.DestroyItem(index);
-
-		// Swap handles to fill holes and keep handle pointers valid
-		std::size_t dataIndexL = index;
-		std::size_t dataIndexR = m_handles.GetItemsCount() - 1U;
-
-		SwapHandles(dataIndexL, dataIndexR);
-		m_handles.DestroyItem(dataIndexR);*/
 	}
 
 	void* Get(const std::size_t index) override
@@ -217,14 +199,14 @@ public:
 		return GetItemByHandleIndex(index);
 	}
 
-	void SetItemEntityId(const std::size_t index, const uint32_t entityId) override
+	void SetItemEntityId(const std::size_t index, const EntityId entityId) override
 	{
 		auto& componentData = GetItemByHandleIndex(index);
 		componentData.entityId = entityId;
 		RefreshComponentActivation(index);
 	}
 
-	uint32_t GetItemEntityId(const std::size_t index) const override
+	EntityId GetItemEntityId(const std::size_t index) const override
 	{
 		return GetItemByHandleIndex(index).entityId;
 	}
@@ -249,7 +231,7 @@ public:
 		auto& componentData = GetItemByHandleIndex(index);
 		if (componentData.entityId != Entity::GetInvalidId())
 		{
-			auto entityData = m_managerConnection.GetEntityData(componentData.entityId);
+			auto entityData = m_managerConnection.GetEntityActivationData(componentData.entityId);
 			RefreshComponentActivation(index, entityData.isEnabled, entityData.isActivated);
 		}
 		else

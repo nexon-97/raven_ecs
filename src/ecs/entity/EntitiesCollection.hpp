@@ -33,6 +33,8 @@ public:
 	void ECS_API ActivateEntity(Entity& entity, const bool activate);
 	bool ECS_API IsEntityActivated(Entity& entity) const;
 
+	void Clear();
+
 private:
 	using EntitiesStorageType = detail::MemoryPool<EntityData>;
 	ECS_API EntitiesStorageType& GetEntitiesData();

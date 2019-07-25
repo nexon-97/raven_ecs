@@ -96,14 +96,26 @@ void Manager::Init()
 
 void Manager::Destroy()
 {
+	// Destroy systems
 	for (ecs::System* system : m_orderedSystems)
 	{
 		system->Destroy();
 	}
-
 	m_systemsTypeIdMapping.clear();
 	m_systemsStorage.clear();
+	m_orderedSystems.clear();
+
+	// Destroy entities
+	m_entitiesCollection.Clear();
+
+	// Destroy components
+	for (auto& storage : m_componentStorages)
+	{
+		storage->Clear();
+		storage.reset();
+	}
 	m_componentStorages.clear();
+
 	m_componentTypeIndexes.clear();
 	m_componentNameToIdMapping.clear();
 	m_typeIndexToComponentTypeIdMapping.clear();

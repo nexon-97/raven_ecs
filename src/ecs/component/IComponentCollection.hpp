@@ -10,6 +10,7 @@ class IComponentCollection
 public:
 	virtual ~IComponentCollection() = default;
 
+	virtual void Clear() = 0;
 	// Create element inside collection and return inserted element index
 	virtual ComponentHandle::HandleIndex* Create() = 0;
 	// Destroy collection element by index. When destroy succeeds, component destructor is called.

@@ -21,11 +21,6 @@ EntityData::EntityData()
 	, storageLocation(k_invalidStorageLocation)
 {}
 
-EntityData::~EntityData()
-{
-
-}
-
 EntityData::EntityData(EntityData&& other) noexcept
 	: id(other.id)
 	, parentId(other.parentId)
