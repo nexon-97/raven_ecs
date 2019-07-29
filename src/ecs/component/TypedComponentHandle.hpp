@@ -11,9 +11,8 @@ struct TypedComponentHandle
 {
 public:
 	TypedComponentHandle()
-	{
-		m_typeId = GetManagerInstance()->GetComponentTypeIdByIndex(typeid(T));
-	}
+		: ComponentHandle()
+	{}
 
 	TypedComponentHandle(const ComponentHandle& genericHandle)
 		: ComponentHandle(genericHandle)
