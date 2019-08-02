@@ -44,7 +44,7 @@ struct Entity
 	void ECS_API AddChild(Entity& child);
 	void ECS_API RemoveChild(Entity& child);
 	void ECS_API ClearChildren();
-	Entity ECS_API GetChildByIdx(const std::size_t idx) const;
+	ECS_API Entity& GetChildByIdx(const std::size_t idx) const;
 	ECS_API EntityChildrenContainer& GetChildren() const;
 	std::size_t ECS_API GetChildrenCount() const;
 	Entity ECS_API GetParent() const;

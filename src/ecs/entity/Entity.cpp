@@ -268,10 +268,10 @@ void Entity::ClearChildren()
 	}
 }
 
-Entity Entity::GetChildByIdx(const std::size_t idx) const
+Entity& Entity::GetChildByIdx(const std::size_t idx) const
 {
 	std::size_t i = 0;
-	for (const auto& entity : m_data->children)
+	for (Entity& entity : m_data->children)
 	{
 		if (i == idx)
 			return entity;
@@ -279,7 +279,8 @@ Entity Entity::GetChildByIdx(const std::size_t idx) const
 		++i;
 	}
 
-	return Entity();
+	static Entity k_empty;
+	return k_empty;
 }
 
 EntityChildrenContainer& Entity::GetChildren() const

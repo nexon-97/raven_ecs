@@ -187,7 +187,13 @@ void Manager::UpdateSystems()
 
 void Manager::SortOrderedSystemsList()
 {
-	std::stable_sort(m_orderedSystems.begin(), m_orderedSystems.end());
+	auto predicate = [](System* lhs, System* rhs)
+	{
+		return *lhs < *rhs;
+	};
+	std::stable_sort(m_orderedSystems.begin(), m_orderedSystems.end(), predicate);
+
+	m_systemPrioritiesChanged = false;
 }
 
 void Manager::DestroyComponent(const ComponentHandle& handle)
