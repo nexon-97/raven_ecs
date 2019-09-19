@@ -1,8 +1,6 @@
 #include "ecs/entity/EntitiesCollection.hpp"
 #include "ecs/Manager.hpp"
 
-#include <iostream>
-
 namespace
 {
 const uint16_t k_invalidOrderInParent = uint16_t(-1);
@@ -58,6 +56,12 @@ Entity EntitiesCollection::CreateEntity()
 
 	// Add entity to ids map
 	m_entityIdsMap.emplace(entityData->id, entityData->storageLocation);
+
+	// Invoke global callback
+	if (nullptr != m_manager.m_globalEntityCreateCallback)
+	{
+		std::invoke(m_manager.m_globalEntityCreateCallback, entityData->id);
+	}
 
 	return Entity(entityData);
 }
@@ -158,7 +162,11 @@ void EntitiesCollection::RefreshChildrenActivation(EntityData& entityData)
 
 void EntitiesCollection::OnEntityDataDestroy(const EntityId entityId)
 {
-	std::cout << "Entity " << entityId << " has been destroyed!" << std::endl;
+	// Invoke global callback
+	if (nullptr != m_manager.m_globalEntityDestroyCallback)
+	{
+		std::invoke(m_manager.m_globalEntityDestroyCallback, entityId);
+	}
 
 	// Find entity data location
 	auto it = m_entityIdsMap.find(entityId);
@@ -304,8 +312,6 @@ EntityData* EntitiesCollection::AllocateEntityData()
 		auto entityCreationResult = m_entitiesData.CreateItem();
 		entityCreationResult.second->storageLocation = static_cast<EntityHandleIndex>(entityCreationResult.first);
 
-		std::cout << "Entity data allocated at [" << entityCreationResult.first << "]" << std::endl;
-
 		return entityCreationResult.second;
 	}
 	else
@@ -315,8 +321,6 @@ EntityData* EntitiesCollection::AllocateEntityData()
 
 		EntityData* data = m_entitiesData[location];
 		data->storageLocation = location;
-
-		std::cout << "Entity data allocated at [" << location << "]" << std::endl;
 		
 		return data;
 	}

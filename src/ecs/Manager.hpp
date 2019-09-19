@@ -18,6 +18,7 @@ constexpr std::size_t k_defaultComponentPoolSize = 1024U;
 class Manager
 {
 	using SystemPtr = std::unique_ptr<System>;
+	friend class EntitiesCollection;
 
 public:
 	ECS_API Manager();
@@ -138,6 +139,9 @@ public:
 	ECS_API const std::string& GetComponentNameByTypeId(const ComponentTypeId typeId) const;
 	ECS_API const std::string& GetComponentNameByTypeId(const std::type_index& typeIndex) const;
 
+	void ECS_API SetEntityCreateCallback(EntityCreateCallback callback);
+	void ECS_API SetEntityDestroyCallback(EntityDestroyCallback callback);
+
 private:
 	/**
 	* @brief Registers system inside internal systems collection
@@ -182,6 +186,9 @@ private:
 	std::vector<System*> m_removedSystems; // Removed systems, that have not been destroyed and removed yet
 	
 	EntitiesCollection m_entitiesCollection; // Class, that manages entities and their functionality
+
+	EntityCreateCallback m_globalEntityCreateCallback = nullptr;
+	EntityDestroyCallback m_globalEntityDestroyCallback = nullptr;
 
 	bool m_systemPrioritiesChanged = true; // Flag, indicating that systems need to be sorted prior next update
 	bool m_isUpdatingSystems = false; // Flag, indicating that manager is currently updating exisiting systems
