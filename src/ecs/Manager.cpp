@@ -356,9 +356,14 @@ void Manager::NotifySystemPriorityChanged()
 	m_systemPrioritiesChanged = true;
 }
 
-void Manager::RegisterEntityDestroyDelegate(EntityDestroyDelegateType delegate)
+void Manager::SetEntityCreateCallback(EntityCreateCallback callback)
 {
-	m_entityDestroyDelegate = delegate;
+	m_globalEntityCreateCallback = callback;
+}
+
+void Manager::SetEntityDestroyCallback(EntityDestroyCallback callback)
+{
+	m_globalEntityDestroyCallback = callback;
 }
 
 } // namespace ecs

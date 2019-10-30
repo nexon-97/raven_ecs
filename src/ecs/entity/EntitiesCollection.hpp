@@ -13,6 +13,9 @@ namespace ecs
 
 class Manager;
 
+typedef void(*EntityCreateCallback)(EntityId);
+typedef void(*EntityDestroyCallback)(EntityId);
+
 class EntitiesCollection
 {
 	friend struct Entity;

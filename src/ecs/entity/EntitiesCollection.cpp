@@ -57,6 +57,12 @@ Entity EntitiesCollection::CreateEntity()
 	// Add entity to ids map
 	m_entityIdsMap.emplace(entityData->id, entityData->storageLocation);
 
+	// Invoke global callback
+	if (nullptr != m_manager.m_globalEntityCreateCallback)
+	{
+		std::invoke(m_manager.m_globalEntityCreateCallback, entityData->id);
+	}
+
 	return Entity(entityData);
 }
 
@@ -156,6 +162,12 @@ void EntitiesCollection::RefreshChildrenActivation(EntityData& entityData)
 
 void EntitiesCollection::OnEntityDataDestroy(const EntityId entityId)
 {
+	// Invoke global callback
+	if (nullptr != m_manager.m_globalEntityDestroyCallback)
+	{
+		std::invoke(m_manager.m_globalEntityDestroyCallback, entityId);
+	}
+
 	// Find entity data location
 	auto it = m_entityIdsMap.find(entityId);
 	assert(it != m_entityIdsMap.end());
@@ -184,12 +196,6 @@ void EntitiesCollection::OnEntityDataDestroy(const EntityId entityId)
 
 	// Remove from entity id -> storage location mapping
 	m_entityIdsMap.erase(it);
-
-	// Invoke global entity destroy delegate
-	if (nullptr != m_manager.m_entityDestroyDelegate)
-	{
-		std::invoke(*m_manager.m_entityDestroyDelegate, entityId);
-	}
 }
 
 EntityComponentMapEntry& EntitiesCollection::CreateComponentMappingEntry(EntityData& entityData)

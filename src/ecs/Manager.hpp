@@ -15,11 +15,10 @@ namespace ecs
 
 constexpr std::size_t k_defaultComponentPoolSize = 1024U;
 
-typedef void(*EntityDestroyDelegateType)(EntityId);
-
 class Manager
 {
 	using SystemPtr = std::unique_ptr<System>;
+	friend class EntitiesCollection;
 
 public:
 	ECS_API Manager();
@@ -141,7 +140,8 @@ public:
 	ECS_API const std::string& GetComponentNameByTypeId(const ComponentTypeId typeId) const;
 	ECS_API const std::string& GetComponentNameByTypeId(const std::type_index& typeIndex) const;
 
-	void ECS_API RegisterEntityDestroyDelegate(EntityDestroyDelegateType delegate);
+	void ECS_API SetEntityCreateCallback(EntityCreateCallback callback);
+	void ECS_API SetEntityDestroyCallback(EntityDestroyCallback callback);
 
 private:
 	/**
@@ -172,8 +172,6 @@ private:
 	void ECS_API RegisterComponentTypeInternal(const std::string& name, const std::type_index& typeIndex, std::unique_ptr<IComponentCollection>&& collection);
 
 private:
-	friend class EntitiesCollection;
-
 	std::vector<std::unique_ptr<IComponentCollection>> m_componentStorages;
 	std::vector<std::type_index> m_componentTypeIndexes;
 	std::unordered_map<std::string, ComponentTypeId> m_componentNameToIdMapping;
@@ -190,7 +188,8 @@ private:
 	
 	EntitiesCollection m_entitiesCollection; // Class, that manages entities and their functionality
 
-	EntityDestroyDelegateType m_entityDestroyDelegate = nullptr;
+	EntityCreateCallback m_globalEntityCreateCallback = nullptr;
+	EntityDestroyCallback m_globalEntityDestroyCallback = nullptr;
 
 	bool m_systemPrioritiesChanged = true; // Flag, indicating that systems need to be sorted prior next update
 	bool m_isUpdatingSystems = false; // Flag, indicating that manager is currently updating exisiting systems
