@@ -34,6 +34,21 @@ bool ComponentHandle::IsValid() const
 	return (m_typeId != ComponentHandleInternal::GetInvalidTypeId());
 }
 
+bool ComponentHandle::IsActive() const
+{
+	if (!IsValid())
+		return false;
+	
+	if (!gManager->IsComponentEnabled(*this))
+		return false;
+
+	// Check entity activation
+	EntityId entityId = gManager->GetComponentEntityId(*this);
+	Entity entity = gManager->GetEntitiesCollection().GetEntityById(entityId);
+
+	return (entity.IsValid() && entity.IsEnabled());
+}
+
 ComponentTypeId ComponentHandle::GetTypeId() const
 {
 	return m_typeId;

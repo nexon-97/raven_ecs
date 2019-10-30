@@ -294,6 +294,12 @@ void Manager::SetComponentEnabled(const ComponentHandle& handle, const bool enab
 	collection->SetItemEnabled(handle.GetOffset(), enabled);
 }
 
+bool Manager::IsComponentEnabled(const ComponentHandle& handle) const
+{
+	auto collection = GetCollection(handle.GetTypeId());
+	return collection->IsItemEnabled(handle.GetOffset());
+}
+
 void Manager::RefreshComponentActivation(const ComponentHandle& handle, const bool ownerEnabled, const bool ownerActivated)
 {
 	auto collection = GetCollection(handle.GetTypeId());
@@ -348,6 +354,11 @@ void Manager::MoveComponentData(const ComponentHandle& handle, void* dataPtr)
 void Manager::NotifySystemPriorityChanged()
 {
 	m_systemPrioritiesChanged = true;
+}
+
+void Manager::RegisterEntityDestroyDelegate(EntityDestroyDelegateType delegate)
+{
+	m_entityDestroyDelegate = delegate;
 }
 
 } // namespace ecs

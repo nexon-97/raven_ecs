@@ -40,6 +40,9 @@ public:
 	HandleIndex ECS_API GetOffset() const;
 	EntityId ECS_API GetEntityId() const;
 
+	/* Indicates if the component is activated and attached to activated entity */
+	bool ECS_API IsActive() const;
+
 	template <typename T>
 	bool IsOfType() const
 	{

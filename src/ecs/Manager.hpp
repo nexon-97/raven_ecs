@@ -15,6 +15,8 @@ namespace ecs
 
 constexpr std::size_t k_defaultComponentPoolSize = 1024U;
 
+typedef void(*EntityDestroyDelegateType)(EntityId);
+
 class Manager
 {
 	using SystemPtr = std::unique_ptr<System>;
@@ -131,12 +133,15 @@ public:
 	std::type_index ECS_API GetComponentTypeIndexByTypeId(const ComponentTypeId typeId) const;
 
 	void ECS_API SetComponentEnabled(const ComponentHandle& handle, const bool enabled);
+	bool ECS_API IsComponentEnabled(const ComponentHandle& handle) const;
 	void ECS_API RefreshComponentActivation(const ComponentHandle& handle, const bool ownerEnabled, const bool ownerActivated);
 
 	ComponentHandle ECS_API CloneComponent(const ComponentHandle& handle);
 
 	ECS_API const std::string& GetComponentNameByTypeId(const ComponentTypeId typeId) const;
 	ECS_API const std::string& GetComponentNameByTypeId(const std::type_index& typeIndex) const;
+
+	void ECS_API RegisterEntityDestroyDelegate(EntityDestroyDelegateType delegate);
 
 private:
 	/**
@@ -167,6 +172,8 @@ private:
 	void ECS_API RegisterComponentTypeInternal(const std::string& name, const std::type_index& typeIndex, std::unique_ptr<IComponentCollection>&& collection);
 
 private:
+	friend class EntitiesCollection;
+
 	std::vector<std::unique_ptr<IComponentCollection>> m_componentStorages;
 	std::vector<std::type_index> m_componentTypeIndexes;
 	std::unordered_map<std::string, ComponentTypeId> m_componentNameToIdMapping;
@@ -182,6 +189,8 @@ private:
 	std::vector<System*> m_removedSystems; // Removed systems, that have not been destroyed and removed yet
 	
 	EntitiesCollection m_entitiesCollection; // Class, that manages entities and their functionality
+
+	EntityDestroyDelegateType m_entityDestroyDelegate = nullptr;
 
 	bool m_systemPrioritiesChanged = true; // Flag, indicating that systems need to be sorted prior next update
 	bool m_isUpdatingSystems = false; // Flag, indicating that manager is currently updating exisiting systems

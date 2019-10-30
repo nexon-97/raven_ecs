@@ -37,7 +37,6 @@ public:
 
 private:
 	using EntitiesStorageType = detail::MemoryPool<EntityData>;
-	ECS_API EntitiesStorageType& GetEntitiesData();
 
 	void RefreshActivation(EntityData& entityData, bool forceActivate = false);
 	void RefreshComponentsActivation(EntityData& entityData);
