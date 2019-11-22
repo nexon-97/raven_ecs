@@ -104,6 +104,12 @@ void Entity::AddComponent(const ComponentHandle& handle)
 	s_ecsManager->SetComponentEntityId(handle, m_data->id);
 
 	s_ecsManager->RefreshComponentActivation(handle, m_data->isEnabled, m_data->isActivated);
+
+	// Invoke global callback
+	if (nullptr != s_ecsManager->m_globalEntityComponentAddedCallback)
+	{
+		std::invoke(s_ecsManager->m_globalEntityComponentAddedCallback, *this, handle);
+	}
 }
 
 void Entity::RemoveComponent(const ComponentHandle& handle)
@@ -118,6 +124,12 @@ void Entity::RemoveComponent(const ComponentHandle& handle)
 		s_ecsManager->SetComponentEntityId(handle, Entity::GetInvalidId());
 
 		m_data->componentsMask.reset(componentType);
+
+		// Invoke global callback
+		if (nullptr != s_ecsManager->m_globalEntityComponentRemovedCallback)
+		{
+			std::invoke(s_ecsManager->m_globalEntityComponentRemovedCallback, *this, handle);
+		}
 	}
 }
 
@@ -234,6 +246,12 @@ void Entity::AddChild(Entity& child)
 	m_data->children.push_back(child);
 
 	entitiesCollection.RefreshActivation(*childData);
+
+	// Invoke global callback
+	if (nullptr != s_ecsManager->m_globalEntityChildAddedCallback)
+	{
+		std::invoke(s_ecsManager->m_globalEntityChildAddedCallback, *this, child.GetId());
+	}
 }
 
 void Entity::RemoveChild(Entity& child)
@@ -247,6 +265,12 @@ void Entity::RemoveChild(Entity& child)
 
 		auto& entitiesCollection = s_ecsManager->GetEntitiesCollection();
 		entitiesCollection.RefreshActivation(*childData);
+
+		// Invoke global callback
+		if (nullptr != s_ecsManager->m_globalEntityChildRemovedCallback)
+		{
+			std::invoke(s_ecsManager->m_globalEntityChildRemovedCallback, *this, child.GetId());
+		}
 	}
 }
 
@@ -265,6 +289,12 @@ void Entity::ClearChildren()
 		entitiesCollection.RefreshActivation(*childData);
 
 		it = m_data->children.erase(it);
+
+		// Invoke global callback
+		if (nullptr != s_ecsManager->m_globalEntityChildRemovedCallback)
+		{
+			std::invoke(s_ecsManager->m_globalEntityChildRemovedCallback, *this, child.GetId());
+		}
 	}
 }
 

@@ -366,4 +366,24 @@ void Manager::SetEntityDestroyCallback(EntityDestroyCallback callback)
 	m_globalEntityDestroyCallback = callback;
 }
 
+void Manager::SetEntityComponentAddedCallback(EntityComponentAddedCallback callback)
+{
+	m_globalEntityComponentAddedCallback = callback;
+}
+
+void Manager::SetEntityComponentRemovedCallback(EntityComponentRemovedCallback callback)
+{
+	m_globalEntityComponentRemovedCallback = callback;
+}
+
+void Manager::SetEntityChildAddedCallback(EntityChildAddedCallback callback)
+{
+	m_globalEntityChildAddedCallback = callback;
+}
+
+void Manager::SetEntityChildRemovedCallback(EntityChildRemovedCallback callback)
+{
+	m_globalEntityChildRemovedCallback = callback;
+}
+
 } // namespace ecs

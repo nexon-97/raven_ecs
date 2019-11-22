@@ -63,3 +63,26 @@ protected:
 };
 
 } // namespace ecs
+
+namespace std
+{
+
+template <>
+struct hash<ecs::ComponentHandle>
+{
+	void hash_combine(size_t &seed, size_t hash) const
+	{
+		hash += 0x9e3779b9 + (seed << 6) + (seed >> 2);
+		seed ^= hash;
+	}
+
+	std::size_t operator()(const ecs::ComponentHandle& handle) const
+	{
+		size_t combined = hash<ecs::ComponentTypeId>()(handle.GetTypeId());
+		hash_combine(combined, hash<uint16_t>()(handle.GetOffset()));
+
+		return combined;
+	}
+};
+
+}

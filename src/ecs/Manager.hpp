@@ -19,6 +19,7 @@ class Manager
 {
 	using SystemPtr = std::unique_ptr<System>;
 	friend class EntitiesCollection;
+	friend struct Entity;
 
 public:
 	ECS_API Manager();
@@ -143,6 +144,11 @@ public:
 	void ECS_API SetEntityCreateCallback(EntityCreateCallback callback);
 	void ECS_API SetEntityDestroyCallback(EntityDestroyCallback callback);
 
+	void ECS_API SetEntityComponentAddedCallback(EntityComponentAddedCallback callback);
+	void ECS_API SetEntityComponentRemovedCallback(EntityComponentRemovedCallback callback);
+	void ECS_API SetEntityChildAddedCallback(EntityChildAddedCallback callback);
+	void ECS_API SetEntityChildRemovedCallback(EntityChildRemovedCallback callback);
+
 private:
 	/**
 	* @brief Registers system inside internal systems collection
@@ -190,6 +196,11 @@ private:
 
 	EntityCreateCallback m_globalEntityCreateCallback = nullptr;
 	EntityDestroyCallback m_globalEntityDestroyCallback = nullptr;
+
+	EntityComponentAddedCallback m_globalEntityComponentAddedCallback = nullptr;
+	EntityComponentRemovedCallback m_globalEntityComponentRemovedCallback = nullptr;
+	EntityChildAddedCallback m_globalEntityChildAddedCallback = nullptr;
+	EntityChildRemovedCallback m_globalEntityChildRemovedCallback = nullptr;
 
 	bool m_systemPrioritiesChanged = true; // Flag, indicating that systems need to be sorted prior next update
 	bool m_isUpdatingSystems = false; // Flag, indicating that manager is currently updating exisiting systems

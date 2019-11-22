@@ -10,6 +10,11 @@ struct EntityData;
 class EntitiesCollection;
 class Manager;
 
+typedef void(*EntityComponentAddedCallback)(Entity&, const ComponentHandle&);
+typedef void(*EntityComponentRemovedCallback)(Entity&, const ComponentHandle&);
+typedef void(*EntityChildAddedCallback)(Entity&, EntityId);
+typedef void(*EntityChildRemovedCallback)(Entity&, EntityId);
+
 /*
 * @brief Entity is a wrapper around entity data, that gives the interface for manipuling the data using ecs infrastructure.
 * Entity is a kind of reference couting wrapper, each entity adds to the alive references count.
