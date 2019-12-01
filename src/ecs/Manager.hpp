@@ -204,6 +204,7 @@ private:
 
 	bool m_systemPrioritiesChanged = true; // Flag, indicating that systems need to be sorted prior next update
 	bool m_isUpdatingSystems = false; // Flag, indicating that manager is currently updating exisiting systems
+	bool m_isBeingDestroyed = false;
 };
 
 } // namespace ecs

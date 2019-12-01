@@ -96,6 +96,8 @@ void Manager::Init()
 
 void Manager::Destroy()
 {
+	m_isBeingDestroyed = true;
+
 	// Destroy systems
 	for (ecs::System* system : m_orderedSystems)
 	{
@@ -119,6 +121,12 @@ void Manager::Destroy()
 	m_componentTypeIndexes.clear();
 	m_componentNameToIdMapping.clear();
 	m_typeIndexToComponentTypeIdMapping.clear();
+
+	m_isBeingDestroyed = false;
+
+	ComponentHandle::SetManagerInstance(nullptr);
+	Entity::SetManagerInstance(nullptr);
+	detail::ComponentCollectionManagerConnection::SetManagerInstance(nullptr);
 }
 
 void Manager::AddSystemToOrderedSystemsList(System* system)

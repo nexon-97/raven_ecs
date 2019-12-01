@@ -344,7 +344,7 @@ void Entity::RemoveRef()
 	{
 		--m_data->refCount;
 
-		if (m_data->refCount == 0U)
+		if (m_data->refCount == 0U && nullptr != s_ecsManager)
 		{
 			s_ecsManager->GetEntitiesCollection().OnEntityDataDestroy(m_data->id);
 		}

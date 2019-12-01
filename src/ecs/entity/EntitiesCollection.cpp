@@ -190,12 +190,15 @@ void EntitiesCollection::OnEntityDataDestroy(const EntityId entityId)
 		*m_entityComponentsMapping[it.offset] = EntityComponentMapEntry();
 	}
 
-	// Replace the entity data with newly created one
-	m_storageHoles.push_back(location);
-	*entityData = EntityData();
-
 	// Remove from entity id -> storage location mapping
 	m_entityIdsMap.erase(it);
+
+	// Replace the entity data with newly created one
+	if (!m_manager.m_isBeingDestroyed)
+	{
+		m_storageHoles.push_back(location);
+		*entityData = EntityData();
+	}
 }
 
 EntityComponentMapEntry& EntitiesCollection::CreateComponentMappingEntry(EntityData& entityData)
