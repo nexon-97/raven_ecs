@@ -19,6 +19,24 @@ ComponentCollectionManagerConnection::EntityActivationData ComponentCollectionMa
 	return EntityActivationData(entity.IsEnabled(), entitiesCollection.IsEntityActivated(entity));
 }
 
+void ComponentCollectionManagerConnection::InvokeComponentActivationEvent(const ComponentHandle& handle, bool activated)
+{
+	if (activated)
+	{
+		if (nullptr != gManager->m_globalComponentActivatedCallback)
+		{
+			std::invoke(gManager->m_globalComponentActivatedCallback, handle);
+		}
+	}
+	else
+	{
+		if (nullptr != gManager->m_globalComponentDeactivatedCallback)
+		{
+			std::invoke(gManager->m_globalComponentDeactivatedCallback, handle);
+		}
+	}
+}
+
 void ComponentCollectionManagerConnection::SetManagerInstance(ecs::Manager* manager)
 {
 	gManager = manager;
