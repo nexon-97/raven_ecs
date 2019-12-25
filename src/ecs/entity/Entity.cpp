@@ -2,6 +2,8 @@
 #include "ecs/entity/EntitiesCollection.hpp"
 #include "ecs/Manager.hpp"
 
+#include <functional>
+
 namespace
 {
 ecs::Manager* s_ecsManager = nullptr;
@@ -364,6 +366,11 @@ void Entity::SetManagerInstance(Manager* manager)
 Manager* Entity::GetManagerInstance()
 {
 	return s_ecsManager;
+}
+
+ComponentTypeId Entity::GetComponentTypeIdByIndex(const std::type_index& index) const
+{
+	return s_ecsManager->GetComponentTypeIdByIndex(index);
 }
 
 } // namespace ecs

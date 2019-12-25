@@ -2,6 +2,7 @@
 #include "IComponentCollection.hpp"
 #include "ComponentHandle.hpp"
 #include "ecs/storage/MemoryPool.hpp"
+#include "ecs/entity/Entity.hpp"
 
 #include <set>
 #include <cassert>

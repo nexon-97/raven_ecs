@@ -1,4 +1,3 @@
-#pragma once
 #include "ecs/entity/EntityComponentsCollection.hpp"
 #include "ecs/entity/Entity.hpp"
 

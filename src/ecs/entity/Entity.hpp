@@ -62,14 +62,14 @@ struct Entity
 	template <typename ComponentType>
 	bool HasComponent() const
 	{
-		ComponentTypeId componentTypeId = GetManagerInstance()->GetComponentTypeIdByIndex(typeid(ComponentType));
+		ComponentTypeId componentTypeId = GetComponentTypeIdByIndex(typeid(ComponentType));
 		return HasComponent(componentTypeId);
 	}
 
 	template <typename ComponentType>
 	ComponentType* GetComponent() const
 	{
-		ComponentTypeId componentTypeId = GetManagerInstance()->GetComponentTypeIdByIndex(typeid(ComponentType));
+		ComponentTypeId componentTypeId = GetComponentTypeIdByIndex(typeid(ComponentType));
 		ComponentHandle handle = GetComponentHandle(componentTypeId);
 		if (handle.IsValid())
 		{
@@ -84,7 +84,7 @@ struct Entity
 	template <typename ComponentType>
 	ComponentHandle GetComponentHandle() const
 	{
-		ComponentTypeId componentTypeId = GetManagerInstance()->GetComponentTypeIdByIndex(typeid(ComponentType));
+		ComponentTypeId componentTypeId = GetComponentTypeIdByIndex(typeid(ComponentType));
 		return GetComponentHandle(componentTypeId);
 	}
 
@@ -103,6 +103,7 @@ struct Entity
 
 private:
 	ECS_API void* DoGetComponentPtr(const ComponentHandle handle) const;
+	ComponentTypeId ECS_API GetComponentTypeIdByIndex(const std::type_index& index) const;
 
 	// Must be constructed only by EntitiesCollection class
 	friend class EntitiesCollection;

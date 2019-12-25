@@ -1,6 +1,8 @@
 #include "ecs/entity/EntitiesCollection.hpp"
 #include "ecs/Manager.hpp"
 
+#include <functional>
+
 namespace
 {
 const uint16_t k_invalidOrderInParent = uint16_t(-1);

@@ -2,6 +2,7 @@ project "ecs"
 	kind "SharedLib"	
 	language "C++"
 	location (_ACTION)
+	cppdialect "C++17"
 
 	files { "../**.cpp", "../**.hpp" }
 	includedirs
@@ -16,6 +17,7 @@ project "ecs"
 	end
 	
 	defines { "ECS_EXPORTS" }
+	pic "On"
 
 	configuration "Debug"
 		defines { "DEBUG" }
