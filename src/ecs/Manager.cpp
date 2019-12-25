@@ -394,4 +394,24 @@ void Manager::SetEntityChildRemovedCallback(EntityChildRemovedCallback callback)
 	m_globalEntityChildRemovedCallback = callback;
 }
 
+void Manager::SetEntityActivatedCallback(EntityActivatedCallback callback)
+{
+	m_globalEntityActivatedCallback = callback;
+}
+
+void Manager::SetEntityDeactivatedCallback(EntityDeactivatedCallback callback)
+{
+	m_globalEntityDeactivatedCallback = callback;
+}
+
+void Manager::SetComponentActivatedCallback(ComponentActivatedCallback callback)
+{
+	m_globalComponentActivatedCallback = callback;
+}
+
+void Manager::SetComponentDeactivatedCallback(ComponentDeactivatedCallback callback)
+{
+	m_globalComponentDeactivatedCallback = callback;
+}
+
 } // namespace ecs

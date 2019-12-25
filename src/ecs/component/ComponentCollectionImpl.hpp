@@ -33,6 +33,7 @@ public:
 	};
 
 	EntityActivationData ECS_API GetEntityActivationData(const EntityId id) const;
+	void ECS_API InvokeComponentActivationEvent(const ComponentHandle& handle, bool activated);
 	static void ECS_API SetManagerInstance(ecs::Manager* manager);
 };
 
@@ -249,6 +250,9 @@ public:
 		if (shouldBeActivated != componentData.isActivated)
 		{
 			componentData.isActivated = shouldBeActivated;
+
+			ComponentHandle tempHandle(m_typeId, m_handleIndexes[index]);
+			m_managerConnection.InvokeComponentActivationEvent(tempHandle, componentData.isActivated);
 			
 			if (shouldBeActivated)
 			{

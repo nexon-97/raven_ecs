@@ -141,6 +141,22 @@ void EntitiesCollection::RefreshActivation(EntityData& entityData, bool forceAct
 
 		RefreshComponentsActivation(entityData);
 		RefreshChildrenActivation(entityData);
+
+		Entity activatedEntity(&entityData);
+		if (entityData.isActivated)
+		{
+			if (nullptr != m_manager.m_globalEntityActivatedCallback)
+			{
+				std::invoke(m_manager.m_globalEntityActivatedCallback, activatedEntity);
+			}
+		}
+		else
+		{
+			if (nullptr != m_manager.m_globalEntityDeactivatedCallback)
+			{
+				std::invoke(m_manager.m_globalEntityDeactivatedCallback, activatedEntity);
+			}
+		}
 	}
 }
 
