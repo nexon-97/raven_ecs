@@ -2,6 +2,11 @@
 #include "ecs/component/ComponentCollectionImpl.hpp"
 #include <algorithm>
 
+namespace
+{
+ecs::Manager* ManagerInstance = nullptr;
+}
+
 namespace ecs
 {
 
@@ -412,6 +417,26 @@ void Manager::SetComponentActivatedCallback(ComponentActivatedCallback callback)
 void Manager::SetComponentDeactivatedCallback(ComponentDeactivatedCallback callback)
 {
 	m_globalComponentDeactivatedCallback = callback;
+}
+
+Manager* Manager::Get()
+{
+	return ManagerInstance;
+}
+
+void Manager::InitECSManager()
+{
+	ManagerInstance = new Manager();
+}
+
+void Manager::ShutdownECSManager()
+{
+	if (nullptr != ManagerInstance)
+	{
+		ManagerInstance->Destroy();
+		delete ManagerInstance;
+		ManagerInstance = nullptr;
+	}
 }
 
 } // namespace ecs

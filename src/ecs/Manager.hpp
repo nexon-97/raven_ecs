@@ -155,6 +155,10 @@ public:
 	void ECS_API SetComponentActivatedCallback(ComponentActivatedCallback callback);
 	void ECS_API SetComponentDeactivatedCallback(ComponentDeactivatedCallback callback);
 
+	static ECS_API Manager* Get();
+	static void ECS_API InitECSManager();
+	static void ECS_API ShutdownECSManager();
+
 private:
 	/**
 	* @brief Registers system inside internal systems collection
