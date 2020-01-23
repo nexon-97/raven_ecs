@@ -155,6 +155,20 @@ public:
 	void ECS_API SetComponentActivatedCallback(ComponentActivatedCallback callback);
 	void ECS_API SetComponentDeactivatedCallback(ComponentDeactivatedCallback callback);
 
+	void ECS_API ReleaseComponentV2(uint32_t componentType, uint32_t index);
+
+	template <typename ComponentType>
+	ComponentType* GetComponentV2(uint32_t componentType, uint32_t index)
+	{
+		auto collection = GetCollection(componentType);
+		if (nullptr != collection)
+		{
+			return static_cast<ComponentType*>(collection->Get(index));
+		}
+
+		return nullptr;
+	}
+
 	static ECS_API Manager* Get();
 	static void ECS_API InitECSManager();
 	static void ECS_API ShutdownECSManager();
