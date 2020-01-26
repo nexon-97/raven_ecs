@@ -1,5 +1,4 @@
 #pragma once
-#include "ecs/ECSApiDef.hpp"
 #include "ecs/entity/EntityData.hpp"
 #include "ecs/entity/EntityComponentsCollection.hpp"
 

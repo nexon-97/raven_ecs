@@ -1,5 +1,4 @@
 #pragma once
-#include "ECSApiDef.hpp"
 
 namespace ecs
 {

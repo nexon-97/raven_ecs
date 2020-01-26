@@ -1,5 +1,4 @@
 #pragma once
-#include "ecs/ECSApiDef.hpp"
 #include "ecs/TypeAliases.hpp"
 #include <cstdint>
 #include <typeindex>

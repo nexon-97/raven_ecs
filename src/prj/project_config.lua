@@ -16,17 +16,17 @@ project "ecs"
 		configureWindowsSDK()
 	end
 	
-	defines { "ECS_EXPORTS" }
+	generateProjectAPIDefExport('ecs')
 	pic "On"
+	targetname "ecs"
 
 	configuration "Debug"
-		defines { "DEBUG" }
-		symbols "on"
-		optimize "Off"
-		targetname "ecs_d"
+		targetsuffix "_d"
 		objdir(_ACTION.."/obj/Debug")
+		
+	configuration "Development"
+		targetsuffix "_dev"
+		objdir(_ACTION.."/obj/Development")
 
 	configuration "Release"
-		optimize "Full"
-		targetname "ecs"
 		objdir(_ACTION.."/obj/Release")
