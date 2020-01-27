@@ -3,7 +3,7 @@
 #include <iterator>
 #include <list>
 #include <vector>
-#include <unordered_set>
+#include <set>
 
 namespace ecs
 {
@@ -13,13 +13,138 @@ const std::size_t k_objectPoolRoomSize = 32U;
 template <class T>
 class ObjectPool
 {
-public:
-	using TRoom = std::vector<T>;
-	using StorageType = std::list<TRoom>;
-	using ItemLocation = std::pair<std::size_t, std::size_t>;
+	using PoolType = ObjectPool<T>;
 
 public:
-	ObjectPool() = default;
+	class TRoom
+	{
+		friend class PoolType;
+
+	public:
+		TRoom(int32_t inRoomIndex)
+			: roomIndex(inRoomIndex)
+		{}
+
+		~TRoom()
+		{
+			for (std::size_t i = 0U; i < k_objectPoolRoomSize; ++i)
+			{
+				if (filledPositions.test(i))
+				{
+					items[i].~T();
+				}
+			}
+
+			filledPositions.reset();
+		}
+
+		template <typename ...Args>
+		std::size_t Emplace(Args&&... args)
+		{
+			std::size_t insertPos = _GetEmptyPosition(0U);
+			assert(insertPos < k_objectPoolRoomSize);
+
+			items[insertPos] = T(std::forward<Args>(args...));
+			filledPositions.set(insertPos);
+			++size;
+
+			return insertPos;
+		}
+
+		std::size_t Push(const T& object)
+		{
+			std::size_t insertPos = _GetEmptyPosition(0U);
+			assert(insertPos < k_objectPoolRoomSize);
+
+			items[insertPos] = T(object);
+			filledPositions.set(insertPos);
+			++size;
+
+			return insertPos;
+		}
+
+		std::size_t Push(T&& object)
+		{
+			std::size_t insertPos = _GetEmptyPosition(0U);
+			assert(insertPos < k_objectPoolRoomSize);
+
+			items[insertPos] = T(object);
+			filledPositions.set(std::move(insertPos));
+			++size;
+
+			return insertPos;
+		}
+
+		T& GetMutable(const std::size_t index)
+		{
+			return items[index];
+		}
+
+		const T& GetConst(const std::size_t index) const
+		{
+			return items[index];
+		}
+
+		void Remove(const std::size_t index)
+		{
+			assert(filledPositions.test(index));
+
+			items[index].~T();
+			filledPositions.reset(index);
+			--size;
+		}
+
+		std::size_t _GetEmptyPosition(const std::size_t startPos) const
+		{
+			for (std::size_t i = startPos; i < k_objectPoolRoomSize; ++i)
+			{
+				if (!filledPositions.test(i))
+					return i;
+			}
+
+			return k_objectPoolRoomSize;
+		}
+
+		std::size_t _GetFilledPosition(const std::size_t startPos) const
+		{
+			for (std::size_t i = startPos; i < k_objectPoolRoomSize; ++i)
+			{
+				if (filledPositions.test(i))
+					return i;
+			}
+
+			return k_objectPoolRoomSize;
+		}
+
+	private:
+		T items[k_objectPoolRoomSize];
+		std::bitset<k_objectPoolRoomSize> filledPositions;
+		int32_t roomIndex;
+		int8_t size = 0;
+
+		// [TODO] add cache of first and last free items cache for performance
+	};
+
+	using StorageType = std::list<TRoom>;
+	using StorageTypeIterator = typename std::list<TRoom>::iterator;
+	using ItemLocation = std::pair<std::size_t, std::size_t>;
+
+	struct InsertResult
+	{
+		T& ref;
+		std::size_t index;
+
+		InsertResult(T& inRef, const std::size_t inIndex)
+			: ref(inRef)
+			, index(inIndex)
+		{}
+	};
+
+public:
+	ObjectPool()
+		: m_firstIndex(GetInvalidPoolId())
+	{}
+
 	~ObjectPool() = default;
 
 	ObjectPool(ObjectPool&& other)
@@ -77,7 +202,7 @@ public:
 		ItemLocation itemLocation = SplitIndexIntoRoomLocation(index);
 
 		auto roomIt = m_poolIteratorById[itemLocation.first];
-		roomIt->erase(roomIt->begin() + itemLocation.second);
+		roomIt->Remove(itemLocation.second);
 
 		OnItemRemoved(roomIt);
 	}
@@ -89,30 +214,96 @@ public:
 		m_availableRooms.clear();
 	}
 
-	void Push(const T& object)
+	InsertResult Push(const T& object)
 	{
-		StorageType::iterator roomIt = GetRoomForInsertion();
-		roomIt->push_back(object);
+		StorageTypeIterator roomIt = GetRoomForInsertion();
+		std::size_t roomDataIndex = roomIt->Push(object);
 		OnItemInserted(roomIt);
+
+		return GenInsertResult(roomIt, roomDataIndex);
 	}
 
-	void Push(T&& object)
+	InsertResult Push(T&& object)
 	{
-		StorageType::iterator roomIt = GetRoomForInsertion();
-		roomIt->push_back(std::move(object));
+		StorageTypeIterator roomIt = GetRoomForInsertion();
+		std::size_t roomDataIndex = roomIt->Push(std::move(object));
 		OnItemInserted(roomIt);
+
+		return GenInsertResult(roomIt, roomDataIndex);
 	}
 
 	template <typename ...Args>
-	void Emplace(Args&&... args)
+	InsertResult Emplace(Args&&... args)
 	{
-		StorageType::iterator roomIt = GetRoomForInsertion();
-		roomIt->emplace_back(std::forward(...args));
+		StorageTypeIterator roomIt = GetRoomForInsertion();
+		std::size_t roomDataIndex = roomIt->Emplace(std::forward<Args>(args)...);
 		OnItemInserted(roomIt);
+
+		return GenInsertResult(roomIt, roomDataIndex);
 	}
 	
+public:
+	struct iterator
+	{
+		using iterator_category = std::forward_iterator_tag;
+		using value_type = T;
+		using pointer = T*;
+		using reference = T&;
+
+		iterator(PoolType* collection, std::size_t index)
+			: collection(collection)
+			, index(index)
+		{}
+
+		reference operator*()
+		{
+			return collection->At(index);
+		}
+
+		pointer operator->()
+		{
+			return &**this;
+		}
+
+		iterator& operator++()
+		{
+			index = collection->GetNextObjectIndex(index + 1U);
+			return *this;
+		}
+
+		iterator operator++(int)
+		{
+			const auto temp(*this); ++*this; return temp;
+		}
+
+		bool operator==(const iterator& other) const
+		{
+			return collection == other.collection && index == other.index;
+		}
+
+		bool operator!=(const iterator& other) const
+		{
+			return !(*this == other);
+		}
+
+		PoolType* collection;
+		std::size_t index;
+	};
+
+	iterator begin()
+	{
+		return iterator(this, m_firstIndex);
+	}
+
+	iterator end()
+	{
+		return iterator(this, GetInvalidPoolId());
+	}
+
 private:
-	StorageType::iterator GetRoomForInsertion()
+	friend struct iterator;
+
+	StorageTypeIterator GetRoomForInsertion()
 	{
 		if (m_availableRooms.empty())
 		{
@@ -124,34 +315,36 @@ private:
 		}
 	}
 
-	StorageType::iterator CreateNewRoom()
+	StorageTypeIterator CreateNewRoom()
 	{
-		StorageType::iterator insertedIt = m_storage.emplace_back();
-		insertedIt->reserve(k_objectPoolRoomSize);
+		int32_t roomId = static_cast<int32_t>(m_storage.size());
+		m_storage.emplace_back(roomId);
+		StorageTypeIterator insertedIt = std::prev(m_storage.end());
 
 		m_poolIteratorById.push_back(insertedIt);
-		m_availableRooms.push_back(insertedIt);
+		m_availableRooms.insert(insertedIt);
 
 		return insertedIt;
 	}
 
-	void OnItemInserted(StorageType::iterator roomIt)
+	void OnItemInserted(StorageTypeIterator roomIt)
 	{
 		auto it = m_availableRooms.find(roomIt);
 		assert(it != m_availableRooms.end());
+
 		if (it != m_availableRooms.end())
 		{
-			if (it->size() >= k_objectPoolRoomSize)
+			if (roomIt->size >= k_objectPoolRoomSize)
 			{
 				m_availableRooms.erase(it);
 			}
 		}
 	}
 
-	void OnItemRemoved(StorageType::iterator roomIt)
+	void OnItemRemoved(StorageTypeIterator roomIt)
 	{
 		// Room became not full, so add it to available rooms
-		m_availableRooms.try_insert(roomIt);
+		m_availableRooms.insert(roomIt);
 	}
 
 	void FillPoolIteratorsInitial()
@@ -177,19 +370,45 @@ private:
 	const T& GetItemAtLocation(const ItemLocation& location) const
 	{
 		auto roomIt = m_poolIteratorById[location.first];
-		return (*roomIt)[location.second];
+		return roomIt->GetConst(location.second);
 	}
 
 	T& GetItemAtLocation(const ItemLocation& location)
 	{
 		auto roomIt = m_poolIteratorById[location.first];
-		return (*roomIt)[location.second];
+		return roomIt->GetMutable(location.second);
+	}
+
+	InsertResult GenInsertResult(StorageTypeIterator roomIt, const std::size_t dataIndex) const
+	{
+		return InsertResult(roomIt->items[dataIndex], roomIt->roomIndex + dataIndex);
+	}
+
+	std::size_t GetNextObjectIndex(const std::size_t index) const
+	{
+		std::size_t startRoomPos = index % k_objectPoolRoomSize;
+		for (std::size_t poolId = index / k_objectPoolRoomSize; poolId < m_poolIteratorById.size(); ++poolId)
+		{
+			std::size_t filledPos = m_poolIteratorById[poolId]->_GetFilledPosition(startRoomPos);
+			if (filledPos != k_objectPoolRoomSize)
+			{
+				return poolId * k_objectPoolRoomSize + filledPos;
+			}
+		}
+
+		return GetInvalidPoolId();
+	}
+
+	const std::size_t GetInvalidPoolId()
+	{
+		return std::numeric_limits<std::size_t>::max();
 	}
 
 private:
 	StorageType m_storage;
-	std::vector<StorageType::iterator> m_poolIteratorById;
-	std::unordered_set<StorageType::iterator> m_availableRooms;
+	std::vector<StorageTypeIterator> m_poolIteratorById;
+	std::set<StorageTypeIterator> m_availableRooms;
+	std::size_t m_firstIndex;
 };
 
 }

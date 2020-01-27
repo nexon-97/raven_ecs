@@ -13,12 +13,7 @@ namespace ecs
 const std::string k_invalidComponentName = "[UNDEFINED]";
 
 Manager::Manager()
-	: m_entitiesCollection(*this)
-{
-	ComponentHandle::SetManagerInstance(this);
-	Entity::SetManagerInstance(this);
-	detail::ComponentCollectionManagerConnection::SetManagerInstance(this);
-}
+{}
 
 System* Manager::GetSystemByTypeIndex(const std::type_index& typeIndex) const
 {
@@ -128,10 +123,6 @@ void Manager::Destroy()
 	m_typeIndexToComponentTypeIdMapping.clear();
 
 	m_isBeingDestroyed = false;
-
-	ComponentHandle::SetManagerInstance(nullptr);
-	Entity::SetManagerInstance(nullptr);
-	detail::ComponentCollectionManagerConnection::SetManagerInstance(nullptr);
 }
 
 void Manager::AddSystemToOrderedSystemsList(System* system)
@@ -209,16 +200,7 @@ void Manager::SortOrderedSystemsList()
 	m_systemPrioritiesChanged = false;
 }
 
-void Manager::DestroyComponent(const ComponentHandle& handle)
-{
-	if (handle.IsValid())
-	{
-		auto collection = GetCollection(handle.GetTypeId());
-		collection->Destroy(handle.GetOffset());
-	}
-}
-
-ComponentHandle Manager::CreateComponentByName(const std::string& name)
+ComponentPtr Manager::CreateComponentByName(const std::string& name)
 {
 	auto typeIdIt = m_componentNameToIdMapping.find(name);
 	if (typeIdIt != m_componentNameToIdMapping.end())
@@ -226,18 +208,22 @@ ComponentHandle Manager::CreateComponentByName(const std::string& name)
 		return CreateComponentInternal(typeIdIt->second);
 	}
 
-	return ComponentHandle(ComponentHandleInternal::GetInvalidTypeId(), nullptr);
+	return ComponentPtr();
 }
 
-ComponentHandle Manager::CreateComponentByTypeId(const ComponentTypeId typeId)
+ComponentPtr Manager::CreateComponentByTypeId(const ComponentTypeId typeId)
 {
 	return CreateComponentInternal(typeId);
 }
 
-ComponentHandle Manager::CreateComponentInternal(const ComponentTypeId typeId)
+ComponentPtr Manager::CreateComponentInternal(const ComponentTypeId typeId)
 {
-	ComponentHandle::HandleIndex* handleIndex = GetCollection(typeId)->Create();
-	return ComponentHandle(typeId, handleIndex);
+	return GetCollection(typeId)->Create();
+}
+
+void Manager::ReleaseComponent(ComponentTypeId componentType, int32_t index)
+{
+	GetCollection(componentType)->Destroy(index);
 }
 
 ComponentTypeId Manager::GetComponentTypeIdByIndex(const std::type_index& typeIndex) const
@@ -248,7 +234,7 @@ ComponentTypeId Manager::GetComponentTypeIdByIndex(const std::type_index& typeIn
 		return it->second;
 	}
 
-	return ComponentHandleInternal::GetInvalidTypeId();
+	return GetInvalidComponentTypeId();
 }
 
 ComponentTypeId Manager::GetComponentTypeIdByName(const std::string& name) const
@@ -259,7 +245,7 @@ ComponentTypeId Manager::GetComponentTypeIdByName(const std::string& name) const
 		return it->second;
 	}
 
-	return ComponentHandleInternal::GetInvalidTypeId();
+	return GetInvalidComponentTypeId();
 }
 
 std::type_index Manager::GetComponentTypeIndexByTypeId(const ComponentTypeId typeId) const
@@ -273,50 +259,18 @@ IComponentCollection* Manager::GetCollection(const ComponentTypeId typeId) const
 	return m_componentStorages[typeId].get();
 }
 
-void Manager::SetComponentEntityId(const ComponentHandle& handle, const EntityId id)
-{
-	auto collection = GetCollection(handle.GetTypeId());
-	collection->SetItemEntityId(handle.GetOffset(), id);
-}
-
-EntityId Manager::GetComponentEntityId(const ComponentHandle& handle) const
-{
-	auto collection = GetCollection(handle.GetTypeId());
-	return collection->GetItemEntityId(handle.GetOffset());
-}
-
 EntitiesCollection& Manager::GetEntitiesCollection()
 {
 	return m_entitiesCollection;
 }
 
-void Manager::RegisterComponentTypeInternal(const std::string& name, const std::type_index& typeIndex, std::unique_ptr<IComponentCollection>&& collection)
+void Manager::RegisterComponentTypeInternal(const std::string& name, const std::type_index& typeIndex, const ComponentTypeId typeId, std::unique_ptr<IComponentCollection>&& collection)
 {
 	// Register type storage
-	ComponentTypeId typeId = static_cast<ComponentTypeId>(m_componentStorages.size());
-	collection->SetTypeId(typeId);
 	m_componentStorages.emplace_back(std::move(collection));
 	m_componentNameToIdMapping.emplace(name, typeId);
 	m_componentTypeIndexes.push_back(typeIndex);
 	m_typeIndexToComponentTypeIdMapping.emplace(typeIndex, typeId);
-}
-
-void Manager::SetComponentEnabled(const ComponentHandle& handle, const bool enabled)
-{
-	auto collection = GetCollection(handle.GetTypeId());
-	collection->SetItemEnabled(handle.GetOffset(), enabled);
-}
-
-bool Manager::IsComponentEnabled(const ComponentHandle& handle) const
-{
-	auto collection = GetCollection(handle.GetTypeId());
-	return collection->IsItemEnabled(handle.GetOffset());
-}
-
-void Manager::RefreshComponentActivation(const ComponentHandle& handle, const bool ownerEnabled, const bool ownerActivated)
-{
-	auto collection = GetCollection(handle.GetTypeId());
-	collection->RefreshComponentActivation(handle.GetOffset(), ownerEnabled, ownerActivated);
 }
 
 const std::string& Manager::GetComponentNameByTypeId(const ComponentTypeId typeId) const
@@ -346,22 +300,16 @@ const std::string& Manager::GetComponentNameByTypeId(const std::type_index& type
 	return k_invalidComponentName;
 }
 
-ComponentHandle Manager::CloneComponent(const ComponentHandle& handle)
+ComponentPtr Manager::CloneComponent(const ComponentPtr& handle)
 {
 	auto collection = GetCollection(handle.GetTypeId());
-	auto handleIndex = collection->CloneComponent(handle.GetOffset());
-	return ComponentHandle(handle.GetTypeId(), handleIndex);
+	return collection->CloneComponent(handle.m_block->dataIndex);
 }
 
-void* Manager::GetComponent(const ComponentHandle& handle) const
-{
-	return m_componentStorages[handle.GetTypeId()]->Get(handle.GetOffset());
-}
-
-void Manager::MoveComponentData(const ComponentHandle& handle, void* dataPtr)
+void Manager::MoveComponentData(const ComponentPtr& handle, void* dataPtr)
 {
 	IComponentCollection* collection = GetCollection(handle.GetTypeId());
-	collection->MoveData(handle.GetOffset(), dataPtr);
+	//collection->MoveData(handle->m_block->dataIndex, dataPtr);
 }
 
 void Manager::NotifySystemPriorityChanged()
@@ -399,24 +347,25 @@ void Manager::SetEntityChildRemovedCallback(EntityChildRemovedCallback callback)
 	m_globalEntityChildRemovedCallback = callback;
 }
 
-void Manager::SetEntityActivatedCallback(EntityActivatedCallback callback)
+Entity Manager::GetEntityById(const EntityId id)
 {
-	m_globalEntityActivatedCallback = callback;
+	return m_entitiesCollection.GetEntityById(id);
 }
 
-void Manager::SetEntityDeactivatedCallback(EntityDeactivatedCallback callback)
+Entity Manager::CreateEntity()
 {
-	m_globalEntityDeactivatedCallback = callback;
+	return m_entitiesCollection.CreateEntity();
 }
 
-void Manager::SetComponentActivatedCallback(ComponentActivatedCallback callback)
+void* Manager::GetComponentRaw(ComponentTypeId componentType, int32_t index)
 {
-	m_globalComponentActivatedCallback = callback;
-}
+	auto collection = GetCollection(componentType);
+	if (nullptr != collection)
+	{
+		return collection->GetData(index);
+	}
 
-void Manager::SetComponentDeactivatedCallback(ComponentDeactivatedCallback callback)
-{
-	m_globalComponentDeactivatedCallback = callback;
+	return nullptr;
 }
 
 Manager* Manager::Get()
@@ -437,6 +386,11 @@ void Manager::ShutdownECSManager()
 		delete ManagerInstance;
 		ManagerInstance = nullptr;
 	}
+}
+
+ComponentTypeId Manager::GetInvalidComponentTypeId()
+{
+	return std::numeric_limits<ComponentTypeId>::max();
 }
 
 } // namespace ecs

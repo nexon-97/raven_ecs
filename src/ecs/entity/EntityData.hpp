@@ -23,8 +23,6 @@ struct EntityData
 	uint16_t refCount;
 	EntityHandleIndex storageLocation;
 	EntityChildrenContainer children;
-	bool isEnabled : 1;		// Indicates if the entity is enabled (though can be not registered in world)
-	bool isActivated : 1;	// Indicates if the entity is currently activated (is actually registered in world)
 	bool isIteratingComponents : 1; // Indicates if the user is currently iterating components of an entity
 
 	EntityData(const EntityData&) = delete;

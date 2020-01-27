@@ -6,7 +6,6 @@
 
 namespace
 {
-ecs::Manager* s_ecsManager = nullptr;
 const uint32_t k_invalidStorageLocation = uint32_t(-1);
 const uint16_t k_invalidOrderInParent = uint16_t(-1);
 }
@@ -94,27 +93,25 @@ Entity::operator bool() const
 	return IsValid();
 }
 
-void Entity::AddComponent(const ComponentHandle& handle)
+void Entity::AddComponent(const ComponentPtr& handle)
 {
 	if (!handle.IsValid())
 		return;
 
-	auto& mappingEntry = s_ecsManager->GetEntitiesCollection().CreateComponentMappingEntry(*m_data);
+	auto& mappingEntry = Manager::Get()->GetEntitiesCollection().CreateComponentMappingEntry(*m_data);
 
-	mappingEntry.handle = handle;
+	mappingEntry.componentPtr = handle;
 	m_data->componentsMask.set(handle.GetTypeId());
-	s_ecsManager->SetComponentEntityId(handle, m_data->id);
-
-	s_ecsManager->RefreshComponentActivation(handle, m_data->isEnabled, m_data->isActivated);
+	mappingEntry.componentPtr.m_block->entityId = m_data->id;
 
 	// Invoke global callback
-	if (nullptr != s_ecsManager->m_globalEntityComponentAddedCallback)
+	if (nullptr != Manager::Get()->m_globalEntityComponentAddedCallback)
 	{
-		std::invoke(s_ecsManager->m_globalEntityComponentAddedCallback, *this, handle);
+		std::invoke(Manager::Get()->m_globalEntityComponentAddedCallback, *this, handle);
 	}
 }
 
-void Entity::RemoveComponent(const ComponentHandle& handle)
+void Entity::RemoveComponent(const ComponentPtr& handle)
 {
 	if (!handle.IsValid())
 		return;
@@ -122,15 +119,15 @@ void Entity::RemoveComponent(const ComponentHandle& handle)
 	ComponentTypeId componentType = handle.GetTypeId();
 	if (HasComponent(componentType))
 	{
-		s_ecsManager->GetEntitiesCollection().RemoveComponentMappingEntry(*m_data, handle.GetTypeId());
-		s_ecsManager->SetComponentEntityId(handle, Entity::GetInvalidId());
+		Manager::Get()->GetEntitiesCollection().RemoveComponentMappingEntry(*m_data, handle.GetTypeId());
+		handle.m_block->entityId = Entity::GetInvalidId();
 
 		m_data->componentsMask.reset(componentType);
 
 		// Invoke global callback
-		if (nullptr != s_ecsManager->m_globalEntityComponentRemovedCallback)
+		if (nullptr != Manager::Get()->m_globalEntityComponentRemovedCallback)
 		{
-			std::invoke(s_ecsManager->m_globalEntityComponentRemovedCallback, *this, handle);
+			std::invoke(Manager::Get()->m_globalEntityComponentRemovedCallback, *this, handle);
 		}
 	}
 }
@@ -140,23 +137,18 @@ bool Entity::HasComponent(const ComponentTypeId componentType) const
 	return m_data->componentsMask.test(componentType);
 }
 
-ComponentHandle Entity::GetComponentHandle(const ComponentTypeId componentType) const
+ComponentPtr Entity::GetComponent(const ComponentTypeId componentType) const
 {
 	if (HasComponent(componentType))
 	{
-		auto mappingEntry = s_ecsManager->GetEntitiesCollection().FindComponentMappingEntry(*m_data, componentType);
+		auto mappingEntry = Manager::Get()->GetEntitiesCollection().FindComponentMappingEntry(*m_data, componentType);
 		if (nullptr != mappingEntry)
 		{
-			return mappingEntry->handle;
+			return mappingEntry->componentPtr;
 		}
 	}
 
-	return ComponentHandle();
-}
-
-void* Entity::DoGetComponentPtr(const ComponentHandle handle) const
-{
-	return s_ecsManager->GetComponent(handle);
+	return ComponentPtr();
 }
 
 EntityId Entity::GetId() const
@@ -178,7 +170,7 @@ Entity Entity::GetParent() const
 {
 	if (Entity::GetInvalidId() != m_data->parentId)
 	{
-		return GetManagerInstance()->GetEntitiesCollection().GetEntityById(m_data->parentId);
+		return Manager::Get()->GetEntitiesCollection().GetEntityById(m_data->parentId);
 	}
 
 	return Entity();
@@ -189,33 +181,17 @@ uint16_t Entity::GetOrderInParent() const
 	return m_data->orderInParent;
 }
 
-bool Entity::IsEnabled() const
-{
-	return m_data->isEnabled;
-}
-
-void Entity::SetEnabled(const bool enable)
-{
-	if (enable != m_data->isEnabled)
-	{
-		m_data->isEnabled = enable;
-
-		// Notify entity enable state changed
-		s_ecsManager->GetEntitiesCollection().OnEntityEnabled(m_data->id, m_data->isEnabled);
-	}
-}
-
 Entity Entity::Clone()
 {
 	if (IsValid())
 	{
-		Entity clone = s_ecsManager->GetEntitiesCollection().CreateEntity();
+		Entity clone = Manager::Get()->GetEntitiesCollection().CreateEntity();
 
 		// Clone components
-		for (const ecs::ComponentHandle& componentHandle : GetComponents())
+		for (const ComponentPtr& componentPtr : GetComponents())
 		{
-			ecs::ComponentHandle componentCloneHandle = s_ecsManager->CloneComponent(componentHandle);
-			clone.AddComponent(componentCloneHandle);
+			ComponentPtr componentClone = Manager::Get()->CloneComponent(componentPtr);
+			clone.AddComponent(componentClone);
 		}
 
 		// Clone children
@@ -233,26 +209,22 @@ Entity Entity::Clone()
 
 EntityComponentsCollection Entity::GetComponents() const
 {
-	auto& storage = s_ecsManager->GetEntitiesCollection().GetComponentsMapStorage();
+	auto& storage = Manager::Get()->GetEntitiesCollection().GetComponentsMapStorage();
 	return EntityComponentsCollection(storage, m_data->componentsDataOffset);
 }
 
 void Entity::AddChild(Entity& child)
 {
-	auto& entitiesCollection = s_ecsManager->GetEntitiesCollection();
-
 	EntityData* childData = child.GetData();
 	childData->parentId = m_data->id;
 	childData->orderInParent = static_cast<uint16_t>(m_data->children.size());
 
 	m_data->children.push_back(child);
 
-	entitiesCollection.RefreshActivation(*childData);
-
 	// Invoke global callback
-	if (nullptr != s_ecsManager->m_globalEntityChildAddedCallback)
+	if (nullptr != Manager::Get()->m_globalEntityChildAddedCallback)
 	{
-		std::invoke(s_ecsManager->m_globalEntityChildAddedCallback, *this, child.GetId());
+		std::invoke(Manager::Get()->m_globalEntityChildAddedCallback, *this, child.GetId());
 	}
 }
 
@@ -265,21 +237,16 @@ void Entity::RemoveChild(Entity& child)
 		childData->parentId = Entity::GetInvalidId();
 		childData->orderInParent = k_invalidOrderInParent;
 
-		auto& entitiesCollection = s_ecsManager->GetEntitiesCollection();
-		entitiesCollection.RefreshActivation(*childData);
-
 		// Invoke global callback
-		if (nullptr != s_ecsManager->m_globalEntityChildRemovedCallback)
+		if (nullptr != Manager::Get()->m_globalEntityChildRemovedCallback)
 		{
-			std::invoke(s_ecsManager->m_globalEntityChildRemovedCallback, *this, child.GetId());
+			std::invoke(Manager::Get()->m_globalEntityChildRemovedCallback, *this, child.GetId());
 		}
 	}
 }
 
 void Entity::ClearChildren()
 {
-	auto& entitiesCollection = s_ecsManager->GetEntitiesCollection();
-
 	for (auto it = m_data->children.begin(); it != m_data->children.end();)
 	{
 		ecs::Entity child = *it;
@@ -288,14 +255,12 @@ void Entity::ClearChildren()
 		childData->parentId = Entity::GetInvalidId();
 		childData->orderInParent = k_invalidOrderInParent;
 
-		entitiesCollection.RefreshActivation(*childData);
-
 		it = m_data->children.erase(it);
 
 		// Invoke global callback
-		if (nullptr != s_ecsManager->m_globalEntityChildRemovedCallback)
+		if (nullptr != Manager::Get()->m_globalEntityChildRemovedCallback)
 		{
-			std::invoke(s_ecsManager->m_globalEntityChildRemovedCallback, *this, child.GetId());
+			std::invoke(Manager::Get()->m_globalEntityChildRemovedCallback, *this, child.GetId());
 		}
 	}
 }
@@ -346,9 +311,9 @@ void Entity::RemoveRef()
 	{
 		--m_data->refCount;
 
-		if (m_data->refCount == 0U && nullptr != s_ecsManager)
+		if (m_data->refCount == 0U && nullptr != Manager::Get())
 		{
-			s_ecsManager->GetEntitiesCollection().OnEntityDataDestroy(m_data->id);
+			Manager::Get()->GetEntitiesCollection().OnEntityDataDestroy(m_data->id);
 		}
 	}
 }
@@ -358,19 +323,9 @@ EntityData* Entity::GetData() const
 	return m_data;
 }
 
-void Entity::SetManagerInstance(Manager* manager)
-{
-	s_ecsManager = manager;
-}
-
-Manager* Entity::GetManagerInstance()
-{
-	return s_ecsManager;
-}
-
 ComponentTypeId Entity::GetComponentTypeIdByIndex(const std::type_index& index) const
 {
-	return s_ecsManager->GetComponentTypeIdByIndex(index);
+	return Manager::Get()->GetComponentTypeIdByIndex(index);
 }
 
 } // namespace ecs

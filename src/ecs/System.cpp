@@ -4,9 +4,8 @@
 namespace ecs
 {
 
-System::System(Manager& manager, const int priority)
-	: m_ecsManager(manager)
-	, m_priority(priority)
+System::System(const int priority)
+	: m_priority(priority)
 {}
 
 void System::Init()
@@ -21,7 +20,7 @@ void System::SetPriority(const int priority)
 	{
 		m_priority = priority;
 
-		m_ecsManager.NotifySystemPriorityChanged();
+		Manager::Get()->NotifySystemPriorityChanged();
 	}
 }
 

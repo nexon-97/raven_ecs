@@ -16,8 +16,6 @@ EntityData::EntityData()
 	, componentsDataOffset(0U)
 	, orderInParent(std::numeric_limits<uint16_t>::max())
 	, refCount(0U)
-	, isEnabled(true)
-	, isActivated(false)
 	, storageLocation(k_invalidStorageLocation)
 {}
 
@@ -27,8 +25,6 @@ EntityData::EntityData(EntityData&& other) noexcept
 	, componentsDataOffset(other.componentsDataOffset)
 	, orderInParent(other.orderInParent)
 	, refCount(other.refCount)
-	, isEnabled(other.isEnabled)
-	, isActivated(other.isActivated)
 	, storageLocation(other.storageLocation)
 	, children(std::move(other.children))
 	, componentsMask(other.componentsMask)
@@ -38,8 +34,6 @@ EntityData::EntityData(EntityData&& other) noexcept
 	other.refCount = 0U;
 	other.componentsDataOffset = 0U;
 	other.orderInParent = std::numeric_limits<uint16_t>::max();
-	other.isEnabled = true;
-	other.isActivated = false;
 	other.storageLocation = k_invalidStorageLocation;
 	other.componentsMask.reset();
 }
@@ -51,8 +45,6 @@ EntityData& EntityData::operator=(EntityData&& other) noexcept
 	refCount = other.refCount;
 	componentsDataOffset = other.componentsDataOffset;
 	orderInParent = other.orderInParent;
-	isEnabled = other.isEnabled;
-	isActivated = other.isActivated;
 	storageLocation = other.storageLocation;
 	children = std::move(other.children);
 	componentsMask = other.componentsMask;
@@ -63,8 +55,6 @@ EntityData& EntityData::operator=(EntityData&& other) noexcept
 	other.componentsDataOffset = 0U;
 	other.componentsMask.reset();
 	other.orderInParent = std::numeric_limits<uint16_t>::max();
-	other.isEnabled = true;
-	other.isActivated = false;
 	other.storageLocation = k_invalidStorageLocation;
 
 	return *this;

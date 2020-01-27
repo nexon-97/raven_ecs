@@ -1,65 +1,33 @@
 #pragma once
-#include "ecs/Manager.hpp"
+#include "ecs/detail/Types.hpp"
 #include <cstdint>
 
 namespace ecs
 {
 
-struct ComponentPtrBlock
+class ECS_API ComponentPtr
 {
-	int32_t typeId = 0;
-	int32_t dataIndex = 0;
-	int32_t refCount = 0;
-};
+	friend class Manager;
+	friend struct Entity;
 
-class ComponentPtr
-{
 public:
 	ComponentPtr() = default;
-	ComponentPtr(ComponentPtrBlock* cblock)
-		: m_block(cblock)
-	{}
+	ComponentPtr(ComponentPtrBlock* cblock);
+	~ComponentPtr();
 
-	ComponentPtr(const ComponentPtr& other)
-		: m_block(other.m_block)
-	{
-		++m_block->refCount;
-	}
+	ComponentPtr(const ComponentPtr& other);
+	ComponentPtr& operator=(const ComponentPtr& other);
+	ComponentPtr(ComponentPtr&& other);
+	ComponentPtr& operator=(ComponentPtr&& other);
 
-	ComponentPtr& operator=(const ComponentPtr& other)
-	{
-		m_block = other.m_block;
-		++m_block->refCount;
+	ComponentTypeId GetTypeId() const;
+	Entity GetEntity() const;
+	bool IsValid() const;
 
-		return *this;
-	}
+	std::size_t GetHash() const;
 
-	ComponentPtr(ComponentPtr&& other)
-		: m_block(other.m_block)
-	{
-		other.m_block = nullptr;
-	}
-
-	ComponentPtr& operator=(ComponentPtr&& other)
-	{
-		m_block = other.m_block;
-		other.m_block = nullptr;
-
-		return *this;
-	}
-
-	~ComponentPtr()
-	{
-		if (nullptr != m_block && m_block->refCount == 1U)
-		{
-			Manager::Get()->ReleaseComponentV2(m_block->typeId, m_block->dataIndex);
-		}
-	}
-
-	bool IsValid() const
-	{
-		return nullptr != m_block && m_block->refCount > 0;
-	}
+protected:
+	void* GetRawData() const;
 
 private:
 	ComponentPtrBlock* m_block = nullptr;
@@ -71,18 +39,33 @@ class TComponentPtr
 {
 public:
 	TComponentPtr() = default;
-	TComponentPtr(ComponentPtrBlock* cblock)
-		: ComponentPtr(cblock)
+
+	TComponentPtr(const ComponentPtr& ptr)
+		: ComponentPtr(ptr)
 	{}
 
 	T* Get() const
 	{
 		if (IsValid())
 		{
-			return Manager::Get()->GetComponentV2<T>(m_block->typeId, m_block->dataIndex);
+			return static_cast<T*>(GetRawData());
 		}
 
 		return nullptr;
+	}
+};
+
+}
+
+namespace std
+{
+
+template <>
+struct hash<ecs::ComponentPtr>
+{
+	std::size_t operator()(const ecs::ComponentPtr& ptr) const
+	{
+		return ptr.GetHash();
 	}
 };
 

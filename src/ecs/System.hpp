@@ -3,29 +3,24 @@
 namespace ecs
 {
 
-class Manager;
-
 // System is a class, that has lifecycle callbacks Init, Destroy and Update,
 // and has integer priority, which is used to determine system's order inside systems collection
-class System
+class ECS_API System
 {
 public:
-	System() = delete;
-	explicit ECS_API System(Manager& manager, const int priority = 100);
+	System() = default;
+	explicit System(const int priority);
 	virtual ~System() = default;
 
-	void ECS_API SetPriority(const int priority);
-	int ECS_API GetPriority() const;
+	void SetPriority(const int priority);
+	int GetPriority() const;
 
-	virtual void ECS_API Init();
-	virtual void ECS_API Destroy();
+	virtual void Init();
+	virtual void Destroy();
 
 	virtual void Update() = 0;
 
-	bool ECS_API operator<(const System&) const;
-
-protected:
-	Manager& m_ecsManager;
+	bool operator<(const System&) const;
 
 private:
 	int m_priority = 100;

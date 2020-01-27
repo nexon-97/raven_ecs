@@ -15,7 +15,7 @@ EntityComponentsCollection::EntityComponentsCollection(ComponentsMapStorageType&
 
 EntityComponentsCollection::iterator EntityComponentsCollection::begin()
 {
-	if (m_storageRef[m_mappingStartOffset]->handle.IsValid())
+	if (m_storageRef[m_mappingStartOffset]->componentPtr.IsValid())
 	{
 		return iterator(m_storageRef, m_mappingStartOffset);
 	}
@@ -35,7 +35,7 @@ EntityComponentsCollection::iterator::iterator(ComponentsMapStorageType& dataRef
 
 EntityComponentsCollection::iterator::reference EntityComponentsCollection::iterator::operator*()
 {
-	return dataRef[offset]->handle;
+	return dataRef[offset]->componentPtr;
 }
 
 EntityComponentsCollection::iterator::pointer EntityComponentsCollection::iterator::operator->()

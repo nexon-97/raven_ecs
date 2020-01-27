@@ -19,8 +19,8 @@ class Manager
 {
 	using SystemPtr = std::unique_ptr<System>;
 	friend class EntitiesCollection;
+	friend class ComponentPtr;
 	friend struct Entity;
-	friend class detail::ComponentCollectionManagerConnection;
 
 public:
 	ECS_API Manager();
@@ -36,15 +36,17 @@ public:
 	* @brief Creates system of SystemType, and stores it inside manager. Then, safely adds the system to the systems list.
 	* Type must be a derivative of ecs::System class.
 	*/
-	template <class SystemType>
-	void AddSystem(const int priority = 100)
+	template <class SystemType, typename ...Args>
+	SystemType* AddSystem(Args&&... args)
 	{
 		static_assert(std::is_base_of<System, SystemType>::value, "System type must be derived from ecs::System!");
 
-		auto system = std::make_unique<SystemType>(*this);
-		system->SetPriority(priority);
+		std::unique_ptr<SystemType> system = std::make_unique<SystemType>(std::forward<Args>(args)...);
+		SystemType* systemRawPtr = system.get();
 
 		AddSystemToStorage(std::move(system));
+
+		return systemRawPtr;
 	}
 
 	void ECS_API AddSystem(System* system);
@@ -67,45 +69,30 @@ public:
 	template <typename ComponentType>
 	void RegisterComponentType(const std::string& name)
 	{
-		auto collection = std::make_unique<ComponentCollectionImpl<ComponentType>>();
-		RegisterComponentTypeInternal(name, typeid(ComponentType), std::move(collection));
+		ComponentTypeId typeId = static_cast<ComponentTypeId>(m_componentStorages.size());
+		auto collection = std::make_unique<ComponentCollectionImpl<ComponentType>>(typeId);
+		
+		RegisterComponentTypeInternal(name, typeid(ComponentType), typeId, std::move(collection));
 	}
 
 	template <typename ComponentType>
-	ComponentHandle CreateComponent(ComponentType*& result)
+	TComponentPtr<ComponentType> CreateComponent()
 	{
-		auto typeId = GetComponentTypeIdByIndex(typeid(ComponentType));
-		auto handle = CreateComponentInternal(typeId);
-
-		result = static_cast<ComponentType*>(GetCollection(typeId)->Get(handle.GetOffset()));
-
-		return handle;
+		ComponentTypeId typeId = GetComponentTypeIdByIndex(typeid(ComponentType));
+		return TComponentPtr<ComponentType>(CreateComponentInternal(typeId));
 	}
 
 	template <typename ComponentType>
-	ComponentHandle CreateComponent()
+	ComponentType* GetComponent(ComponentTypeId componentType, int32_t index)
 	{
-		auto typeId = GetComponentTypeIdByIndex(typeid(ComponentType));
-		return CreateComponentInternal(typeId);
+		void* componentRaw = GetComponentRaw(componentType, index);
+		return static_cast<ComponentType*>(componentRaw);
 	}
 
-	ComponentHandle ECS_API CreateComponentByName(const std::string& name);
-	ComponentHandle ECS_API CreateComponentByTypeId(const ComponentTypeId typeId);
-	void ECS_API DestroyComponent(const ComponentHandle& handle);
-	ECS_API void* GetComponent(const ComponentHandle& handle) const;
-	void ECS_API MoveComponentData(const ComponentHandle& handle, void* dataPtr);
-
-	template <typename ComponentType>
-	ComponentType* GetComponent(const ComponentHandle& handle)
-	{
-		auto collection = GetCollection(handle.GetTypeId());
-		if (nullptr != collection)
-		{
-			return static_cast<ComponentType*>(collection->Get(handle.GetOffset()));
-		}
-
-		return nullptr;
-	}
+	ECS_API void* GetComponentRaw(ComponentTypeId componentType, int32_t index);
+	ComponentPtr ECS_API CreateComponentByName(const std::string& name);
+	ComponentPtr ECS_API CreateComponentByTypeId(const ComponentTypeId typeId);
+	void ECS_API MoveComponentData(const ComponentPtr& handle, void* dataPtr);
 
 	template <typename ComponentType>
 	ComponentCollectionImpl<ComponentType>* GetComponentCollection()
@@ -119,11 +106,6 @@ public:
 		return nullptr;
 	}
 
-	void ECS_API SetComponentEntityId(const ComponentHandle& handle, const EntityId id);
-	EntityId ECS_API GetComponentEntityId(const ComponentHandle& handle) const;
-
-	ECS_API EntitiesCollection& GetEntitiesCollection();
-
 	/**
 	* Returns component type id by type index
 	* @param typeIndex - type index of component
@@ -133,11 +115,7 @@ public:
 	ComponentTypeId ECS_API GetComponentTypeIdByName(const std::string& name) const;
 	std::type_index ECS_API GetComponentTypeIndexByTypeId(const ComponentTypeId typeId) const;
 
-	void ECS_API SetComponentEnabled(const ComponentHandle& handle, const bool enabled);
-	bool ECS_API IsComponentEnabled(const ComponentHandle& handle) const;
-	void ECS_API RefreshComponentActivation(const ComponentHandle& handle, const bool ownerEnabled, const bool ownerActivated);
-
-	ComponentHandle ECS_API CloneComponent(const ComponentHandle& handle);
+	ComponentPtr ECS_API CloneComponent(const ComponentPtr& componentPtr);
 
 	ECS_API const std::string& GetComponentNameByTypeId(const ComponentTypeId typeId) const;
 	ECS_API const std::string& GetComponentNameByTypeId(const std::type_index& typeIndex) const;
@@ -150,28 +128,14 @@ public:
 	void ECS_API SetEntityChildAddedCallback(EntityChildAddedCallback callback);
 	void ECS_API SetEntityChildRemovedCallback(EntityChildRemovedCallback callback);
 
-	void ECS_API SetEntityActivatedCallback(EntityActivatedCallback callback);
-	void ECS_API SetEntityDeactivatedCallback(EntityDeactivatedCallback callback);
-	void ECS_API SetComponentActivatedCallback(ComponentActivatedCallback callback);
-	void ECS_API SetComponentDeactivatedCallback(ComponentDeactivatedCallback callback);
-
-	void ECS_API ReleaseComponentV2(uint32_t componentType, uint32_t index);
-
-	template <typename ComponentType>
-	ComponentType* GetComponentV2(uint32_t componentType, uint32_t index)
-	{
-		auto collection = GetCollection(componentType);
-		if (nullptr != collection)
-		{
-			return static_cast<ComponentType*>(collection->Get(index));
-		}
-
-		return nullptr;
-	}
+	Entity ECS_API GetEntityById(const EntityId id);
+	Entity ECS_API CreateEntity();
 
 	static ECS_API Manager* Get();
 	static void ECS_API InitECSManager();
 	static void ECS_API ShutdownECSManager();
+
+	static ComponentTypeId ECS_API GetInvalidComponentTypeId();
 
 private:
 	/**
@@ -192,14 +156,18 @@ private:
 	*/
 	ECS_API IComponentCollection* GetCollection(const ComponentTypeId typeId) const;
 
+	EntitiesCollection& GetEntitiesCollection();
+
 	/**
 	* @brief Requests component instance creation given the type id of requested component
 	* @param typeId - id of requested component type
 	* @return Handle to created component instance
 	*/
-	ComponentHandle ECS_API CreateComponentInternal(const ComponentTypeId typeId);
+	ComponentPtr ECS_API CreateComponentInternal(const ComponentTypeId typeId);
 
-	void ECS_API RegisterComponentTypeInternal(const std::string& name, const std::type_index& typeIndex, std::unique_ptr<IComponentCollection>&& collection);
+	void ReleaseComponent(ComponentTypeId componentType, int32_t index);
+
+	void ECS_API RegisterComponentTypeInternal(const std::string& name, const std::type_index& typeIndex, const ComponentTypeId typeId, std::unique_ptr<IComponentCollection>&& collection);
 
 private:
 	std::vector<std::unique_ptr<IComponentCollection>> m_componentStorages;
@@ -225,11 +193,6 @@ private:
 	EntityComponentRemovedCallback m_globalEntityComponentRemovedCallback = nullptr;
 	EntityChildAddedCallback m_globalEntityChildAddedCallback = nullptr;
 	EntityChildRemovedCallback m_globalEntityChildRemovedCallback = nullptr;
-
-	EntityActivatedCallback m_globalEntityActivatedCallback = nullptr;
-	EntityDeactivatedCallback m_globalEntityDeactivatedCallback = nullptr;
-	ComponentActivatedCallback m_globalComponentActivatedCallback = nullptr;
-	ComponentDeactivatedCallback m_globalComponentDeactivatedCallback = nullptr;
 
 	bool m_systemPrioritiesChanged = true; // Flag, indicating that systems need to be sorted prior next update
 	bool m_isUpdatingSystems = false; // Flag, indicating that manager is currently updating exisiting systems
