@@ -3,7 +3,7 @@
 #include <iterator>
 #include <list>
 #include <vector>
-#include <set>
+#include <unordered_set>
 
 namespace ecs
 {
@@ -44,7 +44,7 @@ public:
 			std::size_t insertPos = _GetEmptyPosition(0U);
 			assert(insertPos < k_objectPoolRoomSize);
 
-			items[insertPos] = T(std::forward<Args>(args...));
+			items[insertPos] = T(std::forward<Args>(args)...);
 			filledPositions.set(insertPos);
 			++size;
 
@@ -405,9 +405,17 @@ private:
 	}
 
 private:
+	struct StorageTypeIteratorHasher
+	{
+		std::size_t operator()(StorageTypeIterator it) const
+		{
+			return std::hash<int>()(it->roomIndex);
+		}
+	};
+
 	StorageType m_storage;
 	std::vector<StorageTypeIterator> m_poolIteratorById;
-	std::set<StorageTypeIterator> m_availableRooms;
+	std::unordered_set<StorageTypeIterator, StorageTypeIteratorHasher> m_availableRooms;
 	std::size_t m_firstIndex;
 };
 

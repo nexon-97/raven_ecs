@@ -140,12 +140,13 @@ public:
 
 	ComponentPtr CloneComponent(const std::size_t index) override
 	{
-		ComponentData& data = m_data.At(index);
+		//ComponentData& data = m_data.At(index);
 
-		ObjectPool<ComponentData>::InsertResult& insertResult = m_data.Emplace(data.component);
-		insertResult.ref.controlBlock = ComponentPtrBlock(m_typeId, insertResult.index, -1, 1);
+		//ObjectPool<ComponentData>::InsertResult& insertResult = m_data.Emplace(data.component);
+		//insertResult.ref.controlBlock = ComponentPtrBlock(m_typeId, insertResult.index, -1, 1);
 
-		return ComponentPtr(&insertResult.ref.controlBlock);
+		//return ComponentPtr(&insertResult.ref.controlBlock);
+		return ComponentPtr();
 	}
 
 	iterator begin()

@@ -11,13 +11,20 @@ ComponentPtr::ComponentPtr(ComponentPtrBlock* cblock)
 ComponentPtr::ComponentPtr(const ComponentPtr& other)
 	: m_block(other.m_block)
 {
-	++m_block->refCount;
+	if (nullptr != m_block)
+	{
+		++m_block->refCount;
+	}
 }
 
 ComponentPtr& ComponentPtr::operator=(const ComponentPtr& other)
 {
 	m_block = other.m_block;
-	++m_block->refCount;
+
+	if (nullptr != m_block)
+	{
+		++m_block->refCount;
+	}
 
 	return *this;
 }
@@ -77,6 +84,16 @@ void* ComponentPtr::GetRawData() const
 std::size_t ComponentPtr::GetHash() const
 {
 	return std::hash<ComponentPtrBlock*>()(m_block);
+}
+
+bool ComponentPtr::operator==(const ComponentPtr& other) const
+{
+	return m_block == other.m_block;
+}
+
+bool ComponentPtr::operator!=(const ComponentPtr& other) const
+{
+	return !(*this == other);
 }
 
 }

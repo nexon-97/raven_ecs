@@ -26,6 +26,9 @@ public:
 
 	std::size_t GetHash() const;
 
+	bool operator==(const ComponentPtr& other) const;
+	bool operator!=(const ComponentPtr& other) const;
+
 protected:
 	void* GetRawData() const;
 
@@ -64,6 +67,15 @@ template <>
 struct hash<ecs::ComponentPtr>
 {
 	std::size_t operator()(const ecs::ComponentPtr& ptr) const
+	{
+		return ptr.GetHash();
+	}
+};
+
+template <class T>
+struct hash<ecs::TComponentPtr<T>>
+{
+	std::size_t operator()(const ecs::TComponentPtr<T>& ptr) const
 	{
 		return ptr.GetHash();
 	}
