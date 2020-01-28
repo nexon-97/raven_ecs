@@ -289,6 +289,26 @@ public:
 		return iterator(this, GetInvalidPoolId());
 	}
 
+	std::size_t GetNextObjectIndex(const std::size_t index) const
+	{
+		std::size_t startRoomPos = index % k_objectPoolRoomSize;
+		for (std::size_t poolId = index / k_objectPoolRoomSize; poolId < m_poolIteratorById.size(); ++poolId)
+		{
+			std::size_t filledPos = m_poolIteratorById[poolId]->_GetFilledPosition(startRoomPos);
+			if (filledPos != k_objectPoolRoomSize)
+			{
+				return poolId * k_objectPoolRoomSize + filledPos;
+			}
+		}
+
+		return GetInvalidPoolId();
+	}
+
+	const std::size_t GetInvalidPoolId() const
+	{
+		return std::numeric_limits<std::size_t>::max();
+	}
+
 private:
 	friend struct iterator;
 
@@ -371,26 +391,6 @@ private:
 	InsertResult GenInsertResult(StorageTypeIterator roomIt, const std::size_t dataIndex) const
 	{
 		return InsertResult(roomIt->items[dataIndex], roomIt->roomIndex + dataIndex);
-	}
-
-	std::size_t GetNextObjectIndex(const std::size_t index) const
-	{
-		std::size_t startRoomPos = index % k_objectPoolRoomSize;
-		for (std::size_t poolId = index / k_objectPoolRoomSize; poolId < m_poolIteratorById.size(); ++poolId)
-		{
-			std::size_t filledPos = m_poolIteratorById[poolId]->_GetFilledPosition(startRoomPos);
-			if (filledPos != k_objectPoolRoomSize)
-			{
-				return poolId * k_objectPoolRoomSize + filledPos;
-			}
-		}
-
-		return GetInvalidPoolId();
-	}
-
-	const std::size_t GetInvalidPoolId()
-	{
-		return std::numeric_limits<std::size_t>::max();
 	}
 
 private:

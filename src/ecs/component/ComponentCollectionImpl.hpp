@@ -47,14 +47,14 @@ public:
 		using reference = TComponentPtr<ComponentType>&;
 
 		iterator() = default;
-		iterator(CollectionType* collection, std::size_t index)
+		iterator(CollectionType* collection, int32_t index)
 			: collection(collection)
 			, index(index)
 		{}
 
 		value_type operator*()
 		{
-			return static_cast<TComponentPtr<ComponentType>>(collection->GetItemPtr(index));
+			return collection->GetTypedItemPtr(index);
 		}
 
 		pointer operator->()
@@ -64,7 +64,7 @@ public:
 
 		iterator& operator++()
 		{
-			++index;
+			index = collection->GetNextIndex(index);
 			return *this;
 		}
 
@@ -84,7 +84,7 @@ public:
 		}
 
 		CollectionType* collection;
-		std::size_t index;
+		int32_t index;
 	};
 
 	ComponentPtr Create() override
@@ -124,6 +124,23 @@ public:
 		return ComponentPtr(controlBlock);
 	}
 
+	TComponentPtr<ComponentType> GetTypedItemPtr(const std::size_t index)
+	{
+		ComponentPtrBlock* controlBlock = GetControlBlock(index);
+		if (nullptr != controlBlock && controlBlock->refCount > 0)
+		{
+			++controlBlock->refCount;
+		}
+
+		return TComponentPtr<ComponentType>(controlBlock);
+	}
+
+	int32_t GetNextIndex(int32_t currentIndex)
+	{
+		std::size_t nextIndex = m_data.GetNextObjectIndex(static_cast<std::size_t>(currentIndex + 1));
+		return (nextIndex == m_data.GetInvalidPoolId()) ? -1 : static_cast<int32_t>(nextIndex);
+	}
+
 	void CopyData(const std::size_t index, const void* dataSource) override
 	{
 		const ComponentType& dataRef = *reinterpret_cast<const ComponentType*>(dataSource);
@@ -151,13 +168,12 @@ public:
 
 	iterator begin()
 	{
-		return iterator(this, 0U);
+		return iterator(this, GetNextIndex(-1));
 	}
 
 	iterator end()
 	{
-		return iterator(this, 0U);
-		//return iterator(this, m_activatedCount);
+		return iterator(this, -1);
 	}
 
 private:

@@ -47,6 +47,10 @@ public:
 		: ComponentPtr(ptr)
 	{}
 
+	TComponentPtr(ComponentPtrBlock* cblock)
+		: ComponentPtr(cblock)
+	{}
+
 	T* Get() const
 	{
 		if (IsValid())
@@ -55,6 +59,11 @@ public:
 		}
 
 		return nullptr;
+	}
+
+	T* operator->() const
+	{
+		return static_cast<T*>(GetRawData());
 	}
 };
 
