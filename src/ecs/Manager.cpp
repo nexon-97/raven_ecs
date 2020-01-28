@@ -309,7 +309,7 @@ ComponentPtr Manager::CloneComponent(const ComponentPtr& handle)
 void Manager::MoveComponentData(const ComponentPtr& handle, void* dataPtr)
 {
 	IComponentCollection* collection = GetCollection(handle.GetTypeId());
-	//collection->MoveData(handle->m_block->dataIndex, dataPtr);
+	collection->MoveData(handle.m_block->dataIndex, dataPtr);
 }
 
 void Manager::NotifySystemPriorityChanged()
