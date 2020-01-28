@@ -52,7 +52,7 @@ public:
 			, index(index)
 		{}
 
-		reference operator*()
+		value_type operator*()
 		{
 			return static_cast<TComponentPtr<ComponentType>>(collection->GetItemPtr(index));
 		}
@@ -91,7 +91,7 @@ public:
 	{
 		// Create data using default constructor
 		ObjectPool<ComponentData>::InsertResult& insertResult = m_data.Emplace();
-		insertResult.ref.controlBlock = ComponentPtrBlock(m_typeId, insertResult.index, -1, 1);
+		insertResult.ref.controlBlock = ComponentPtrBlock(m_typeId, static_cast<int32_t>(insertResult.index), -1, 1);
 
 		return ComponentPtr(&insertResult.ref.controlBlock);
 	}

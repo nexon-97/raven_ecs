@@ -25,18 +25,7 @@ public:
 			: roomIndex(inRoomIndex)
 		{}
 
-		~TRoom()
-		{
-			for (std::size_t i = 0U; i < k_objectPoolRoomSize; ++i)
-			{
-				if (filledPositions.test(i))
-				{
-					items[i].~T();
-				}
-			}
-
-			filledPositions.reset();
-		}
+		~TRoom() = default;
 
 		template <typename ...Args>
 		std::size_t Emplace(Args&&... args)
@@ -89,7 +78,7 @@ public:
 		{
 			assert(filledPositions.test(index));
 
-			items[index].~T();
+			items[index] = T();
 			filledPositions.reset(index);
 			--size;
 		}
