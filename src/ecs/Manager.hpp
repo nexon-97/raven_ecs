@@ -9,6 +9,15 @@
 #include "ecs/component/ComponentCollectionImpl.hpp"
 #include "ecs/System.hpp"
 #include "ecs/entity/EntitiesCollection.hpp"
+#include "ecs/events/DelegateMacro.hpp"
+
+DECLARE_MULTICAST_DELEGATE(EntityCreateDelegate, ecs::Entity);
+DECLARE_MULTICAST_DELEGATE(EntityDestroyDelegate, ecs::EntityId);
+DECLARE_MULTICAST_DELEGATE(ComponentCreateDelegate, ecs::ComponentPtr);
+DECLARE_MULTICAST_DELEGATE(ComponentDestroyDelegate, ecs::ComponentPtr);
+DECLARE_MULTICAST_DELEGATE(ComponentAttachedDelegate, ecs::Entity, ecs::ComponentPtr);
+DECLARE_MULTICAST_DELEGATE(ComponentDetachedDelegate, ecs::Entity, ecs::ComponentPtr);
+DECLARE_MULTICAST_DELEGATE(SystemPriorityChangedDelegate, ecs::System*);
 
 namespace ecs
 {
@@ -120,13 +129,12 @@ public:
 	ECS_API const std::string& GetComponentNameByTypeId(const ComponentTypeId typeId) const;
 	ECS_API const std::string& GetComponentNameByTypeId(const std::type_index& typeIndex) const;
 
-	void ECS_API SetEntityCreateCallback(EntityCreateCallback callback);
-	void ECS_API SetEntityDestroyCallback(EntityDestroyCallback callback);
-
-	void ECS_API SetEntityComponentAddedCallback(EntityComponentAddedCallback callback);
-	void ECS_API SetEntityComponentRemovedCallback(EntityComponentRemovedCallback callback);
-	void ECS_API SetEntityChildAddedCallback(EntityChildAddedCallback callback);
-	void ECS_API SetEntityChildRemovedCallback(EntityChildRemovedCallback callback);
+	ECS_API EntityCreateDelegate& GetEntityCreateDelegate();
+	ECS_API EntityDestroyDelegate& GetEntityDestroyDelegate();
+	ECS_API ComponentCreateDelegate& GetComponentCreateDelegate();
+	ECS_API ComponentDestroyDelegate& GetComponentDestroyDelegate();
+	ECS_API ComponentAttachedDelegate& GetComponentAttachedDelegate();
+	ECS_API ComponentDetachedDelegate& GetComponentDetachedDelegate();
 
 	Entity ECS_API GetEntityById(const EntityId id);
 	Entity ECS_API CreateEntity();
@@ -186,13 +194,14 @@ private:
 	
 	EntitiesCollection m_entitiesCollection; // Class, that manages entities and their functionality
 
-	EntityCreateCallback m_globalEntityCreateCallback = nullptr;
-	EntityDestroyCallback m_globalEntityDestroyCallback = nullptr;
-
-	EntityComponentAddedCallback m_globalEntityComponentAddedCallback = nullptr;
-	EntityComponentRemovedCallback m_globalEntityComponentRemovedCallback = nullptr;
-	EntityChildAddedCallback m_globalEntityChildAddedCallback = nullptr;
-	EntityChildRemovedCallback m_globalEntityChildRemovedCallback = nullptr;
+	// Global ecs state delegates
+	EntityCreateDelegate m_entityCreateDelegate;
+	EntityDestroyDelegate m_entityDestroyDelegate;
+	ComponentCreateDelegate m_componentCreateDelegate;
+	ComponentDestroyDelegate m_componentDestroyDelegate;
+	ComponentAttachedDelegate m_componentAttachedDelegate;
+	ComponentDetachedDelegate m_componentDetachedDelegate;
+	SystemPriorityChangedDelegate m_systemPriorityChangedDelegate;
 
 	bool m_systemPrioritiesChanged = true; // Flag, indicating that systems need to be sorted prior next update
 	bool m_isUpdatingSystems = false; // Flag, indicating that manager is currently updating exisiting systems

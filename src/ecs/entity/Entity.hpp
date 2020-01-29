@@ -11,14 +11,8 @@ namespace ecs
 class EntitiesCollection;
 class Manager;
 
-typedef void(*EntityComponentAddedCallback)(Entity&, const ComponentPtr&);
-typedef void(*EntityComponentRemovedCallback)(Entity&, const ComponentPtr&);
 typedef void(*EntityChildAddedCallback)(Entity&, EntityId);
 typedef void(*EntityChildRemovedCallback)(Entity&, EntityId);
-typedef void(*EntityActivatedCallback)(Entity&);
-typedef void(*EntityDeactivatedCallback)(Entity&);
-typedef void(*ComponentActivatedCallback)(const ComponentPtr&);
-typedef void(*ComponentDeactivatedCallback)(const ComponentPtr&);
 
 /*
 * @brief Entity is a wrapper around entity data, that gives the interface for manipuling the data using ecs infrastructure.

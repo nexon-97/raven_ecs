@@ -317,34 +317,34 @@ void Manager::NotifySystemPriorityChanged()
 	m_systemPrioritiesChanged = true;
 }
 
-void Manager::SetEntityCreateCallback(EntityCreateCallback callback)
+ComponentCreateDelegate& Manager::GetComponentCreateDelegate()
 {
-	m_globalEntityCreateCallback = callback;
+	return m_componentCreateDelegate;
 }
 
-void Manager::SetEntityDestroyCallback(EntityDestroyCallback callback)
+ComponentDestroyDelegate& Manager::GetComponentDestroyDelegate()
 {
-	m_globalEntityDestroyCallback = callback;
+	return m_componentDestroyDelegate;
 }
 
-void Manager::SetEntityComponentAddedCallback(EntityComponentAddedCallback callback)
+ComponentAttachedDelegate& Manager::GetComponentAttachedDelegate()
 {
-	m_globalEntityComponentAddedCallback = callback;
+	return m_componentAttachedDelegate;
 }
 
-void Manager::SetEntityComponentRemovedCallback(EntityComponentRemovedCallback callback)
+ComponentDetachedDelegate& Manager::GetComponentDetachedDelegate()
 {
-	m_globalEntityComponentRemovedCallback = callback;
+	return m_componentDetachedDelegate;
 }
 
-void Manager::SetEntityChildAddedCallback(EntityChildAddedCallback callback)
+EntityCreateDelegate& Manager::GetEntityCreateDelegate()
 {
-	m_globalEntityChildAddedCallback = callback;
+	return m_entityCreateDelegate;
 }
 
-void Manager::SetEntityChildRemovedCallback(EntityChildRemovedCallback callback)
+EntityDestroyDelegate& Manager::GetEntityDestroyDelegate()
 {
-	m_globalEntityChildRemovedCallback = callback;
+	return m_entityDestroyDelegate;
 }
 
 Entity Manager::GetEntityById(const EntityId id)

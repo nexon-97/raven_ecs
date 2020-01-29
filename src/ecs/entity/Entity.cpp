@@ -105,10 +105,10 @@ void Entity::AddComponent(const ComponentPtr& handle)
 	mappingEntry.componentPtr.m_block->entityId = m_data->id;
 
 	// Invoke global callback
-	if (nullptr != Manager::Get()->m_globalEntityComponentAddedCallback)
-	{
-		std::invoke(Manager::Get()->m_globalEntityComponentAddedCallback, *this, handle);
-	}
+	//if (nullptr != Manager::Get()->m_globalEntityComponentAddedCallback)
+	//{
+	//	std::invoke(Manager::Get()->m_globalEntityComponentAddedCallback, *this, handle);
+	//}
 }
 
 void Entity::RemoveComponent(const ComponentPtr& handle)
@@ -125,10 +125,10 @@ void Entity::RemoveComponent(const ComponentPtr& handle)
 		m_data->componentsMask.reset(componentType);
 
 		// Invoke global callback
-		if (nullptr != Manager::Get()->m_globalEntityComponentRemovedCallback)
-		{
-			std::invoke(Manager::Get()->m_globalEntityComponentRemovedCallback, *this, handle);
-		}
+		//if (nullptr != Manager::Get()->m_globalEntityComponentRemovedCallback)
+		//{
+		//	std::invoke(Manager::Get()->m_globalEntityComponentRemovedCallback, *this, handle);
+		//}
 	}
 }
 
@@ -222,10 +222,10 @@ void Entity::AddChild(Entity& child)
 	m_data->children.push_back(child);
 
 	// Invoke global callback
-	if (nullptr != Manager::Get()->m_globalEntityChildAddedCallback)
-	{
-		std::invoke(Manager::Get()->m_globalEntityChildAddedCallback, *this, child.GetId());
-	}
+	//if (nullptr != Manager::Get()->m_globalEntityChildAddedCallback)
+	//{
+	//	std::invoke(Manager::Get()->m_globalEntityChildAddedCallback, *this, child.GetId());
+	//}
 }
 
 void Entity::RemoveChild(Entity& child)
@@ -238,10 +238,10 @@ void Entity::RemoveChild(Entity& child)
 		childData->orderInParent = k_invalidOrderInParent;
 
 		// Invoke global callback
-		if (nullptr != Manager::Get()->m_globalEntityChildRemovedCallback)
-		{
-			std::invoke(Manager::Get()->m_globalEntityChildRemovedCallback, *this, child.GetId());
-		}
+		//if (nullptr != Manager::Get()->m_globalEntityChildRemovedCallback)
+		//{
+		//	std::invoke(Manager::Get()->m_globalEntityChildRemovedCallback, *this, child.GetId());
+		//}
 	}
 }
 
@@ -258,10 +258,10 @@ void Entity::ClearChildren()
 		it = m_data->children.erase(it);
 
 		// Invoke global callback
-		if (nullptr != Manager::Get()->m_globalEntityChildRemovedCallback)
-		{
-			std::invoke(Manager::Get()->m_globalEntityChildRemovedCallback, *this, child.GetId());
-		}
+		//if (nullptr != Manager::Get()->m_globalEntityChildRemovedCallback)
+		//{
+		//	std::invoke(Manager::Get()->m_globalEntityChildRemovedCallback, *this, child.GetId());
+		//}
 	}
 }
 

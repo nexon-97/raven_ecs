@@ -59,12 +59,10 @@ Entity EntitiesCollection::CreateEntity()
 	m_entityIdsMap.emplace(entityData->id, entityData->storageLocation);
 
 	// Invoke global callback
-	if (nullptr != Manager::Get()->m_globalEntityCreateCallback)
-	{
-		std::invoke(Manager::Get()->m_globalEntityCreateCallback, entityData->id);
-	}
+	Entity createdEntity(entityData);
+	Manager::Get()->GetEntityCreateDelegate().Broadcast(createdEntity);
 
-	return Entity(entityData);
+	return createdEntity;
 }
 
 void EntitiesCollection::MoveEntityData(EntityData& entityData, const uint32_t newLocation)
@@ -104,13 +102,10 @@ void EntitiesCollection::MoveEntityData(EntityData& entityData, const uint32_t n
 //	// TODO: Performs logic consistency checks. Entity should be properly logically unloaded before actually destroying it...
 //}
 
-void EntitiesCollection::OnEntityDataDestroy(const EntityId entityId)
+void EntitiesCollection::OnEntityDataDestroy(EntityId entityId)
 {
 	// Invoke global callback
-	if (nullptr != Manager::Get()->m_globalEntityDestroyCallback)
-	{
-		std::invoke(Manager::Get()->m_globalEntityDestroyCallback, entityId);
-	}
+	Manager::Get()->GetEntityDestroyDelegate().Broadcast(entityId);
 
 	// Find entity data location
 	auto it = m_entityIdsMap.find(entityId);

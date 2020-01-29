@@ -34,7 +34,7 @@ private:
 	using EntitiesStorageType = detail::MemoryPool<EntityData>;
 
 	void MoveEntityData(EntityData& entityData, const uint32_t newLocation);
-	void OnEntityDataDestroy(const EntityId entityId);
+	void OnEntityDataDestroy(EntityId entityId);
 
 	EntityComponentMapEntry& CreateComponentMappingEntry(EntityData& entityData);
 	EntityComponentMapEntry* FindComponentMappingEntry(EntityData& entityData, const ComponentTypeId componentType);
