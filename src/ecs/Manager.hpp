@@ -9,6 +9,7 @@
 #include "ecs/component/ComponentCollectionImpl.hpp"
 #include "ecs/System.hpp"
 #include "ecs/entity/EntitiesCollection.hpp"
+#include "ecs/cache/ComponentsTupleCache.hpp"
 #include "ecs/events/DelegateMacro.hpp"
 
 DECLARE_MULTICAST_DELEGATE(EntityCreateDelegate, ecs::Entity);
@@ -139,6 +140,17 @@ public:
 	Entity ECS_API GetEntityById(const EntityId id);
 	Entity ECS_API CreateEntity();
 
+	template <class ...ComponentT>
+	void RegisterComponentsTupleIterator()
+	{
+		std::vector<ComponentTypeId> typeIds;
+		(typeIds.push_back(GetComponentTypeIdByIndex(typeid(ComponentT))), ...);
+
+		RegisterComponentsTupleIterator(typeIds);
+	}
+
+	void ECS_API RegisterComponentsTupleIterator(std::vector<ComponentTypeId>& typeIds);
+
 	static ECS_API Manager* Get();
 	static void ECS_API InitECSManager();
 	static void ECS_API ShutdownECSManager();
@@ -193,6 +205,8 @@ private:
 	std::vector<System*> m_removedSystems; // Removed systems, that have not been destroyed and removed yet
 	
 	EntitiesCollection m_entitiesCollection; // Class, that manages entities and their functionality
+
+	std::unordered_map<uint32_t, ComponentsTupleCache> m_tupleCaches;
 
 	// Global ecs state delegates
 	EntityCreateDelegate m_entityCreateDelegate;

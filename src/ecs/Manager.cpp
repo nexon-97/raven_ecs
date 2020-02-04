@@ -393,4 +393,9 @@ ComponentTypeId Manager::GetInvalidComponentTypeId()
 	return std::numeric_limits<ComponentTypeId>::max();
 }
 
+void Manager::RegisterComponentsTupleIterator(std::vector<ComponentTypeId>& typeIds)
+{
+	m_tupleCaches.emplace(std::piecewise_construct, std::forward_as_tuple(0), std::forward_as_tuple(typeIds.data(), typeIds.size()));
+}
+
 } // namespace ecs
