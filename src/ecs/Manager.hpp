@@ -10,6 +10,8 @@
 #include "ecs/System.hpp"
 #include "ecs/entity/EntitiesCollection.hpp"
 #include "ecs/cache/ComponentsTupleCache.hpp"
+#include "ecs/cache/GenericComponentsCacheView.hpp"
+#include "ecs/cache/TypedComponentsCacheView.hpp"
 #include "ecs/events/DelegateMacro.hpp"
 
 DECLARE_MULTICAST_DELEGATE(EntityCreateDelegate, ecs::Entity);
@@ -143,13 +145,21 @@ public:
 	template <class ...ComponentT>
 	void RegisterComponentsTupleIterator()
 	{
-		std::vector<ComponentTypeId> typeIds;
-		(typeIds.push_back(GetComponentTypeIdByIndex(typeid(ComponentT))), ...);
-
+		std::vector<ComponentTypeId> typeIds = ComposeTypeIdsVector<ComponentT...>();
 		RegisterComponentsTupleIterator(typeIds);
 	}
 
 	void ECS_API RegisterComponentsTupleIterator(std::vector<ComponentTypeId>& typeIds);
+
+	GenericComponentsCacheView ECS_API GetComponentsTuple(const std::vector<ComponentTypeId>& typeIds);
+
+	template <class ...ComponentT>
+	TypedComponentsCacheView<ComponentT...> GetComponentsTuple()
+	{
+		std::vector<ComponentTypeId> typeIds = ComposeTypeIdsVector<ComponentT...>();
+		ComponentsTupleCache* tupleCache = GetComponentsTupleCache(typeIds);
+		return TypedComponentsCacheView<ComponentT...>(tupleCache);
+	}
 
 	static ECS_API Manager* Get();
 	static void ECS_API InitECSManager();
@@ -188,6 +198,16 @@ private:
 	void ReleaseComponent(ComponentTypeId componentType, int32_t index);
 
 	void ECS_API RegisterComponentTypeInternal(const std::string& name, const std::type_index& typeIndex, const ComponentTypeId typeId, std::unique_ptr<IComponentCollection>&& collection);
+	ECS_API ComponentsTupleCache* GetComponentsTupleCache(const std::vector<ComponentTypeId>& typeIds);
+
+	template <class ...ComponentT>
+	std::vector<ComponentTypeId> ComposeTypeIdsVector() const
+	{
+		std::vector<ComponentTypeId> typeIds;
+		(typeIds.push_back(GetComponentTypeIdByIndex(typeid(ComponentT))), ...);
+
+		return typeIds;
+	}
 
 private:
 	std::vector<std::unique_ptr<IComponentCollection>> m_componentStorages;

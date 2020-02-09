@@ -2,6 +2,8 @@
 #include "ecs/detail/Types.hpp"
 #include "ecs/component/ComponentPtr.hpp"
 
+#include <tuple>
+
 namespace ecs
 {
 
@@ -24,6 +26,26 @@ struct ECS_API ComponentsTuple
 
 	ComponentPtr& operator[](const std::size_t index);
 	const ComponentPtr& operator[](const std::size_t index) const;
+
+	// Conversion utils
+	template <typename ...ComponentTypes>
+	std::tuple<TComponentPtr<ComponentTypes>...> GetTyped()
+	{
+		using TupleT = std::tuple<TComponentPtr<ComponentTypes>...>;
+		return PopulateTuple<TupleT>();
+	}
+
+	template <typename Tuple, std::size_t N = std::tuple_size<Tuple>::value, typename Indices = std::make_index_sequence<N>>
+	Tuple PopulateTuple()
+	{
+		return PopulateTupleImpl<Tuple>(Indices{});
+	}
+
+	template <typename Tuple, std::size_t... I>
+	Tuple PopulateTupleImpl(std::index_sequence<I...>)
+	{
+		return Tuple(m_data[I]...);
+	}
 
 private:
 	ComponentPtr* m_data;

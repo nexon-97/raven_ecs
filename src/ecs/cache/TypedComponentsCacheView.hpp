@@ -21,12 +21,12 @@ class TypedComponentsCacheView
 {
 public:
 	TypedComponentsCacheView() = delete;
-	TypedComponentsCacheView(ComponentsTupleCache& inCache)
+	TypedComponentsCacheView(ComponentsTupleCache* inCache)
 		: m_cache(inCache)
 	{}
 
 	using CollectionT = std::unordered_map<EntityId, ComponentsTuple>;
-	using StdComponentsTupleT = std::tuple<TComponentPtr<ComponentTypes>>;
+	using StdComponentsTupleT = std::tuple<TComponentPtr<ComponentTypes>...>;
 
 	// Collection iterator implementation
 	struct iterator
@@ -43,12 +43,8 @@ public:
 
 		value_type operator*()
 		{
-			const ComponentsTuple& cachedTuple = internalIterator->second;
-			ComponentsTupleT outTuple;
-
-			std::size_t i = 0;
-			(outTuple[i++] = ConvertToTypedPtr<ComponentTypes>(i), ...);
-
+			ComponentsTuple& cachedTuple = internalIterator->second;
+			StdComponentsTupleT outTuple = cachedTuple.GetTyped<ComponentTypes...>();
 			return outTuple;
 		}
 
@@ -90,16 +86,30 @@ public:
 
 	iterator begin()
 	{
-		return iterator(m_cache.GetData().begin());
+		if (m_cache)
+		{
+			return iterator(m_cache->GetData().begin());
+		}
+		else
+		{
+			return iterator();
+		}
 	}
 
 	iterator end()
 	{
-		return iterator(m_cache.GetData().end());
+		if (m_cache)
+		{
+			return iterator(m_cache->GetData().end());
+		}
+		else
+		{
+			return iterator();
+		}
 	}
 
 private:
-	ComponentsTupleCache& m_cache;
+	ComponentsTupleCache* m_cache;
 };
 
 }

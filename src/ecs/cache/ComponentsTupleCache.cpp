@@ -9,7 +9,7 @@ ComponentsTupleCache::ComponentsTupleCache(ComponentTypeId* componentTypesList, 
 	if (componentTypesCount > 0)
 	{
 		m_componentTypesList = new ComponentTypeId[componentTypesCount];
-		std::memcpy(m_componentTypesList, componentTypesList, componentTypesCount);
+		std::memcpy(m_componentTypesList, componentTypesList, sizeof(ComponentTypeId) * componentTypesCount);
 	}
 }
 

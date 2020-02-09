@@ -8,7 +8,7 @@ class GenericComponentsCacheView
 {
 public:
 	GenericComponentsCacheView() = delete;
-	GenericComponentsCacheView(ComponentsTupleCache& inCache)
+	GenericComponentsCacheView(ComponentsTupleCache* inCache)
 		: m_cache(inCache)
 	{}
 
@@ -63,16 +63,26 @@ public:
 
 	iterator begin()
 	{
-		return iterator(m_cache.GetData().begin());
+		if (nullptr != m_cache)
+		{
+			return iterator(m_cache->GetData().begin());
+		}
+
+		return iterator();
 	}
 
 	iterator end()
 	{
-		return iterator(m_cache.GetData().end());
+		if (nullptr != m_cache)
+		{
+			return iterator(m_cache->GetData().end());
+		}
+
+		return iterator();
 	}
 
 private:
-	ComponentsTupleCache& m_cache;
+	ComponentsTupleCache* m_cache;
 };
 
 }

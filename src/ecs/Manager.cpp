@@ -1,10 +1,25 @@
 #include "Manager.hpp"
 #include "ecs/component/ComponentCollectionImpl.hpp"
+#include "ecs/detail/Hash.hpp"
 #include <algorithm>
 
 namespace
 {
 ecs::Manager* ManagerInstance = nullptr;
+
+std::size_t ComponentTypesListHash(const std::vector<ecs::ComponentTypeId>& typeIds)
+{
+	if (typeIds.empty())
+		return 0U;
+
+	std::size_t outHash = std::hash<ecs::ComponentTypeId>()(typeIds[0]);
+	for (std::size_t i = 1; i < typeIds.size(); ++i)
+	{
+		ecs::detail::hash_combine(outHash, std::hash<ecs::ComponentTypeId>()(typeIds[i]));
+	}
+
+	return outHash;
+}
 }
 
 namespace ecs
@@ -273,6 +288,24 @@ void Manager::RegisterComponentTypeInternal(const std::string& name, const std::
 	m_typeIndexToComponentTypeIdMapping.emplace(typeIndex, typeId);
 }
 
+ComponentsTupleCache* Manager::GetComponentsTupleCache(const std::vector<ComponentTypeId>& typeIds)
+{
+	uint32_t hash = static_cast<uint32_t>(ComponentTypesListHash(typeIds));
+	auto it = m_tupleCaches.find(hash);
+	if (it != m_tupleCaches.end())
+	{
+		return &it->second;
+	}
+
+	return nullptr;
+}
+
+GenericComponentsCacheView Manager::GetComponentsTuple(const std::vector<ComponentTypeId>& typeIds)
+{
+	ComponentsTupleCache* tupleCache = GetComponentsTupleCache(typeIds);
+	return GenericComponentsCacheView(tupleCache);
+}
+
 const std::string& Manager::GetComponentNameByTypeId(const ComponentTypeId typeId) const
 {
 	auto predicate = [typeId](const std::pair<std::string, ComponentTypeId>& data)
@@ -395,7 +428,11 @@ ComponentTypeId Manager::GetInvalidComponentTypeId()
 
 void Manager::RegisterComponentsTupleIterator(std::vector<ComponentTypeId>& typeIds)
 {
-	m_tupleCaches.emplace(std::piecewise_construct, std::forward_as_tuple(0), std::forward_as_tuple(typeIds.data(), typeIds.size()));
+	if (typeIds.size() > 0)
+	{
+		uint32_t typeIdsHash = static_cast<uint32_t>(ComponentTypesListHash(typeIds));
+		m_tupleCaches.emplace(std::piecewise_construct, std::forward_as_tuple(typeIdsHash), std::forward_as_tuple(typeIds.data(), typeIds.size()));
+	}
 }
 
 } // namespace ecs
