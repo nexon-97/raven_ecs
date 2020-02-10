@@ -142,6 +142,9 @@ public:
 	Entity ECS_API GetEntityById(const EntityId id);
 	Entity ECS_API CreateEntity();
 
+	///////////////////////////////////////////////////////////////////////////////////
+	// Component cache views section
+
 	template <class ...ComponentT>
 	void RegisterComponentsTupleIterator()
 	{
@@ -160,6 +163,9 @@ public:
 		ComponentsTupleCache* tupleCache = GetComponentsTupleCache(typeIds);
 		return TypedComponentsCacheView<ComponentT...>(tupleCache);
 	}
+
+	///////////////////////////////////////////////////////////////////////////////////
+	// Static section
 
 	static ECS_API Manager* Get();
 	static void ECS_API InitECSManager();
@@ -208,6 +214,9 @@ private:
 
 		return typeIds;
 	}
+	
+	void DefaultComponentAttachedDelegate(ecs::Entity entity, ecs::ComponentPtr component);
+	void DefaultComponentDetachedDelegate(ecs::Entity entity, ecs::ComponentPtr component);
 
 private:
 	std::vector<std::unique_ptr<IComponentCollection>> m_componentStorages;
@@ -226,7 +235,8 @@ private:
 	
 	EntitiesCollection m_entitiesCollection; // Class, that manages entities and their functionality
 
-	std::unordered_map<uint32_t, ComponentsTupleCache> m_tupleCaches;
+	std::unordered_map<uint32_t, std::unique_ptr<ComponentsTupleCache>> m_tupleCaches;
+	std::unordered_map<ComponentTypeId, std::vector<ComponentsTupleCache*>> m_componentTypeCaches;
 
 	// Global ecs state delegates
 	EntityCreateDelegate m_entityCreateDelegate;

@@ -106,7 +106,8 @@ void Manager::DoRemoveSystem(System* system)
 
 void Manager::Init()
 {
-	
+	m_componentAttachedDelegate.BindMemberFunction(&Manager::DefaultComponentAttachedDelegate, this);
+	m_componentDetachedDelegate.BindMemberFunction(&Manager::DefaultComponentDetachedDelegate, this);
 }
 
 void Manager::Destroy()
@@ -136,6 +137,9 @@ void Manager::Destroy()
 	m_componentTypeIndexes.clear();
 	m_componentNameToIdMapping.clear();
 	m_typeIndexToComponentTypeIdMapping.clear();
+
+	m_componentAttachedDelegate.UnbindAll();
+	m_componentDetachedDelegate.UnbindAll();
 
 	m_isBeingDestroyed = false;
 }
@@ -286,6 +290,9 @@ void Manager::RegisterComponentTypeInternal(const std::string& name, const std::
 	m_componentNameToIdMapping.emplace(name, typeId);
 	m_componentTypeIndexes.push_back(typeIndex);
 	m_typeIndexToComponentTypeIdMapping.emplace(typeIndex, typeId);
+
+	// Register caches link
+	m_componentTypeCaches.emplace(typeId, std::vector<ComponentsTupleCache*>());
 }
 
 ComponentsTupleCache* Manager::GetComponentsTupleCache(const std::vector<ComponentTypeId>& typeIds)
@@ -294,7 +301,7 @@ ComponentsTupleCache* Manager::GetComponentsTupleCache(const std::vector<Compone
 	auto it = m_tupleCaches.find(hash);
 	if (it != m_tupleCaches.end())
 	{
-		return &it->second;
+		return it->second.get();
 	}
 
 	return nullptr;
@@ -432,7 +439,28 @@ void Manager::RegisterComponentsTupleIterator(std::vector<ComponentTypeId>& type
 	{
 		uint32_t typeIdsHash = static_cast<uint32_t>(ComponentTypesListHash(typeIds));
 		m_tupleCaches.emplace(std::piecewise_construct, std::forward_as_tuple(typeIdsHash), std::forward_as_tuple(typeIds.data(), typeIds.size()));
+
+		// Register cache in type id -> cache mapping
+		for (ComponentTypeId typeId : typeIds)
+		{
+			auto it = m_componentTypeCaches.find(typeId);
+			if (it != m_componentTypeCaches.end())
+			{
+				ComponentsTupleCache* cachePtr = m_tupleCaches.find(typeIdsHash)->second.get();
+				it->second.push_back(cachePtr);
+			}
+		}
 	}
+}
+
+void Manager::DefaultComponentAttachedDelegate(ecs::Entity entity, ecs::ComponentPtr component)
+{
+	
+}
+
+void Manager::DefaultComponentDetachedDelegate(ecs::Entity entity, ecs::ComponentPtr component)
+{
+
 }
 
 } // namespace ecs

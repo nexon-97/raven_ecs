@@ -9,9 +9,6 @@
 namespace ecs
 {
 
-typedef void(*EntityCreateCallback)(EntityId);
-typedef void(*EntityDestroyCallback)(EntityId);
-
 class EntitiesCollection
 {
 	friend struct Entity;
