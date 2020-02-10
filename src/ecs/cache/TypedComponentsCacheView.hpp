@@ -3,18 +3,6 @@
 
 namespace ecs
 {
-
-/*SystemType* AddSystem(Args&&... args)
-{
-	static_assert(std::is_base_of<System, SystemType>::value, "System type must be derived from ecs::System!");
-
-	std::unique_ptr<SystemType> system = std::make_unique<SystemType>(std::forward<Args>(args)...);
-	SystemType* systemRawPtr = system.get();
-
-	AddSystemToStorage(std::move(system));
-
-	return systemRawPtr;
-}*/
 	
 template <class ...ComponentTypes>
 class TypedComponentsCacheView

@@ -1,4 +1,5 @@
 #include "ecs/cache/ComponentsTupleCache.hpp"
+#include "ecs/entity/Entity.hpp"
 
 namespace ecs
 {
@@ -45,6 +46,40 @@ ComponentsTupleCache& ComponentsTupleCache::operator=(ComponentsTupleCache&& oth
 std::unordered_map<EntityId, ComponentsTuple>& ComponentsTupleCache::GetData()
 {
 	return m_componentTuples;
+}
+
+void ComponentsTupleCache::TouchEntity(const Entity& entity)
+{
+	bool hasAllComponents = true;
+	for (std::size_t i = 0; i < m_componentsCount; ++i)
+	{
+		if (!entity.HasComponent(m_componentTypesList[i]))
+		{
+			hasAllComponents = false;
+			break;
+		}
+	}
+
+	if (hasAllComponents)
+	{
+		// Fill components tuple
+		ComponentsTuple components(m_componentsCount);
+		for (std::size_t i = 0; i < m_componentsCount; ++i)
+		{
+			components[i] = entity.GetComponent(m_componentTypesList[i]);
+		}
+
+		// Add to cache
+		m_componentTuples.try_emplace(entity.GetId(), std::move(components));
+	}
+	else
+	{
+		auto it = m_componentTuples.find(entity.GetId());
+		if (it != m_componentTuples.end())
+		{
+			m_componentTuples.erase(it);
+		}
+	}
 }
 
 }

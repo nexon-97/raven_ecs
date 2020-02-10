@@ -7,27 +7,12 @@ class MulticastDelegate
 public:
 	MulticastDelegate() = default;
 
-	//void Broadcast(Args&&... args)
-	//{
-	//	m_isBroadcasting = true;
-	//	for (const auto& binding : bindings)
-	//	{
-	//		binding->Execute(std::forward<Args>(args)...);
-	//	}
-	//	m_isBroadcasting = false;
-
-	//	if (m_pendingUnbindAll)
-	//	{
-	//		UnbindAll();
-	//	}
-	//}
-
-	void Broadcast(Args&... args)
+	void Broadcast(Args... args)
 	{
 		m_isBroadcasting = true;
 		for (const auto& binding : bindings)
 		{
-			binding->Execute(std::forward<Args>(args)...);
+			binding->Execute(std::forward<Args&&>(args)...);
 		}
 		m_isBroadcasting = false;
 

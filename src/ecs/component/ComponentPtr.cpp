@@ -63,7 +63,7 @@ ComponentTypeId ComponentPtr::GetTypeId() const
 		return m_block->typeId;
 	}
 
-	return -1;
+	return Manager::Get()->GetInvalidComponentTypeId();
 }
 
 Entity ComponentPtr::GetEntity() const

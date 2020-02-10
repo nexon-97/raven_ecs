@@ -105,10 +105,7 @@ void Entity::AddComponent(const ComponentPtr& handle)
 	mappingEntry.componentPtr.m_block->entityId = m_data->id;
 
 	// Invoke global callback
-	//if (nullptr != Manager::Get()->m_globalEntityComponentAddedCallback)
-	//{
-	//	std::invoke(Manager::Get()->m_globalEntityComponentAddedCallback, *this, handle);
-	//}
+	Manager::Get()->GetComponentAttachedDelegate().Broadcast(*this, handle);
 }
 
 void Entity::RemoveComponent(const ComponentPtr& handle)

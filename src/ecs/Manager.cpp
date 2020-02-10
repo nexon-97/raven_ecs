@@ -438,7 +438,9 @@ void Manager::RegisterComponentsTupleIterator(std::vector<ComponentTypeId>& type
 	if (typeIds.size() > 0)
 	{
 		uint32_t typeIdsHash = static_cast<uint32_t>(ComponentTypesListHash(typeIds));
-		m_tupleCaches.emplace(std::piecewise_construct, std::forward_as_tuple(typeIdsHash), std::forward_as_tuple(typeIds.data(), typeIds.size()));
+		std::unique_ptr<ComponentsTupleCache> cache = std::make_unique<ComponentsTupleCache>(typeIds.data(), typeIds.size());
+		ComponentsTupleCache* cachePtr = cache.get();
+		m_tupleCaches.emplace(std::piecewise_construct, std::forward_as_tuple(typeIdsHash), std::forward_as_tuple(std::move(cache)));
 
 		// Register cache in type id -> cache mapping
 		for (ComponentTypeId typeId : typeIds)
@@ -446,7 +448,6 @@ void Manager::RegisterComponentsTupleIterator(std::vector<ComponentTypeId>& type
 			auto it = m_componentTypeCaches.find(typeId);
 			if (it != m_componentTypeCaches.end())
 			{
-				ComponentsTupleCache* cachePtr = m_tupleCaches.find(typeIdsHash)->second.get();
 				it->second.push_back(cachePtr);
 			}
 		}
@@ -455,7 +456,16 @@ void Manager::RegisterComponentsTupleIterator(std::vector<ComponentTypeId>& type
 
 void Manager::DefaultComponentAttachedDelegate(ecs::Entity entity, ecs::ComponentPtr component)
 {
-	
+	ComponentTypeId typeId = component.GetTypeId();
+	auto it = m_componentTypeCaches.find(typeId);
+	if (it != m_componentTypeCaches.end())
+	{
+		const auto& cachesList = it->second;
+		for (ComponentsTupleCache* cache : cachesList)
+		{
+			cache->TouchEntity(entity);
+		}
+	}
 }
 
 void Manager::DefaultComponentDetachedDelegate(ecs::Entity entity, ecs::ComponentPtr component)

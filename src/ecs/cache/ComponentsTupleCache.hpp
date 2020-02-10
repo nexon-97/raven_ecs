@@ -22,6 +22,7 @@ public:
 	ECS_API ComponentsTupleCache& operator=(ComponentsTupleCache&& other);
 
 	ECS_API std::unordered_map<EntityId, ComponentsTuple>& GetData();
+	void ECS_API TouchEntity(const Entity& entity);
 
 private:
 	std::unordered_map<EntityId, ComponentsTuple> m_componentTuples;

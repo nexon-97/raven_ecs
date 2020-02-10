@@ -7,6 +7,9 @@
 namespace ecs
 {
 
+template <typename ...ComponentTypes>
+using ComponentTupleT = std::tuple<TComponentPtr<ComponentTypes>...>;
+
 struct ECS_API ComponentsTuple
 {
 	ComponentsTuple() = delete;
@@ -29,9 +32,9 @@ struct ECS_API ComponentsTuple
 
 	// Conversion utils
 	template <typename ...ComponentTypes>
-	std::tuple<TComponentPtr<ComponentTypes>...> GetTyped()
+	ComponentTupleT<ComponentTypes...> GetTyped()
 	{
-		using TupleT = std::tuple<TComponentPtr<ComponentTypes>...>;
+		using TupleT = ComponentTupleT<ComponentTypes...>;
 		return PopulateTuple<TupleT>();
 	}
 
