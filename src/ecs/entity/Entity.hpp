@@ -42,8 +42,10 @@ struct ECS_API Entity
 	void AddComponent(const ComponentPtr& handle);
 	void RemoveComponent(const ComponentPtr& handle);
 	bool HasComponent(const ComponentTypeId componentType) const;
+	bool HasComponents(ComponentTypeId* componentTypes, const std::size_t count) const;
 	ComponentPtr GetComponent(const ComponentTypeId componentType) const;
 	EntityComponentsCollection GetComponents() const;
+	void GetComponentsOfTypes(ComponentPtr* outComponents, ComponentTypeId* componentTypes, const std::size_t count) const;
 
 	void AddChild(Entity& child);
 	void RemoveChild(Entity& child);

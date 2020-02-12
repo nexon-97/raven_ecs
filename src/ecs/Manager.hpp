@@ -145,6 +145,7 @@ public:
 	///////////////////////////////////////////////////////////////////////////////////
 	// Component cache views section
 
+	// Setup components tuple tracking
 	template <class ...ComponentT>
 	void RegisterComponentsTupleIterator()
 	{
@@ -154,15 +155,26 @@ public:
 
 	void ECS_API RegisterComponentsTupleIterator(std::vector<ComponentTypeId>& typeIds);
 
-	GenericComponentsCacheView ECS_API GetComponentsTuple(const std::vector<ComponentTypeId>& typeIds);
-
+	// These calls can be used to generate integer tuple id from component types sequence, to get the tuple cache view later
 	template <class ...ComponentT>
-	TypedComponentsCacheView<ComponentT...> GetComponentsTuple()
+	uint32_t GetComponentsTupleId() const
 	{
 		std::vector<ComponentTypeId> typeIds = ComposeTypeIdsVector<ComponentT...>();
-		ComponentsTupleCache* tupleCache = GetComponentsTupleCache(typeIds);
+		return GetComponentsTupleId(typeIds);
+	}
+	uint32_t ECS_API GetComponentsTupleId(const std::vector<ComponentTypeId>& typeIds) const;
+
+	// Component tuples view retrieval using tuple id (can be obtained from GetComponentsTupleId call)
+	GenericComponentsCacheView ECS_API GetComponentsTupleById(const uint32_t tupleId);
+
+	template <class ...ComponentT>
+	TypedComponentsCacheView<ComponentT...> GetComponentsTupleById(const uint32_t tupleId)
+	{
+		ComponentsTupleCache* tupleCache = GetComponentsTupleCacheById(tupleId);
 		return TypedComponentsCacheView<ComponentT...>(tupleCache);
 	}
+
+	// [TODO] Consider locking of cache views for multithreading
 
 	///////////////////////////////////////////////////////////////////////////////////
 	// Static section
@@ -205,6 +217,7 @@ private:
 
 	void ECS_API RegisterComponentTypeInternal(const std::string& name, const std::type_index& typeIndex, const ComponentTypeId typeId, std::unique_ptr<IComponentCollection>&& collection);
 	ECS_API ComponentsTupleCache* GetComponentsTupleCache(const std::vector<ComponentTypeId>& typeIds);
+	ECS_API ComponentsTupleCache* GetComponentsTupleCacheById(const uint32_t cacheId);
 
 	template <class ...ComponentT>
 	std::vector<ComponentTypeId> ComposeTypeIdsVector() const

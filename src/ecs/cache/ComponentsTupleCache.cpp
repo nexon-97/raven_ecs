@@ -50,30 +50,23 @@ std::unordered_map<EntityId, ComponentsTuple>& ComponentsTupleCache::GetData()
 
 void ComponentsTupleCache::TouchEntity(const Entity& entity)
 {
-	bool hasAllComponents = true;
-	for (std::size_t i = 0; i < m_componentsCount; ++i)
-	{
-		if (!entity.HasComponent(m_componentTypesList[i]))
-		{
-			hasAllComponents = false;
-			break;
-		}
-	}
-
+	bool hasAllComponents = entity.HasComponents(m_componentTypesList, m_componentsCount);
 	if (hasAllComponents)
 	{
-		// Fill components tuple
-		ComponentsTuple components(m_componentsCount);
-		for (std::size_t i = 0; i < m_componentsCount; ++i)
+		auto it = m_componentTuples.find(entity.GetId());
+		if (it == m_componentTuples.end())
 		{
-			components[i] = entity.GetComponent(m_componentTypesList[i]);
-		}
+			// Fill components tuple
+			ComponentsTuple componentsTuple(m_componentsCount);
+			entity.GetComponentsOfTypes(componentsTuple.GetMutableData(), m_componentTypesList, m_componentsCount);
 
-		// Add to cache
-		m_componentTuples.try_emplace(entity.GetId(), std::move(components));
+			// Add to cache
+			m_componentTuples.emplace(entity.GetId(), std::move(componentsTuple));
+		}
 	}
 	else
 	{
+		// Not all components set -> try to remove entity from cache
 		auto it = m_componentTuples.find(entity.GetId());
 		if (it != m_componentTuples.end())
 		{

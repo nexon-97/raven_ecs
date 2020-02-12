@@ -22,6 +22,8 @@ public:
 	ECS_API ComponentsTupleCache& operator=(ComponentsTupleCache&& other);
 
 	ECS_API std::unordered_map<EntityId, ComponentsTuple>& GetData();
+
+	// Touch entity to see if its components match the cache definition, modifying m_componentTuples map
 	void ECS_API TouchEntity(const Entity& entity);
 
 private:

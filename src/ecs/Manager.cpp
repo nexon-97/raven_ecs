@@ -6,20 +6,6 @@
 namespace
 {
 ecs::Manager* ManagerInstance = nullptr;
-
-std::size_t ComponentTypesListHash(const std::vector<ecs::ComponentTypeId>& typeIds)
-{
-	if (typeIds.empty())
-		return 0U;
-
-	std::size_t outHash = std::hash<ecs::ComponentTypeId>()(typeIds[0]);
-	for (std::size_t i = 1; i < typeIds.size(); ++i)
-	{
-		ecs::detail::hash_combine(outHash, std::hash<ecs::ComponentTypeId>()(typeIds[i]));
-	}
-
-	return outHash;
-}
 }
 
 namespace ecs
@@ -297,8 +283,13 @@ void Manager::RegisterComponentTypeInternal(const std::string& name, const std::
 
 ComponentsTupleCache* Manager::GetComponentsTupleCache(const std::vector<ComponentTypeId>& typeIds)
 {
-	uint32_t hash = static_cast<uint32_t>(ComponentTypesListHash(typeIds));
-	auto it = m_tupleCaches.find(hash);
+	uint32_t hash = GetComponentsTupleId(typeIds);
+	return GetComponentsTupleCacheById(hash);
+}
+
+ComponentsTupleCache* Manager::GetComponentsTupleCacheById(const uint32_t cacheId)
+{
+	auto it = m_tupleCaches.find(cacheId);
 	if (it != m_tupleCaches.end())
 	{
 		return it->second.get();
@@ -307,10 +298,24 @@ ComponentsTupleCache* Manager::GetComponentsTupleCache(const std::vector<Compone
 	return nullptr;
 }
 
-GenericComponentsCacheView Manager::GetComponentsTuple(const std::vector<ComponentTypeId>& typeIds)
+GenericComponentsCacheView Manager::GetComponentsTupleById(const uint32_t tupleId)
 {
-	ComponentsTupleCache* tupleCache = GetComponentsTupleCache(typeIds);
+	ComponentsTupleCache* tupleCache = GetComponentsTupleCacheById(tupleId);
 	return GenericComponentsCacheView(tupleCache);
+}
+
+uint32_t Manager::GetComponentsTupleId(const std::vector<ComponentTypeId>& typeIds) const
+{
+	if (typeIds.empty())
+		return 0U;
+
+	std::size_t outHash = std::hash<ecs::ComponentTypeId>()(typeIds[0]);
+	for (std::size_t i = 1; i < typeIds.size(); ++i)
+	{
+		ecs::detail::hash_combine(outHash, std::hash<ecs::ComponentTypeId>()(typeIds[i]));
+	}
+
+	return static_cast<uint32_t>(outHash);
 }
 
 const std::string& Manager::GetComponentNameByTypeId(const ComponentTypeId typeId) const
@@ -437,7 +442,7 @@ void Manager::RegisterComponentsTupleIterator(std::vector<ComponentTypeId>& type
 {
 	if (typeIds.size() > 0)
 	{
-		uint32_t typeIdsHash = static_cast<uint32_t>(ComponentTypesListHash(typeIds));
+		uint32_t typeIdsHash = GetComponentsTupleId(typeIds);
 		std::unique_ptr<ComponentsTupleCache> cache = std::make_unique<ComponentsTupleCache>(typeIds.data(), typeIds.size());
 		ComponentsTupleCache* cachePtr = cache.get();
 		m_tupleCaches.emplace(std::piecewise_construct, std::forward_as_tuple(typeIdsHash), std::forward_as_tuple(std::move(cache)));
@@ -470,7 +475,16 @@ void Manager::DefaultComponentAttachedDelegate(ecs::Entity entity, ecs::Componen
 
 void Manager::DefaultComponentDetachedDelegate(ecs::Entity entity, ecs::ComponentPtr component)
 {
-
+	ComponentTypeId typeId = component.GetTypeId();
+	auto it = m_componentTypeCaches.find(typeId);
+	if (it != m_componentTypeCaches.end())
+	{
+		const auto& cachesList = it->second;
+		for (ComponentsTupleCache* cache : cachesList)
+		{
+			cache->TouchEntity(entity);
+		}
+	}
 }
 
 } // namespace ecs

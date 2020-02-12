@@ -134,6 +134,19 @@ bool Entity::HasComponent(const ComponentTypeId componentType) const
 	return m_data->componentsMask.test(componentType);
 }
 
+bool Entity::HasComponents(ComponentTypeId* componentTypes, const std::size_t count) const
+{
+	for (std::size_t i = 0U; i < count; ++i)
+	{
+		if (!m_data->componentsMask.test(componentTypes[i]))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
 ComponentPtr Entity::GetComponent(const ComponentTypeId componentType) const
 {
 	if (HasComponent(componentType))
@@ -208,6 +221,26 @@ EntityComponentsCollection Entity::GetComponents() const
 {
 	auto& storage = Manager::Get()->GetEntitiesCollection().GetComponentsMapStorage();
 	return EntityComponentsCollection(storage, m_data->componentsDataOffset);
+}
+
+void Entity::GetComponentsOfTypes(ComponentPtr* outComponents, ComponentTypeId* componentTypes, const std::size_t count) const
+{
+	for (std::size_t i = 0; i < count; ++i)
+	{
+		if (HasComponent(componentTypes[i]))
+		{
+			auto mappingEntry = Manager::Get()->GetEntitiesCollection().FindComponentMappingEntry(*m_data, componentTypes[i]);
+			if (nullptr != mappingEntry)
+			{
+				// Set component ptr value and go to next
+				outComponents[i] = mappingEntry->componentPtr;
+				continue;
+			}
+		}
+
+		// Set empty component ptr
+		outComponents[i] = ComponentPtr();
+	}
 }
 
 void Entity::AddChild(Entity& child)

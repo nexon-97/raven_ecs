@@ -46,6 +46,11 @@ const ComponentPtr* ComponentsTuple::GetData() const
 	return m_data;
 }
 
+ComponentPtr* ComponentsTuple::GetMutableData()
+{
+	return m_data;
+}
+
 const std::size_t ComponentsTuple::GetSize() const
 {
 	return m_size;

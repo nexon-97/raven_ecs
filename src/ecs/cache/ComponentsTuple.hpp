@@ -25,6 +25,7 @@ struct ECS_API ComponentsTuple
 	ComponentsTuple& operator=(ComponentsTuple&& other);
 
 	const ComponentPtr* GetData() const;
+	ComponentPtr* GetMutableData();
 	const std::size_t GetSize() const;
 
 	ComponentPtr& operator[](const std::size_t index);
