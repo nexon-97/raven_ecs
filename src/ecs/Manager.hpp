@@ -94,13 +94,6 @@ public:
 		return TComponentPtr<ComponentType>(CreateComponentInternal(typeId));
 	}
 
-	template <typename ComponentType>
-	ComponentType* GetComponent(ComponentTypeId componentType, int32_t index)
-	{
-		void* componentRaw = GetComponentRaw(componentType, index);
-		return static_cast<ComponentType*>(componentRaw);
-	}
-
 	ECS_API void* GetComponentRaw(ComponentTypeId componentType, int32_t index);
 	ComponentPtr ECS_API CreateComponentByName(const std::string& name);
 	ComponentPtr ECS_API CreateComponentByTypeId(const ComponentTypeId typeId);
@@ -127,6 +120,12 @@ public:
 	ComponentTypeId ECS_API GetComponentTypeIdByName(const std::string& name) const;
 	std::type_index ECS_API GetComponentTypeIndexByTypeId(const ComponentTypeId typeId) const;
 
+	template <typename ComponentType>
+	ComponentTypeId GetComponentTypeId() const
+	{
+		return GetComponentTypeIdByIndex(typeid(ComponentType));
+	}
+
 	ComponentPtr ECS_API CloneComponent(const ComponentPtr& componentPtr);
 
 	ECS_API const std::string& GetComponentNameByTypeId(const ComponentTypeId typeId) const;
@@ -139,6 +138,11 @@ public:
 	ECS_API ComponentAttachedDelegate& GetComponentAttachedDelegate();
 	ECS_API ComponentDetachedDelegate& GetComponentDetachedDelegate();
 
+	ECS_API ComponentCreateDelegate& GetSpecializedComponentCreateDelegate(const ComponentTypeId typeId);
+	ECS_API ComponentDestroyDelegate& GetSpecializedComponentDestroyDelegate(const ComponentTypeId typeId);
+	ECS_API ComponentAttachedDelegate& GetSpecializedComponentAttachedDelegate(const ComponentTypeId typeId);
+	ECS_API ComponentDetachedDelegate& GetSpecializedComponentDetachedDelegate(const ComponentTypeId typeId);
+
 	Entity ECS_API GetEntityById(const EntityId id);
 	Entity ECS_API CreateEntity();
 
@@ -147,13 +151,13 @@ public:
 
 	// Setup components tuple tracking
 	template <class ...ComponentT>
-	void RegisterComponentsTupleIterator()
+	uint32_t RegisterComponentsTupleIterator()
 	{
 		std::vector<ComponentTypeId> typeIds = ComposeTypeIdsVector<ComponentT...>();
-		RegisterComponentsTupleIterator(typeIds);
+		return RegisterComponentsTupleIterator(typeIds);
 	}
 
-	void ECS_API RegisterComponentsTupleIterator(std::vector<ComponentTypeId>& typeIds);
+	uint32_t ECS_API RegisterComponentsTupleIterator(std::vector<ComponentTypeId>& typeIds);
 
 	// These calls can be used to generate integer tuple id from component types sequence, to get the tuple cache view later
 	template <class ...ComponentT>
@@ -259,6 +263,11 @@ private:
 	ComponentAttachedDelegate m_componentAttachedDelegate;
 	ComponentDetachedDelegate m_componentDetachedDelegate;
 	SystemPriorityChangedDelegate m_systemPriorityChangedDelegate;
+
+	std::unordered_map<ComponentTypeId, ComponentCreateDelegate> m_componentSpecificCreateDelegates;
+	std::unordered_map<ComponentTypeId, ComponentDestroyDelegate> m_componentSpecificDestroyDelegates;
+	std::unordered_map<ComponentTypeId, ComponentAttachedDelegate> m_componentSpecificAttachDelegates;
+	std::unordered_map<ComponentTypeId, ComponentDetachedDelegate> m_componentSpecificDetachDelegates;
 
 	bool m_systemPrioritiesChanged = true; // Flag, indicating that systems need to be sorted prior next update
 	bool m_isUpdatingSystems = false; // Flag, indicating that manager is currently updating exisiting systems

@@ -67,6 +67,17 @@ public:
 	}
 };
 
+template <class T>
+TComponentPtr<T> Cast(const ComponentPtr& component)
+{
+	if (component.GetTypeId() == Manager::Get()->GetComponentTypeId<T>())
+	{
+		return TComponentPtr<T>(component);
+	}
+
+	return TComponentPtr<T>();
+}
+
 }
 
 namespace std

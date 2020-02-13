@@ -33,18 +33,12 @@ private:
 	void MoveEntityData(EntityData& entityData, const uint32_t newLocation);
 	void OnEntityDataDestroy(EntityId entityId);
 
-	EntityComponentMapEntry& CreateComponentMappingEntry(EntityData& entityData);
-	EntityComponentMapEntry* FindComponentMappingEntry(EntityData& entityData, const ComponentTypeId componentType);
-	void RemoveComponentMappingEntry(EntityData& entityData, const ComponentTypeId componentType);
-	ComponentsMapStorageType& GetComponentsMapStorage();
-
 	EntityData* AllocateEntityData();
 	EntityData* GetEntityData(const EntityId id);
 
 private:
 	EntitiesStorageType m_entitiesData;
 	EntityIdsMap m_entityIdsMap;
-	ComponentsMapStorageType m_entityComponentsMapping;
 	EntityId m_nextEntityId = 0U;
 	std::deque<uint32_t> m_storageHoles;
 };

@@ -312,7 +312,7 @@ uint32_t Manager::GetComponentsTupleId(const std::vector<ComponentTypeId>& typeI
 	std::size_t outHash = std::hash<ecs::ComponentTypeId>()(typeIds[0]);
 	for (std::size_t i = 1; i < typeIds.size(); ++i)
 	{
-		ecs::detail::hash_combine(outHash, std::hash<ecs::ComponentTypeId>()(typeIds[i]));
+		detail::hash_combine(outHash, std::hash<ecs::ComponentTypeId>()(typeIds[i]));
 	}
 
 	return static_cast<uint32_t>(outHash);
@@ -382,6 +382,26 @@ ComponentDetachedDelegate& Manager::GetComponentDetachedDelegate()
 	return m_componentDetachedDelegate;
 }
 
+ComponentCreateDelegate& Manager::GetSpecializedComponentCreateDelegate(const ComponentTypeId typeId)
+{
+	return m_componentSpecificCreateDelegates[typeId];
+}
+
+ComponentDestroyDelegate& Manager::GetSpecializedComponentDestroyDelegate(const ComponentTypeId typeId)
+{
+	return m_componentSpecificDestroyDelegates[typeId];
+}
+
+ComponentAttachedDelegate& Manager::GetSpecializedComponentAttachedDelegate(const ComponentTypeId typeId)
+{
+	return m_componentSpecificAttachDelegates[typeId];
+}
+
+ComponentDetachedDelegate& Manager::GetSpecializedComponentDetachedDelegate(const ComponentTypeId typeId)
+{
+	return m_componentSpecificDetachDelegates[typeId];
+}
+
 EntityCreateDelegate& Manager::GetEntityCreateDelegate()
 {
 	return m_entityCreateDelegate;
@@ -438,7 +458,7 @@ ComponentTypeId Manager::GetInvalidComponentTypeId()
 	return std::numeric_limits<ComponentTypeId>::max();
 }
 
-void Manager::RegisterComponentsTupleIterator(std::vector<ComponentTypeId>& typeIds)
+uint32_t Manager::RegisterComponentsTupleIterator(std::vector<ComponentTypeId>& typeIds)
 {
 	if (typeIds.size() > 0)
 	{
@@ -456,11 +476,19 @@ void Manager::RegisterComponentsTupleIterator(std::vector<ComponentTypeId>& type
 				it->second.push_back(cachePtr);
 			}
 		}
+
+		return typeIdsHash;
 	}
+
+	return 0U;
 }
 
 void Manager::DefaultComponentAttachedDelegate(ecs::Entity entity, ecs::ComponentPtr component)
 {
+	// Invoke specialized delegate
+	GetSpecializedComponentAttachedDelegate(component.GetTypeId()).Broadcast(entity, component);
+
+	// Touch tuple caches
 	ComponentTypeId typeId = component.GetTypeId();
 	auto it = m_componentTypeCaches.find(typeId);
 	if (it != m_componentTypeCaches.end())
@@ -475,6 +503,10 @@ void Manager::DefaultComponentAttachedDelegate(ecs::Entity entity, ecs::Componen
 
 void Manager::DefaultComponentDetachedDelegate(ecs::Entity entity, ecs::ComponentPtr component)
 {
+	// Invoke specialized delegate
+	GetSpecializedComponentDetachedDelegate(component.GetTypeId()).Broadcast(entity, component);
+
+	// Touch tuple caches
 	ComponentTypeId typeId = component.GetTypeId();
 	auto it = m_componentTypeCaches.find(typeId);
 	if (it != m_componentTypeCaches.end())

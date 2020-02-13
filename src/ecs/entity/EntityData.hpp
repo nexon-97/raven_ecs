@@ -1,13 +1,16 @@
 #pragma once
 #include "ecs/TypeAliases.hpp"
+#include "ecs/component/ComponentPtr.hpp"
 
 #include <list>
+#include <vector>
 
 namespace ecs
 {
 
 struct Entity;
 using EntityChildrenContainer = std::list<Entity>;
+using EntityComponentsContainer = std::vector<ComponentPtr>;
 
 /*
 * @brief EntityData is a data container, which fully describes entity, its state, components and reference counting.
@@ -18,7 +21,7 @@ struct EntityData
 	EntityId id;
 	EntityId parentId;
 	ComponentMaskType componentsMask;
-	uint32_t componentsDataOffset;
+	EntityComponentsContainer components;
 	uint16_t orderInParent;
 	uint16_t refCount;
 	EntityHandleIndex storageLocation;

@@ -4,20 +4,15 @@
 namespace ecs
 {
 
-struct ComponentPtrBlock
+struct ECS_API ComponentPtrBlock
 {
-	ComponentTypeId typeId = -1;
-	int32_t dataIndex = -1;
-	EntityId entityId = -1;
-	int32_t refCount = 0;
+	ComponentTypeId typeId;
+	int32_t dataIndex;
+	EntityId entityId;
+	int32_t refCount;
 
-	ComponentPtrBlock() = default;
-	ComponentPtrBlock(ComponentTypeId inTypeId, int32_t inDataIndex, EntityId inEntityId, int32_t inRefCount)
-		: typeId(inTypeId)
-		, dataIndex(inDataIndex)
-		, entityId(inEntityId)
-		, refCount(inRefCount)
-	{}
+	ComponentPtrBlock();
+	ComponentPtrBlock(ComponentTypeId inTypeId, int32_t inDataIndex, EntityId inEntityId, int32_t inRefCount);
 };
 
 struct Entity;

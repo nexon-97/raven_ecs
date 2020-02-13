@@ -13,13 +13,11 @@ namespace ecs
 
 EntitiesCollection::EntitiesCollection()
 	: m_entitiesData(1024U)
-	, m_entityComponentsMapping(1024U)
 {}
 
 void EntitiesCollection::Clear()
 {
 	m_entitiesData.Clear();
-	m_entityComponentsMapping.Clear();
 }
 
 Entity EntitiesCollection::GetEntityById(const EntityId id)
@@ -41,19 +39,9 @@ Entity EntitiesCollection::CreateEntity()
 	const EntityId newEntityId = m_nextEntityId;
 	++m_nextEntityId;
 
-	//EntityData* entityData = entityCreationResult.second;
 	entityData->id = newEntityId;
 	entityData->parentId = Entity::GetInvalidId();
 	entityData->orderInParent = k_invalidOrderInParent;
-
-	{
-		auto componentMappingCreationResult = m_entityComponentsMapping.CreateItem();
-		auto mappingItem = componentMappingCreationResult.second;
-		mappingItem->componentPtr = ComponentPtr();
-		mappingItem->nextItemPtr = Entity::GetInvalidId();
-
-		entityData->componentsDataOffset = static_cast<uint32_t>(componentMappingCreationResult.first);
-	}
 
 	// Add entity to ids map
 	m_entityIdsMap.emplace(entityData->id, entityData->storageLocation);
@@ -71,37 +59,6 @@ void EntitiesCollection::MoveEntityData(EntityData& entityData, const uint32_t n
 	*newLocationDataPtr = std::move(entityData);
 }
 
-//void EntitiesCollection::DestroyEntity(const EntityId id)
-//{
-//	EntityData& entityData = *m_entitiesData[id];
-//
-//	// Disable all owned components
-//	auto componentNode = m_entityComponentsMapping[entityData.componentsDataOffset];
-//	bool reachedEndOfList = false;
-//
-//	while (!reachedEndOfList)
-//	{
-//		if (componentNode->handle.IsValid())
-//		{
-//			m_manager.DestroyComponent(componentNode->handle);
-//		}
-//
-//		reachedEndOfList = (componentNode->nextItemPtr == Entity::GetInvalidId());
-//
-//		if (!reachedEndOfList)
-//		{
-//			componentNode = m_entityComponentsMapping[componentNode->nextItemPtr];
-//		}
-//	}
-//
-//	// Erase list items
-//	componentNode = m_entityComponentsMapping[entityData.componentsDataOffset];
-//	componentNode->handle = ComponentHandle(ComponentHandleInternal::GetInvalidTypeId(), nullptr);
-//	componentNode->nextItemPtr = Entity::GetInvalidId();
-//
-//	// TODO: Performs logic consistency checks. Entity should be properly logically unloaded before actually destroying it...
-//}
-
 void EntitiesCollection::OnEntityDataDestroy(EntityId entityId)
 {
 	// Invoke global callback
@@ -114,24 +71,6 @@ void EntitiesCollection::OnEntityDataDestroy(EntityId entityId)
 	uint32_t location = it->second;
 	EntityData* entityData = m_entitiesData[location];
 
-	// Destroy all owned components
-	auto componentsCollection = EntityComponentsCollection(m_entityComponentsMapping, entityData->componentsDataOffset);
-	std::vector<EntityComponentsCollection::iterator> collectionIterators;
-	for (auto it = componentsCollection.begin(); it != componentsCollection.end(); ++it)
-	{
-		collectionIterators.push_back(it);
-	}
-
-	for (EntityComponentsCollection::iterator& it : collectionIterators)
-	{
-		//it->m_block->entityId = Entity::GetInvalidId();
-
-		//Manager::Get()->SetComponentEntityId(*it, Entity::GetInvalidId());
-		//Manager::Get()->DestroyComponent(*it);
-
-		*m_entityComponentsMapping[it.offset] = EntityComponentMapEntry();
-	}
-
 	// Remove from entity id -> storage location mapping
 	m_entityIdsMap.erase(it);
 
@@ -141,113 +80,6 @@ void EntitiesCollection::OnEntityDataDestroy(EntityId entityId)
 		m_storageHoles.push_back(location);
 		*entityData = EntityData();
 	}
-}
-
-EntityComponentMapEntry& EntitiesCollection::CreateComponentMappingEntry(EntityData& entityData)
-{
-	// Make entry in components mapping
-	bool placeForInsertionFound = false;
-	std::size_t offset = entityData.componentsDataOffset;
-
-	while (!placeForInsertionFound)
-	{
-		EntityComponentMapEntry* mappingEntry = m_entityComponentsMapping[offset];
-		if (mappingEntry->nextItemPtr == Entity::GetInvalidId())
-		{
-			// This is the end of the list, can be used as insertion point
-			placeForInsertionFound = true;
-		}
-		else
-		{
-			// Jump to next item in the list
-			offset = mappingEntry->nextItemPtr;
-		}
-	}
-
-	std::size_t mappingEntryId = offset;
-	std::size_t newEntryId = mappingEntryId;
-
-	if (m_entityComponentsMapping[mappingEntryId]->componentPtr.IsValid())
-	{
-		auto creationResult = m_entityComponentsMapping.CreateItem();
-		newEntryId = creationResult.first;
-	}
-
-	// Insert component id here
-	EntityComponentMapEntry* currentEntry = m_entityComponentsMapping[mappingEntryId];
-	EntityComponentMapEntry* newEntry = m_entityComponentsMapping[newEntryId];
-	newEntry->nextItemPtr = Entity::GetInvalidId();
-
-	if (currentEntry != newEntry)
-	{
-		// Link new entry to the list
-		currentEntry->nextItemPtr = static_cast<uint32_t>(newEntryId);
-	}
-
-	return *newEntry;
-}
-
-EntityComponentMapEntry* EntitiesCollection::FindComponentMappingEntry(EntityData& entityData, const ComponentTypeId componentType)
-{
-	EntityComponentMapEntry* componentNode = m_entityComponentsMapping[entityData.componentsDataOffset];
-	bool reachedEndOfList = false;
-
-	while (!reachedEndOfList)
-	{
-		if (componentNode->componentPtr.GetTypeId() == componentType)
-		{
-			return componentNode;
-		}
-
-		reachedEndOfList = (componentNode->nextItemPtr == Entity::GetInvalidId());
-
-		if (!reachedEndOfList)
-		{
-			componentNode = m_entityComponentsMapping[componentNode->nextItemPtr];
-		}
-	}
-
-	return nullptr;
-}
-
-void EntitiesCollection::RemoveComponentMappingEntry(EntityData& entityData, const ComponentTypeId componentType)
-{
-	std::size_t offset = entityData.componentsDataOffset;
-	std::size_t prevOffset = Entity::GetInvalidId();
-
-	while (offset != Entity::GetInvalidId())
-	{
-		EntityComponentMapEntry* mappingEntry = m_entityComponentsMapping[offset];
-
-		if (mappingEntry->componentPtr.GetTypeId() == componentType)
-		{
-			// Component type found, remove it
-			entityData.componentsMask.reset(componentType);
-
-			// Link the list
-			if (prevOffset == Entity::GetInvalidId())
-			{
-				if (mappingEntry->nextItemPtr != Entity::GetInvalidId())
-				{
-					entityData.componentsDataOffset = mappingEntry->nextItemPtr;
-				}
-			}
-			else
-			{
-				m_entityComponentsMapping[prevOffset]->nextItemPtr = mappingEntry->nextItemPtr;
-			}
-
-			return;
-		}
-
-		prevOffset = offset;
-		offset = mappingEntry->nextItemPtr;
-	}
-}
-
-ComponentsMapStorageType& EntitiesCollection::GetComponentsMapStorage()
-{
-	return m_entityComponentsMapping;
 }
 
 EntityData* EntitiesCollection::AllocateEntityData()

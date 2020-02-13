@@ -3,17 +3,31 @@
 #include "ecs/Manager.hpp"
 
 #include <functional>
+#include <algorithm>
 
 namespace
 {
 const uint32_t k_invalidStorageLocation = uint32_t(-1);
 const uint16_t k_invalidOrderInParent = uint16_t(-1);
+const ecs::EntityId k_invalidEntityId = std::numeric_limits<ecs::EntityId>::max();
+
+struct FindComponentByTypePredicate
+{
+	ecs::ComponentTypeId typeId;
+
+	FindComponentByTypePredicate(ecs::ComponentTypeId inTypeId)
+		: typeId(inTypeId)
+	{}
+
+	bool operator()(const ecs::ComponentPtr& component)
+	{
+		return component.GetTypeId() == typeId;
+	}
+};
 }
 
 namespace ecs
 {
-
-const EntityId k_invalidId = std::numeric_limits<EntityId>::max();
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -98,12 +112,15 @@ void Entity::AddComponent(const ComponentPtr& handle)
 	if (!handle.IsValid())
 		return;
 
-	auto& mappingEntry = Manager::Get()->GetEntitiesCollection().CreateComponentMappingEntry(*m_data);
+	assert(handle.m_block->entityId == k_invalidEntityId);
 
-	mappingEntry.componentPtr = handle;
+	// Register component inside entity data
+	m_data->components.push_back(handle);
 	m_data->componentsMask.set(handle.GetTypeId());
-	mappingEntry.componentPtr.m_block->entityId = m_data->id;
 
+	// Register entity id inside component handle
+	handle.m_block->entityId = m_data->id;
+	
 	// Invoke global callback
 	Manager::Get()->GetComponentAttachedDelegate().Broadcast(*this, handle);
 }
@@ -113,20 +130,24 @@ void Entity::RemoveComponent(const ComponentPtr& handle)
 	if (!handle.IsValid())
 		return;
 
-	ComponentTypeId componentType = handle.GetTypeId();
-	if (HasComponent(componentType))
+	if (handle.m_block->entityId != m_data->id)
 	{
-		Manager::Get()->GetEntitiesCollection().RemoveComponentMappingEntry(*m_data, handle.GetTypeId());
-		handle.m_block->entityId = Entity::GetInvalidId();
-
-		m_data->componentsMask.reset(componentType);
-
-		// Invoke global callback
-		//if (nullptr != Manager::Get()->m_globalEntityComponentRemovedCallback)
-		//{
-		//	std::invoke(Manager::Get()->m_globalEntityComponentRemovedCallback, *this, handle);
-		//}
+		// Trying to remove component from entity that it's not attached to
+		// Put warning here
+		return;
 	}
+
+	auto it = std::find(m_data->components.begin(), m_data->components.end(), handle);
+	if (it != m_data->components.end())
+	{
+		m_data->components.erase(it);
+		handle.m_block->entityId = k_invalidEntityId;
+	}
+
+	m_data->componentsMask.reset(handle.GetTypeId());
+
+	// Invoke component detach delegate
+	Manager::Get()->GetComponentDetachedDelegate().Broadcast(*this, handle);
 }
 
 bool Entity::HasComponent(const ComponentTypeId componentType) const
@@ -151,10 +172,12 @@ ComponentPtr Entity::GetComponent(const ComponentTypeId componentType) const
 {
 	if (HasComponent(componentType))
 	{
-		auto mappingEntry = Manager::Get()->GetEntitiesCollection().FindComponentMappingEntry(*m_data, componentType);
-		if (nullptr != mappingEntry)
+		FindComponentByTypePredicate predicate(componentType);
+
+		auto it = std::find_if(m_data->components.begin(), m_data->components.end(), predicate);
+		if (it != m_data->components.end())
 		{
-			return mappingEntry->componentPtr;
+			return *it;
 		}
 	}
 
@@ -217,10 +240,9 @@ Entity Entity::Clone()
 	return Entity();
 }
 
-EntityComponentsCollection Entity::GetComponents() const
+const EntityComponentsContainer& Entity::GetComponents() const
 {
-	auto& storage = Manager::Get()->GetEntitiesCollection().GetComponentsMapStorage();
-	return EntityComponentsCollection(storage, m_data->componentsDataOffset);
+	return m_data->components;
 }
 
 void Entity::GetComponentsOfTypes(ComponentPtr* outComponents, ComponentTypeId* componentTypes, const std::size_t count) const
@@ -229,11 +251,13 @@ void Entity::GetComponentsOfTypes(ComponentPtr* outComponents, ComponentTypeId* 
 	{
 		if (HasComponent(componentTypes[i]))
 		{
-			auto mappingEntry = Manager::Get()->GetEntitiesCollection().FindComponentMappingEntry(*m_data, componentTypes[i]);
-			if (nullptr != mappingEntry)
+			FindComponentByTypePredicate predicate(componentTypes[i]);
+
+			auto it = std::find_if(m_data->components.begin(), m_data->components.end(), predicate);
+			if (it != m_data->components.end())
 			{
 				// Set component ptr value and go to next
-				outComponents[i] = mappingEntry->componentPtr;
+				outComponents[i] = *it;
 				continue;
 			}
 		}
@@ -327,7 +351,7 @@ bool Entity::operator!=(const Entity& other) const
 
 const EntityId Entity::GetInvalidId()
 {
-	return k_invalidId;
+	return k_invalidEntityId;
 }
 
 void Entity::AddRef()

@@ -13,7 +13,6 @@ namespace ecs
 EntityData::EntityData()
 	: id(Entity::GetInvalidId())
 	, parentId(Entity::GetInvalidId())
-	, componentsDataOffset(0U)
 	, orderInParent(std::numeric_limits<uint16_t>::max())
 	, refCount(0U)
 	, storageLocation(k_invalidStorageLocation)
@@ -22,7 +21,7 @@ EntityData::EntityData()
 EntityData::EntityData(EntityData&& other) noexcept
 	: id(other.id)
 	, parentId(other.parentId)
-	, componentsDataOffset(other.componentsDataOffset)
+	, components(std::move(other.components))
 	, orderInParent(other.orderInParent)
 	, refCount(other.refCount)
 	, storageLocation(other.storageLocation)
@@ -32,7 +31,7 @@ EntityData::EntityData(EntityData&& other) noexcept
 	other.id = Entity::GetInvalidId();
 	other.parentId = Entity::GetInvalidId();
 	other.refCount = 0U;
-	other.componentsDataOffset = 0U;
+	other.components.clear();
 	other.orderInParent = std::numeric_limits<uint16_t>::max();
 	other.storageLocation = k_invalidStorageLocation;
 	other.componentsMask.reset();
@@ -43,7 +42,7 @@ EntityData& EntityData::operator=(EntityData&& other) noexcept
 	id = other.id;
 	parentId = other.parentId;
 	refCount = other.refCount;
-	componentsDataOffset = other.componentsDataOffset;
+	components = std::move(other.components);
 	orderInParent = other.orderInParent;
 	storageLocation = other.storageLocation;
 	children = std::move(other.children);
@@ -52,7 +51,7 @@ EntityData& EntityData::operator=(EntityData&& other) noexcept
 	other.id = Entity::GetInvalidId();
 	other.parentId = Entity::GetInvalidId();
 	other.refCount = 0U;
-	other.componentsDataOffset = 0U;
+	other.components.clear();
 	other.componentsMask.reset();
 	other.orderInParent = std::numeric_limits<uint16_t>::max();
 	other.storageLocation = k_invalidStorageLocation;

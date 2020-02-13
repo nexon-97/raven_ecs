@@ -1,6 +1,5 @@
 #pragma once
 #include "ecs/entity/EntityData.hpp"
-#include "ecs/entity/EntityComponentsCollection.hpp"
 #include "ecs/detail/Types.hpp"
 
 #include <typeindex>
@@ -44,7 +43,7 @@ struct ECS_API Entity
 	bool HasComponent(const ComponentTypeId componentType) const;
 	bool HasComponents(ComponentTypeId* componentTypes, const std::size_t count) const;
 	ComponentPtr GetComponent(const ComponentTypeId componentType) const;
-	EntityComponentsCollection GetComponents() const;
+	const EntityComponentsContainer& GetComponents() const;
 	void GetComponentsOfTypes(ComponentPtr* outComponents, ComponentTypeId* componentTypes, const std::size_t count) const;
 
 	void AddChild(Entity& child);

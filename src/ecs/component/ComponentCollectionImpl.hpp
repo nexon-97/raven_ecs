@@ -91,7 +91,7 @@ public:
 	{
 		// Create data using default constructor
 		ObjectPool<ComponentData>::InsertResult& insertResult = m_data.Emplace();
-		insertResult.ref.controlBlock = ComponentPtrBlock(m_typeId, static_cast<int32_t>(insertResult.index), -1, 1);
+		insertResult.ref.controlBlock = ComponentPtrBlock(m_typeId, static_cast<int32_t>(insertResult.index), Entity::GetInvalidId(), 1);
 
 		return ComponentPtr(&insertResult.ref.controlBlock);
 	}
@@ -157,13 +157,15 @@ public:
 
 	ComponentPtr CloneComponent(const std::size_t index) override
 	{
-		//ComponentData& data = m_data.At(index);
+		// Create data using default constructor
+		ObjectPool<ComponentData>::InsertResult& insertResult = m_data.Emplace();
+		insertResult.ref.controlBlock = ComponentPtrBlock(m_typeId, static_cast<int32_t>(insertResult.index), Entity::GetInvalidId(), 1);
 
-		//ObjectPool<ComponentData>::InsertResult& insertResult = m_data.Emplace(data.component);
-		//insertResult.ref.controlBlock = ComponentPtrBlock(m_typeId, insertResult.index, -1, 1);
+		// Copy data using copy constructor
+		ComponentData& dataToClone = m_data.At(index);
+		insertResult.ref.component = ComponentType(dataToClone.component);
 
-		//return ComponentPtr(&insertResult.ref.controlBlock);
-		return ComponentPtr();
+		return ComponentPtr(&insertResult.ref.controlBlock);
 	}
 
 	iterator begin()

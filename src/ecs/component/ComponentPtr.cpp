@@ -4,6 +4,20 @@
 namespace ecs
 {
 
+ComponentPtrBlock::ComponentPtrBlock()
+	: typeId(Manager::GetInvalidComponentTypeId())
+	, dataIndex(-1)
+	, entityId(Entity::GetInvalidId())
+	, refCount(0)
+{}
+
+ComponentPtrBlock::ComponentPtrBlock(ComponentTypeId inTypeId, int32_t inDataIndex, EntityId inEntityId, int32_t inRefCount)
+	: typeId(inTypeId)
+	, dataIndex(inDataIndex)
+	, entityId(inEntityId)
+	, refCount(inRefCount)
+{}
+
 ComponentPtr::ComponentPtr(ComponentPtrBlock* cblock)
 	: m_block(cblock)
 {}
