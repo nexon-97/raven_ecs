@@ -4,13 +4,12 @@
 #include <list>
 #include <vector>
 #include <unordered_set>
+#include <bitset>
 
 namespace ecs
 {
-
-const std::size_t k_objectPoolRoomSize = 32U;
 	
-template <class T>
+template <class T, std::size_t RoomSize = 32U>
 class ObjectPool
 {
 	using PoolType = ObjectPool<T>;
@@ -31,7 +30,7 @@ public:
 		std::size_t Emplace(Args&&... args)
 		{
 			std::size_t insertPos = _GetEmptyPosition(0U);
-			assert(insertPos < k_objectPoolRoomSize);
+			assert(insertPos < RoomSize);
 
 			items[insertPos] = T(std::forward<Args>(args)...);
 			filledPositions.set(insertPos);
@@ -43,7 +42,7 @@ public:
 		std::size_t Push(const T& object)
 		{
 			std::size_t insertPos = _GetEmptyPosition(0U);
-			assert(insertPos < k_objectPoolRoomSize);
+			assert(insertPos < RoomSize);
 
 			items[insertPos] = T(object);
 			filledPositions.set(insertPos);
@@ -55,7 +54,7 @@ public:
 		std::size_t Push(T&& object)
 		{
 			std::size_t insertPos = _GetEmptyPosition(0U);
-			assert(insertPos < k_objectPoolRoomSize);
+			assert(insertPos < RoomSize);
 
 			items[insertPos] = T(object);
 			filledPositions.set(std::move(insertPos));
@@ -85,29 +84,29 @@ public:
 
 		std::size_t _GetEmptyPosition(const std::size_t startPos) const
 		{
-			for (std::size_t i = startPos; i < k_objectPoolRoomSize; ++i)
+			for (std::size_t i = startPos; i < RoomSize; ++i)
 			{
 				if (!filledPositions.test(i))
 					return i;
 			}
 
-			return k_objectPoolRoomSize;
+			return RoomSize;
 		}
 
 		std::size_t _GetFilledPosition(const std::size_t startPos) const
 		{
-			for (std::size_t i = startPos; i < k_objectPoolRoomSize; ++i)
+			for (std::size_t i = startPos; i < RoomSize; ++i)
 			{
 				if (filledPositions.test(i))
 					return i;
 			}
 
-			return k_objectPoolRoomSize;
+			return RoomSize;
 		}
 
 	private:
-		T items[k_objectPoolRoomSize];
-		std::bitset<k_objectPoolRoomSize> filledPositions;
+		T items[RoomSize];
+		std::bitset<RoomSize> filledPositions;
 		int32_t roomIndex;
 		int8_t size = 0;
 
@@ -291,13 +290,13 @@ public:
 
 	std::size_t GetNextObjectIndex(const std::size_t index) const
 	{
-		std::size_t startRoomPos = index % k_objectPoolRoomSize;
-		for (std::size_t poolId = index / k_objectPoolRoomSize; poolId < m_poolIteratorById.size(); ++poolId)
+		std::size_t startRoomPos = index % RoomSize;
+		for (std::size_t poolId = index / RoomSize; poolId < m_poolIteratorById.size(); ++poolId)
 		{
 			std::size_t filledPos = m_poolIteratorById[poolId]->_GetFilledPosition(startRoomPos);
-			if (filledPos != k_objectPoolRoomSize)
+			if (filledPos != RoomSize)
 			{
-				return poolId * k_objectPoolRoomSize + filledPos;
+				return poolId * RoomSize + filledPos;
 			}
 		}
 
@@ -343,7 +342,7 @@ private:
 
 		if (it != m_availableRooms.end())
 		{
-			if (roomIt->size >= k_objectPoolRoomSize)
+			if (roomIt->size >= RoomSize)
 			{
 				m_availableRooms.erase(it);
 			}
@@ -364,7 +363,7 @@ private:
 		{
 			m_poolIteratorById.push_back(it);
 
-			if (it->size() < k_objectPoolRoomSize)
+			if (it->size() < RoomSize)
 			{
 				m_availableRooms.push_back(it);
 			}
@@ -373,7 +372,7 @@ private:
 
 	ItemLocation SplitIndexIntoRoomLocation(const std::size_t index) const
 	{
-		return ItemLocation(index / k_objectPoolRoomSize, index % k_objectPoolRoomSize);
+		return ItemLocation(index / RoomSize, index % RoomSize);
 	}
 
 	const T& GetItemAtLocation(const ItemLocation& location) const

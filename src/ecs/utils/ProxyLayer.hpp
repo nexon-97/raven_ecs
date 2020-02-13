@@ -10,6 +10,15 @@ template <class ProxyT, typename IdType = int32_t>
 class ProxyLayer
 {
 public:
+	ProxyLayer() = default;
+	~ProxyLayer() = default;
+
+	ProxyLayer(const ProxyLayer&) = delete;
+	ProxyLayer& operator=(const ProxyLayer&) = delete;
+
+	ProxyLayer(ProxyLayer&&) = default;
+	ProxyLayer& operator=(ProxyLayer&&) = default;
+
 	EntityId GetEntityByProxyId(const IdType proxyId) const
 	{
 		auto it = m_proxyToEntityMapping.find(proxyId);
@@ -90,6 +99,11 @@ public:
 			m_proxiesStorage.RemoveAt(it->second);
 			m_proxiesById.erase(it);
 		}
+	}
+
+	ObjectPool<ProxyT>& GetProxies()
+	{
+		return m_proxiesStorage;
 	}
 
 	static const IdType GetInvalidProxyId()
