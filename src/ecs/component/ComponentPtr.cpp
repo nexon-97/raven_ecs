@@ -95,6 +95,16 @@ void* ComponentPtr::GetRawData() const
 	return Manager::Get()->GetComponentRaw(m_block->typeId, m_block->dataIndex);
 }
 
+ComponentTypeId ComponentPtr::TypeIndexToTypeId(const std::type_index& typeIndex) const
+{
+	return Manager::Get()->GetComponentTypeIdByIndex(typeIndex);
+}
+
+ComponentPtr ComponentPtr::GetSibling(const ComponentTypeId componentType) const
+{
+	return GetEntity().GetComponent(componentType);
+}
+
 std::size_t ComponentPtr::GetHash() const
 {
 	return std::hash<ComponentPtrBlock*>()(m_block);

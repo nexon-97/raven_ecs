@@ -1,9 +1,17 @@
 #pragma once
 #include "ecs/detail/Types.hpp"
 #include <cstdint>
+#include <typeindex>
 
 namespace ecs
 {
+
+// Forward declarations
+class ComponentPtr;
+template <class T>
+class TComponentPtr;
+template <class T>
+TComponentPtr<T> Cast(const ComponentPtr& component);
 
 class ECS_API ComponentPtr
 {
@@ -23,6 +31,13 @@ public:
 	ComponentTypeId GetTypeId() const;
 	Entity GetEntity() const;
 	bool IsValid() const;
+	ComponentPtr GetSibling(const ComponentTypeId componentType) const;
+
+	template <typename SiblingT>
+	TComponentPtr<SiblingT> GetSibling() const
+	{
+		return Cast<SiblingT>(GetSibling(TypeIndexToTypeId(typeid(SiblingT))));
+	}
 
 	std::size_t GetHash() const;
 
@@ -31,6 +46,7 @@ public:
 
 protected:
 	void* GetRawData() const;
+	ComponentTypeId TypeIndexToTypeId(const std::type_index& typeIndex) const;
 
 private:
 	ComponentPtrBlock* m_block = nullptr;

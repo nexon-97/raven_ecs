@@ -30,17 +30,6 @@ public:
 		return Entity::GetInvalidId();
 	}
 
-	IdType GetProxyIdByEntity(const EntityId entityId) const
-	{
-		auto it = m_entityToProxyMapping.find(entityId);
-		if (it != m_entityToProxyMapping.end())
-		{
-			return it->second;
-		}
-
-		return GetInvalidProxyId();
-	}
-
 	ProxyT* GetProxyById(const IdType proxyId)
 	{
 		auto it = m_proxiesById.find(proxyId);
@@ -67,38 +56,18 @@ public:
 	template <typename ...Args>
 	std::pair<IdType, ProxyT*> CreateProxy(const EntityId entityId, Args... args)
 	{
-		auto it = m_entityToProxyMapping.find(entityId);
-		if (it != m_entityToProxyMapping.end())
-		{
-			std::size_t poolLocation = m_proxiesById[it->second];
-			ProxyT* proxy = &m_proxiesStorage[poolLocation];
-
-			return std::make_pair(it->second, proxy);
-		}
-
 		IdType proxyId = m_nextProxyId;
 		++m_nextProxyId;
 
-		auto insertResult = m_proxiesStorage.Emplace(std::forward<Args>(args)...);
-		m_proxiesById.emplace(proxyId, insertResult.index);
-		m_entityToProxyMapping.emplace(entityId, proxyId);
-		m_proxyToEntityMapping.emplace(proxyId, entityId);
+		auto insertResult = CreateProxyInternal(std::forward<Args>(args)...);
 
-		ProxyT* proxyValue = &insertResult.ref;
+		ProxyT* proxyValue = AddProxyInternal(insertResult, entityId, proxyId);
 		return std::make_pair(proxyId, proxyValue);
 	}
 
 	void RemoveProxyById(const IdType proxyId)
 	{
-		auto it = m_proxiesById.find(proxyId);
-		if (it != m_proxiesById.end())
-		{
-			EntityId entityId = m_proxyToEntityMapping[proxyId];
-			m_entityToProxyMapping.erase(entityId);
-			m_proxyToEntityMapping.erase(proxyId);
-			m_proxiesStorage.RemoveAt(it->second);
-			m_proxiesById.erase(it);
-		}
+		RemoveProxyInternal(proxyId);
 	}
 
 	ObjectPool<ProxyT>& GetProxies()
@@ -111,8 +80,31 @@ public:
 		return std::numeric_limits<IdType>::max();
 	}
 
-private:
-	std::unordered_map<EntityId, IdType> m_entityToProxyMapping;
+protected:
+	virtual ProxyT* AddProxyInternal(const typename ObjectPool<ProxyT>::InsertResult& insertResult, const EntityId entityId, const IdType proxyId)
+	{
+		m_proxiesById.emplace(proxyId, insertResult.index);
+		m_proxyToEntityMapping.emplace(proxyId, entityId);
+
+		ProxyT* proxyValue = &insertResult.ref;
+		return proxyValue;
+	}
+
+	virtual void RemoveProxyInternal(const IdType proxyId)
+	{
+		m_proxyToEntityMapping.erase(proxyId);
+		std::size_t storageLocation = m_proxiesById[proxyId];
+		m_proxiesStorage.RemoveAt(storageLocation);
+		m_proxiesById.erase(proxyId);
+	}
+
+	template <typename ...Args>
+	typename ObjectPool<ProxyT>::InsertResult CreateProxyInternal()
+	{
+		return m_proxiesStorage.Emplace(std::forward<Args>(args)...);
+	}
+
+protected:
 	std::unordered_map<IdType, EntityId> m_proxyToEntityMapping;
 	std::unordered_map<IdType, std::size_t> m_proxiesById;
 	ObjectPool<ProxyT> m_proxiesStorage;
