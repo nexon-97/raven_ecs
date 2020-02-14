@@ -1,32 +1,15 @@
-project "ecs"
-	kind "SharedLib"	
-	language "C++"
-	location (_ACTION)
-	cppdialect "C++17"
+local ecs_path = EngineRootLocation.."/framework/core/raven_ecs"
+local ecs_src = ecs_path.."/src"
 
-	files { "../**.cpp", "../**.hpp" }
-	includedirs
-	{
-		"../.",
-	}
+local module_definition =
+{
+	["name"] = "ecs",
+	["prj_location"] = ecs_src.."/prj/".._ACTION,
+	["dependencies"] = {},
+	["files"] = { ecs_src.."/**.cpp", ecs_src.."/**.hpp" },
+	["include_dirs"] = { ecs_src },
+	["defines"] = {},
+	["link_type"] = "dynamic",
+}
 
-	targetdir(EngineRootLocation.."/bin")
-	
-	if prj_config["os"] == "windows" then
-		configureWindowsSDK()
-	end
-	
-	generateProjectAPIDefExport('ecs')
-	pic "On"
-	targetname "ecs"
-
-	configuration "Debug"
-		targetsuffix "_d"
-		objdir(_ACTION.."/obj/Debug")
-		
-	configuration "Development"
-		targetsuffix "_dev"
-		objdir(_ACTION.."/obj/Development")
-
-	configuration "Release"
-		objdir(_ACTION.."/obj/Release")
+registerModuleDef(module_definition)
