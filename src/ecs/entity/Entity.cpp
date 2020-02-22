@@ -152,6 +152,9 @@ void Entity::RemoveComponent(const ComponentPtr& handle)
 
 bool Entity::HasComponent(const ComponentTypeId componentType) const
 {
+	if (componentType == Manager::GetInvalidComponentTypeId())
+		return false;
+
 	return m_data->componentsMask.test(componentType);
 }
 
