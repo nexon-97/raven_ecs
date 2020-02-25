@@ -217,7 +217,7 @@ uint16_t Entity::GetOrderInParent() const
 	return m_data->orderInParent;
 }
 
-Entity Entity::Clone()
+Entity Entity::Clone() const
 {
 	if (IsValid())
 	{

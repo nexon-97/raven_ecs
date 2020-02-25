@@ -36,7 +36,7 @@ struct ECS_API Entity
 
 	void Reset();
 
-	Entity Clone();
+	Entity Clone() const;
 
 	void AddComponent(const ComponentPtr& handle);
 	void RemoveComponent(const ComponentPtr& handle);
