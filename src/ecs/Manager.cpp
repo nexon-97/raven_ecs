@@ -94,6 +94,8 @@ void Manager::Init()
 {
 	m_componentAttachedDelegate.BindMemberFunction(&Manager::DefaultComponentAttachedDelegate, this);
 	m_componentDetachedDelegate.BindMemberFunction(&Manager::DefaultComponentDetachedDelegate, this);
+
+	InitNewSystems();
 }
 
 void Manager::Destroy()
@@ -143,7 +145,7 @@ void Manager::AddSystemToOrderedSystemsList(System* system)
 	m_orderedSystems.insert(insertIterator, system);
 }
 
-void Manager::Update()
+void Manager::InitNewSystems()
 {
 	if (!m_newSystems.empty())
 	{
@@ -167,6 +169,11 @@ void Manager::Update()
 	{
 		SortOrderedSystemsList();
 	}
+}
+
+void Manager::Update()
+{
+	InitNewSystems();
 
 	UpdateSystems();
 

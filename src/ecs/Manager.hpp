@@ -41,6 +41,9 @@ public:
 	void ECS_API Destroy();
 	void ECS_API Update();
 
+	// Initializes new systems that haven't been initialized yet, and sort systems by priority for proper update order
+	void ECS_API InitNewSystems();
+
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Section for systems management
 
