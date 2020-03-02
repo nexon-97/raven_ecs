@@ -58,7 +58,7 @@ void Manager::RemoveSystem(System* system)
 
 void Manager::DoRemoveSystem(System* system)
 {
-	system->Destroy();
+	system->DispatchDestroy();
 
 	{
 		auto it = m_systemsTypeIdMapping.find(typeid(*system));
@@ -105,7 +105,7 @@ void Manager::Destroy()
 	// Destroy systems
 	for (ecs::System* system : m_orderedSystems)
 	{
-		system->Destroy();
+		system->DispatchDestroy();
 	}
 	m_systemsTypeIdMapping.clear();
 	m_systemsStorage.clear();
@@ -159,7 +159,7 @@ void Manager::InitNewSystems()
 				AddSystemToOrderedSystemsList(system);
 			}
 
-			system->Init();
+			system->DispatchInit();
 		}
 
 		m_newSystems.clear();
