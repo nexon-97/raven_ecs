@@ -175,12 +175,12 @@ ComponentPtr Entity::GetComponent(const ComponentTypeId componentType) const
 {
 	if (HasComponent(componentType))
 	{
-		FindComponentByTypePredicate predicate(componentType);
-
-		auto it = std::find_if(m_data->components.begin(), m_data->components.end(), predicate);
-		if (it != m_data->components.end())
+		for (const ComponentPtr& component : m_data->components)
 		{
-			return *it;
+			if (component.GetTypeId() == componentType)
+			{
+				return component;
+			}
 		}
 	}
 
