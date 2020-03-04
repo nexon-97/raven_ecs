@@ -1,5 +1,7 @@
 #pragma once
 #include "ecs/events/DelegateDetails.hpp"
+#include <vector>
+#include <memory>
 
 template <typename ...Args>
 class MulticastDelegate
