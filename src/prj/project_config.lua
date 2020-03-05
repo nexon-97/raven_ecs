@@ -5,7 +5,7 @@ local module_definition =
 {
 	["name"] = "ecs",
 	["kind"] = "shared_lib",
-	["dependencies"] = {},
+	["dependencies"] = { "events" },
 	["files"] = { ecs_src.."/**.cpp", ecs_src.."/**.hpp" },
 	["include_dirs"] = { ecs_src },
 	["defines"] = {},

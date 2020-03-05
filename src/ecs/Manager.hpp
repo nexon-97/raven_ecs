@@ -12,7 +12,7 @@
 #include "ecs/cache/ComponentsTupleCache.hpp"
 #include "ecs/cache/GenericComponentsCacheView.hpp"
 #include "ecs/cache/TypedComponentsCacheView.hpp"
-#include "ecs/events/DelegateMacro.hpp"
+#include <RavenEvents.hpp>
 
 DECLARE_MULTICAST_DELEGATE(EntityCreateDelegate, ecs::Entity);
 DECLARE_MULTICAST_DELEGATE(EntityDestroyDelegate, ecs::EntityId);
