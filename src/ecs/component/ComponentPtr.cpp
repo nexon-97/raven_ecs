@@ -59,9 +59,10 @@ ComponentPtr& ComponentPtr::operator=(ComponentPtr&& other)
 
 ComponentPtr::~ComponentPtr()
 {
-	if (nullptr != m_block && m_block->refCount == 1U)
+	Manager* manager = Manager::Get();
+	if (nullptr != manager && nullptr != m_block && m_block->refCount == 1U)
 	{
-		Manager::Get()->ReleaseComponent(m_block->typeId, m_block->dataIndex);
+		manager->ReleaseComponent(m_block->typeId, m_block->dataIndex);
 	}
 
 	m_block = nullptr;
