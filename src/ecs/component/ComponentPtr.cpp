@@ -63,6 +63,8 @@ ComponentPtr::~ComponentPtr()
 	{
 		Manager::Get()->ReleaseComponent(m_block->typeId, m_block->dataIndex);
 	}
+
+	m_block = nullptr;
 }
 
 bool ComponentPtr::IsValid() const
