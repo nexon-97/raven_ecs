@@ -43,6 +43,7 @@ public:
 
 	bool operator==(const ComponentPtr& other) const;
 	bool operator!=(const ComponentPtr& other) const;
+	operator bool() const;
 
 protected:
 	void* GetRawData() const;

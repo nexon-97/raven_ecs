@@ -123,4 +123,9 @@ bool ComponentPtr::operator!=(const ComponentPtr& other) const
 	return !(*this == other);
 }
 
+ComponentPtr::operator bool() const
+{
+	return IsValid();
+}
+
 }
