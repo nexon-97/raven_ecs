@@ -31,6 +31,7 @@ public:
 	ComponentTypeId GetTypeId() const;
 	Entity GetEntity() const;
 	bool IsValid() const;
+	void Reset();
 	ComponentPtr GetSibling(const ComponentTypeId componentType) const;
 
 	template <typename SiblingT>

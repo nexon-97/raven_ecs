@@ -389,7 +389,7 @@ private:
 
 	InsertResult GenInsertResult(StorageTypeIterator roomIt, const std::size_t dataIndex) const
 	{
-		return InsertResult(roomIt->items[dataIndex], roomIt->roomIndex + dataIndex);
+		return InsertResult(roomIt->items[dataIndex], roomIt->roomIndex * RoomSize + dataIndex);
 	}
 
 private:

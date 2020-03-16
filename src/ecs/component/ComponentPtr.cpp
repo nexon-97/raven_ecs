@@ -59,6 +59,11 @@ ComponentPtr& ComponentPtr::operator=(ComponentPtr&& other)
 
 ComponentPtr::~ComponentPtr()
 {
+	Reset();
+}
+
+void ComponentPtr::Reset()
+{
 	Manager* manager = Manager::Get();
 	if (nullptr != manager && nullptr != m_block && m_block->refCount == 1U)
 	{
