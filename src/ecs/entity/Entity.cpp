@@ -10,6 +10,7 @@ namespace
 const uint32_t k_invalidStorageLocation = uint32_t(-1);
 const uint16_t k_invalidOrderInParent = uint16_t(-1);
 const ecs::EntityId k_invalidEntityId = std::numeric_limits<ecs::EntityId>::max();
+const std::string k_emptyName;
 
 struct FindComponentByTypePredicate
 {
@@ -223,6 +224,9 @@ Entity Entity::Clone() const
 	{
 		Entity clone = Manager::Get()->GetEntitiesCollection().CreateEntity();
 
+		// Clone name
+		clone.SetName(GetName());
+
 		// Clone components
 		for (const ComponentPtr& componentPtr : GetComponents())
 		{
@@ -383,6 +387,42 @@ EntityData* Entity::GetData() const
 ComponentTypeId Entity::GetComponentTypeIdByIndex(const std::type_index& index) const
 {
 	return Manager::Get()->GetComponentTypeIdByIndex(index);
+}
+
+void Entity::SetName(const std::string& name)
+{
+	if (name.empty())
+	{
+		m_data->name.reset();
+	}
+	else
+	{
+		m_data->name = std::make_unique<std::string>(name);
+	}
+}
+
+void Entity::SetName(std::string&& name)
+{
+	if (name.empty())
+	{
+		m_data->name.reset();
+	}
+	else
+	{
+		m_data->name = std::make_unique<std::string>(std::move(name));
+	}
+}
+
+const std::string& Entity::GetName() const
+{
+	if (m_data->name)
+	{
+		return *m_data->name;
+	}
+	else
+	{
+		return k_emptyName;
+	}
 }
 
 } // namespace ecs

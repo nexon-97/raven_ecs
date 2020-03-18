@@ -27,6 +27,7 @@ EntityData::EntityData(EntityData&& other) noexcept
 	, storageLocation(other.storageLocation)
 	, children(std::move(other.children))
 	, componentsMask(other.componentsMask)
+	, name(std::move(other.name))
 {
 	other.id = Entity::GetInvalidId();
 	other.parentId = Entity::GetInvalidId();
@@ -47,6 +48,7 @@ EntityData& EntityData::operator=(EntityData&& other) noexcept
 	storageLocation = other.storageLocation;
 	children = std::move(other.children);
 	componentsMask = other.componentsMask;
+	name = std::move(other.name);
 
 	other.id = Entity::GetInvalidId();
 	other.parentId = Entity::GetInvalidId();

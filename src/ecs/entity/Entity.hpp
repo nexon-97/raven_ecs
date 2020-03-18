@@ -57,6 +57,10 @@ struct ECS_API Entity
 
 	EntityId GetId() const;
 
+	void SetName(const std::string& name);
+	void SetName(std::string&& name);
+	const std::string& GetName() const;
+
 	template <typename ComponentType>
 	bool HasComponent() const
 	{

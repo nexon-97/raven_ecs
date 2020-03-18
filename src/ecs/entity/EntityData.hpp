@@ -26,6 +26,7 @@ struct EntityData
 	uint16_t refCount;
 	EntityHandleIndex storageLocation;
 	EntityChildrenContainer children;
+	std::unique_ptr<std::string> name;
 	bool isIteratingComponents : 1; // Indicates if the user is currently iterating components of an entity
 
 	EntityData(const EntityData&) = delete;
