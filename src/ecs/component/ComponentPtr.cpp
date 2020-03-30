@@ -103,7 +103,7 @@ void* ComponentPtr::GetRawData() const
 	return Manager::Get()->GetComponentRaw(m_block->typeId, m_block->dataIndex);
 }
 
-ComponentTypeId ComponentPtr::TypeIndexToTypeId(const std::type_index& typeIndex) const
+ComponentTypeId ComponentPtr::TypeIndexToTypeId(const std::type_index& typeIndex)
 {
 	return Manager::Get()->GetComponentTypeIdByIndex(typeIndex);
 }

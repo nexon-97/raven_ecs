@@ -17,7 +17,7 @@ class ObjectPool
 public:
 	class TRoom
 	{
-		friend class PoolType;
+		friend class ObjectPool<T, RoomSize>;
 
 	public:
 		TRoom(int32_t inRoomIndex)

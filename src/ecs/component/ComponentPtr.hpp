@@ -46,9 +46,10 @@ public:
 	bool operator!=(const ComponentPtr& other) const;
 	operator bool() const;
 
+	static ComponentTypeId TypeIndexToTypeId(const std::type_index& typeIndex);
+
 protected:
 	void* GetRawData() const;
-	ComponentTypeId TypeIndexToTypeId(const std::type_index& typeIndex) const;
 
 private:
 	ComponentPtrBlock* m_block = nullptr;
@@ -88,7 +89,7 @@ public:
 template <class T>
 TComponentPtr<T> Cast(const ComponentPtr& component)
 {
-	if (component.GetTypeId() == Manager::Get()->GetComponentTypeId<T>())
+	if (component.GetTypeId() == ComponentPtr::TypeIndexToTypeId(typeid(T)))
 	{
 		return TComponentPtr<T>(component);
 	}
