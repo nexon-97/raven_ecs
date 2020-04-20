@@ -90,7 +90,7 @@ public:
 	ComponentPtr Create() override
 	{
 		// Create data using default constructor
-		auto& insertResult = m_data.Emplace();
+		auto insertResult = m_data.Emplace();
 		insertResult.ref.controlBlock = ComponentPtrBlock(m_typeId, static_cast<int32_t>(insertResult.index), Entity::GetInvalidId(), 1);
 
 		return ComponentPtr(&insertResult.ref.controlBlock);
@@ -158,7 +158,7 @@ public:
 	ComponentPtr CloneComponent(const std::size_t index) override
 	{
 		// Create data using default constructor
-		auto& insertResult = m_data.Emplace();
+		auto insertResult = m_data.Emplace();
 		insertResult.ref.controlBlock = ComponentPtrBlock(m_typeId, static_cast<int32_t>(insertResult.index), Entity::GetInvalidId(), 1);
 
 		// Copy data using copy constructor

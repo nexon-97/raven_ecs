@@ -42,17 +42,6 @@ public:
 		return nullptr;
 	}
 
-	ProxyT* GetProxyByEntityId(const EntityId entityId)
-	{
-		auto proxyIdIt = m_entityToProxyMapping.find(entityId);
-		if (proxyIdIt != m_entityToProxyMapping.end())
-		{
-			return GetProxyById(proxyIdIt->second);
-		}
-
-		return nullptr;
-	}
-
 	template <typename ...Args>
 	std::pair<IdType, ProxyT*> CreateProxy(const EntityId entityId, Args... args)
 	{
@@ -99,7 +88,7 @@ protected:
 	}
 
 	template <typename ...Args>
-	typename ObjectPool<ProxyT>::InsertResult CreateProxyInternal()
+	typename ObjectPool<ProxyT>::InsertResult CreateProxyInternal(Args... args)
 	{
 		return m_proxiesStorage.Emplace(std::forward<Args>(args)...);
 	}

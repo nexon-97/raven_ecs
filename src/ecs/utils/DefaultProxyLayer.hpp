@@ -20,7 +20,7 @@ public:
 			return it->second;
 		}
 
-		return GetInvalidProxyId();
+		return ProxyLayer<ProxyT, IdType>::GetInvalidProxyId();
 	}
 
 protected:
@@ -34,7 +34,7 @@ protected:
 
 	void RemoveProxyInternal(const IdType proxyId) override
 	{
-		EntityId entityId = m_proxyToEntityMapping[proxyId];
+		EntityId entityId = ProxyLayer<ProxyT, IdType>::m_proxyToEntityMapping[proxyId];
 		m_entityToProxyMapping.erase(entityId);
 
 		ProxyLayer<ProxyT, IdType>::RemoveProxyInternal(proxyId);

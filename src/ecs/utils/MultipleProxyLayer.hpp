@@ -53,7 +53,7 @@ protected:
 	{
 		if (!m_isRemovingAllEntityProxies)
 		{
-			EntityId entityId = m_proxyToEntityMapping[proxyId];
+			EntityId entityId = ProxyLayer<ProxyT, IdType>::GetEntityByProxyId(proxyId);
 			std::vector<IdType>& entityProxies = m_entityToProxyMapping[entityId];
 
 			auto it = std::find(entityProxies.begin(), entityProxies.end(), proxyId);
