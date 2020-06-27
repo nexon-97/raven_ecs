@@ -1,5 +1,6 @@
 #include "ecs/cache/ComponentsTupleCache.hpp"
 #include "ecs/entity/Entity.hpp"
+#include <cstring>
 
 namespace ecs
 {
