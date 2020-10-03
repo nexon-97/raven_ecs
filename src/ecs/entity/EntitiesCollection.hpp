@@ -12,6 +12,7 @@ namespace ecs
 class EntitiesCollection
 {
 	friend struct Entity;
+	friend class ComponentsTupleCache;
 
 	using EntityIdsMap = std::unordered_map<EntityId, uint32_t>; // Mapping of entity id to entity storage location
 

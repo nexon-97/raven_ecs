@@ -503,16 +503,19 @@ void Manager::DefaultComponentAttachedDelegate(ecs::Entity entity, ecs::Componen
 		const auto& cachesList = it->second;
 		for (ComponentsTupleCache* cache : cachesList)
 		{
-			cache->TouchEntity(entity);
+			cache->TouchEntity(entity.GetId());
 		}
 	}
 }
 
-void Manager::DefaultComponentDetachedDelegate(ecs::Entity entity, ecs::ComponentPtr component)
+void Manager::DefaultComponentDetachedDelegate(ecs::ComponentPtr component)
 {
 	// Invoke specialized delegate
-	GetSpecializedComponentDetachedDelegate(component.GetTypeId()).Broadcast(entity, component);
+	GetSpecializedComponentDetachedDelegate(component.GetTypeId()).Broadcast(component);
+}
 
+void Manager::HandleComponentDetach(const ecs::EntityId entityId, const ecs::ComponentPtr& component)
+{
 	// Touch tuple caches
 	ComponentTypeId typeId = component.GetTypeId();
 	auto it = m_componentTypeCaches.find(typeId);
@@ -521,9 +524,11 @@ void Manager::DefaultComponentDetachedDelegate(ecs::Entity entity, ecs::Componen
 		const auto& cachesList = it->second;
 		for (ComponentsTupleCache* cache : cachesList)
 		{
-			cache->TouchEntity(entity);
+			cache->TouchEntity(entityId);
 		}
 	}
+
+	m_componentDetachedDelegate.Broadcast(component);
 }
 
 } // namespace ecs

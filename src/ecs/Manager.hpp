@@ -18,8 +18,8 @@ DECLARE_MULTICAST_DELEGATE(EntityCreateDelegate, ecs::Entity);
 DECLARE_MULTICAST_DELEGATE(EntityDestroyDelegate, ecs::EntityId);
 DECLARE_MULTICAST_DELEGATE(ComponentCreateDelegate, ecs::ComponentPtr);
 DECLARE_MULTICAST_DELEGATE(ComponentDestroyDelegate, ecs::ComponentPtr);
-DECLARE_MULTICAST_DELEGATE(ComponentAttachedDelegate, ecs::Entity, ecs::ComponentPtr);
-DECLARE_MULTICAST_DELEGATE(ComponentDetachedDelegate, ecs::Entity, ecs::ComponentPtr);
+DECLARE_MULTICAST_DELEGATE(ComponentAttachedDelegate, ecs::Entity&, ecs::ComponentPtr);
+DECLARE_MULTICAST_DELEGATE(ComponentDetachedDelegate, ecs::ComponentPtr);
 DECLARE_MULTICAST_DELEGATE(SystemPriorityChangedDelegate, ecs::System*);
 
 namespace ecs
@@ -33,6 +33,7 @@ class Manager
 	friend class EntitiesCollection;
 	friend class ComponentPtr;
 	friend struct Entity;
+	friend class ComponentsTupleCache;
 
 public:
 	ECS_API Manager();
@@ -236,7 +237,9 @@ private:
 	}
 	
 	void DefaultComponentAttachedDelegate(ecs::Entity entity, ecs::ComponentPtr component);
-	void DefaultComponentDetachedDelegate(ecs::Entity entity, ecs::ComponentPtr component);
+	void DefaultComponentDetachedDelegate(ecs::ComponentPtr component);
+
+	void HandleComponentDetach(const ecs::EntityId entityId, const ecs::ComponentPtr& component);
 
 private:
 	std::vector<std::unique_ptr<IComponentCollection>> m_componentStorages;

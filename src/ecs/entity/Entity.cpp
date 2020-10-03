@@ -142,13 +142,12 @@ void Entity::RemoveComponent(const ComponentPtr& handle)
 	if (it != m_data->components.end())
 	{
 		m_data->components.erase(it);
+		m_data->componentsMask.reset(handle.GetTypeId());
 		handle.m_block->entityId = k_invalidEntityId;
+
+		// Invoke component detach delegate
+		Manager::Get()->HandleComponentDetach(handle.m_block->entityId, handle);
 	}
-
-	m_data->componentsMask.reset(handle.GetTypeId());
-
-	// Invoke component detach delegate
-	Manager::Get()->GetComponentDetachedDelegate().Broadcast(*this, handle);
 }
 
 bool Entity::HasComponent(const ComponentTypeId componentType) const
@@ -374,6 +373,7 @@ void Entity::RemoveRef()
 
 		if (m_data->refCount == 0U && nullptr != Manager::Get())
 		{
+			// Perform entity data destruction
 			Manager::Get()->GetEntitiesCollection().OnEntityDataDestroy(m_data->id);
 		}
 	}

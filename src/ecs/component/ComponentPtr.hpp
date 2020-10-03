@@ -17,6 +17,7 @@ class ECS_API ComponentPtr
 {
 	friend class Manager;
 	friend struct Entity;
+	friend class EntitiesCollection;
 
 public:
 	ComponentPtr() = default;

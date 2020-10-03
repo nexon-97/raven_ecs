@@ -6,6 +6,7 @@
 namespace
 {
 const uint16_t k_invalidOrderInParent = uint16_t(-1);
+const ecs::EntityId k_invalidEntityId = std::numeric_limits<ecs::EntityId>::max();
 }
 
 namespace ecs
@@ -61,9 +62,6 @@ void EntitiesCollection::MoveEntityData(EntityData& entityData, const uint32_t n
 
 void EntitiesCollection::OnEntityDataDestroy(EntityId entityId)
 {
-	// Invoke global callback
-	Manager::Get()->GetEntityDestroyDelegate().Broadcast(entityId);
-
 	// Find entity data location
 	auto it = m_entityIdsMap.find(entityId);
 	assert(it != m_entityIdsMap.end());
@@ -74,12 +72,25 @@ void EntitiesCollection::OnEntityDataDestroy(EntityId entityId)
 	// Remove from entity id -> storage location mapping
 	m_entityIdsMap.erase(it);
 
+	// Detach all components from entity
+	for (const auto& componentHandle : entityData->components)
+	{
+		entityData->componentsMask.reset(componentHandle.GetTypeId());
+		componentHandle.m_block->entityId = k_invalidEntityId;
+
+		Manager::Get()->HandleComponentDetach(entityId, componentHandle);
+	}
+	entityData->components.clear();
+
 	// Replace the entity data with newly created one
 	if (!Manager::Get()->m_isBeingDestroyed)
 	{
 		m_storageHoles.push_back(location);
 		*entityData = EntityData();
 	}
+
+	// Invoke global callback, when entity has already been destroyed
+	Manager::Get()->GetEntityDestroyDelegate().Broadcast(entityId);
 }
 
 EntityData* EntitiesCollection::AllocateEntityData()
