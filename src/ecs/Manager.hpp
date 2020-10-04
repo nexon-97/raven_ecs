@@ -9,6 +9,7 @@
 #include "ecs/component/ComponentCollectionImpl.hpp"
 #include "ecs/System.hpp"
 #include "ecs/entity/EntitiesCollection.hpp"
+#include "ecs/entity/EntityLayer.hpp"
 #include "ecs/cache/ComponentsTupleCache.hpp"
 #include "ecs/cache/GenericComponentsCacheView.hpp"
 #include "ecs/cache/TypedComponentsCacheView.hpp"
@@ -182,6 +183,11 @@ public:
 		return TypedComponentsCacheView<ComponentT...>(tupleCache);
 	}
 
+	void ECS_API AddEntityLayer(const std::string& layerName, std::unique_ptr<EntityLayer>&& layer);
+	void ECS_API RemoveEntityLayer(const std::string& layerName);
+	ECS_API EntityLayer* GetEntityLayer(const std::string& layerName) const;
+	ECS_API EntityLayer& GetDefaultEntityLayer();
+
 	// [TODO] Consider locking of cache views for multithreading
 
 	///////////////////////////////////////////////////////////////////////////////////
@@ -257,6 +263,8 @@ private:
 	std::vector<System*> m_removedSystems; // Removed systems, that have not been destroyed and removed yet
 	
 	EntitiesCollection m_entitiesCollection; // Class, that manages entities and their functionality
+	std::unordered_map<std::string, std::unique_ptr<EntityLayer>> m_entityLayers;
+	EntityLayer m_defaultEntityLayer;
 
 	std::unordered_map<uint32_t, std::unique_ptr<ComponentsTupleCache>> m_tupleCaches;
 	std::unordered_map<ComponentTypeId, std::vector<ComponentsTupleCache*>> m_componentTypeCaches;

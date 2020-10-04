@@ -531,4 +531,38 @@ void Manager::HandleComponentDetach(const ecs::EntityId entityId, const ecs::Com
 	m_componentDetachedDelegate.Broadcast(component);
 }
 
+void Manager::AddEntityLayer(const std::string& layerName, std::unique_ptr<EntityLayer>&& layer)
+{
+	auto it = m_entityLayers.find(layerName);
+	if (it == m_entityLayers.end())
+	{
+		m_entityLayers.emplace(layerName, std::move(layer));
+	}
+}
+
+void Manager::RemoveEntityLayer(const std::string& layerName)
+{
+	auto it = m_entityLayers.find(layerName);
+	if (it != m_entityLayers.end())
+	{
+		m_entityLayers.erase(it);
+	}
+}
+
+EntityLayer* Manager::GetEntityLayer(const std::string& layerName) const
+{
+	auto it = m_entityLayers.find(layerName);
+	if (it != m_entityLayers.end())
+	{
+		return it->second.get();
+	}
+
+	return nullptr;
+}
+
+EntityLayer& Manager::GetDefaultEntityLayer()
+{
+	return m_defaultEntityLayer;
+}
+
 } // namespace ecs
