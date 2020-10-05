@@ -565,4 +565,29 @@ EntityLayer& Manager::GetDefaultEntityLayer()
 	return m_defaultEntityLayer;
 }
 
+std::vector<Manager::ComponentTypeData> Manager::GetAllComponentTypesData() const
+{
+	std::vector<ComponentTypeData> result;
+	result.reserve(m_componentTypeIndexes.size());
+
+	ComponentTypeId currentTypeId = 0U;
+	for (const std::type_index& typeIndex : m_componentTypeIndexes)
+	{
+		std::string name;
+		for (auto it = m_componentNameToIdMapping.begin(); it != m_componentNameToIdMapping.end(); it++)
+		{
+			if (it->second == currentTypeId)
+			{
+				name = it->first;
+				break;
+			}
+		}
+
+		result.emplace_back(name, typeIndex, currentTypeId);
+		currentTypeId++;
+	}
+
+	return result;
+}
+
 } // namespace ecs

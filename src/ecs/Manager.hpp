@@ -188,6 +188,23 @@ public:
 	ECS_API EntityLayer* GetEntityLayer(const std::string& layerName) const;
 	ECS_API EntityLayer& GetDefaultEntityLayer();
 
+
+	struct ComponentTypeData
+	{
+		std::string name;
+		std::type_index typeIndex;
+		ComponentTypeId typeId;
+
+		ComponentTypeData(const std::string& name, const std::type_index& typeIndex, const ComponentTypeId typeId)
+			: name(name)
+			, typeIndex(typeIndex)
+			, typeId(typeId)
+		{}
+	};
+
+	// Get all the registered components data currently registered in ECS
+	std::vector<ComponentTypeData> ECS_API GetAllComponentTypesData() const;
+
 	// [TODO] Consider locking of cache views for multithreading
 
 	///////////////////////////////////////////////////////////////////////////////////
