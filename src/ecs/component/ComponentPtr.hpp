@@ -34,6 +34,7 @@ public:
 	bool IsValid() const;
 	void Reset();
 	ComponentPtr GetSibling(const ComponentTypeId componentType) const;
+	void* GetRawData() const;
 
 	template <typename SiblingT>
 	TComponentPtr<SiblingT> GetSibling() const
@@ -48,9 +49,6 @@ public:
 	operator bool() const;
 
 	static ComponentTypeId TypeIndexToTypeId(const std::type_index& typeIndex);
-
-protected:
-	void* GetRawData() const;
 
 private:
 	ComponentPtrBlock* m_block = nullptr;
