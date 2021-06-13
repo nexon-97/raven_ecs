@@ -1,4 +1,5 @@
 #pragma once
+#include "raven_ecs_export.h"
 #include "ecs/detail/Types.hpp"
 #include <cstdint>
 #include <typeindex>
